@@ -52,6 +52,8 @@ export default function ProductList({ products }: { products: Product[] }) {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [saveResult, setSaveResult] = useState<ActionResult | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   function openEdit(product: Product) {
@@ -124,6 +126,17 @@ export default function ProductList({ products }: { products: Product[] }) {
     });
   }
 
+  function handleDelete(product: Product) {
+    if (!window.confirm(`确定删除「${product.name}」吗？此操作无法撤销。`)) return;
+    setDeletingId(product.id);
+    setDeleteError(null);
+    startTransition(async () => {
+      const result = await deleteProduct(product.id);
+      setDeletingId(null);
+      if ("error" in result) setDeleteError(result.error);
+    });
+  }
+
   if (products.length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-zinc-300 bg-white py-16 text-center">
@@ -137,6 +150,18 @@ export default function ProductList({ products }: { products: Product[] }) {
 
   return (
     <>
+      {deleteError && (
+        <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          删除失败：{deleteError}
+          <button
+            type="button"
+            onClick={() => setDeleteError(null)}
+            className="ml-3 text-red-400 hover:text-red-600"
+          >
+            ×
+          </button>
+        </div>
+      )}
       <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
         <table className="w-full text-sm">
           <thead>
@@ -150,7 +175,7 @@ export default function ProductList({ products }: { products: Product[] }) {
           </thead>
           <tbody className="divide-y divide-zinc-100">
             {products.map((product) => {
-              const deleteWithId = deleteProduct.bind(null, product.id);
+              const isDeleting = deletingId === product.id;
               return (
                 <tr key={product.id} className="hover:bg-zinc-50">
                   <td className="px-4 py-3">
@@ -199,14 +224,14 @@ export default function ProductList({ products }: { products: Product[] }) {
                       >
                         编辑
                       </button>
-                      <form action={deleteWithId}>
-                        <button
-                          type="submit"
-                          className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50"
-                        >
-                          删除
-                        </button>
-                      </form>
+                      <button
+                        type="button"
+                        disabled={isDeleting}
+                        onClick={() => handleDelete(product)}
+                        className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 disabled:opacity-40"
+                      >
+                        {isDeleting ? "删除中…" : "删除"}
+                      </button>
                     </div>
                   </td>
                 </tr>

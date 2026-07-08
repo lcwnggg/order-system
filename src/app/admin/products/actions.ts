@@ -84,10 +84,13 @@ export async function updateProduct(
   return { success: true };
 }
 
-export async function deleteProduct(id: string): Promise<void> {
+export async function deleteProduct(id: string): Promise<ActionResult> {
   const supabase = await requireWarehouse();
-  if (!supabase) return;
+  if (!supabase) return { error: "无权限" };
 
-  await supabase.from("products").delete().eq("id", id);
+  const { error } = await supabase.from("products").delete().eq("id", id);
+  if (error) return { error: error.message };
+
   revalidatePath("/admin/products");
+  return { success: true };
 }
