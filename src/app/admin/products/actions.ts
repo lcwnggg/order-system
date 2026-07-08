@@ -84,6 +84,24 @@ export async function updateProduct(
   return { success: true };
 }
 
+export async function toggleProductActive(
+  id: string,
+  isActive: boolean
+): Promise<ActionResult> {
+  const supabase = await requireWarehouse();
+  if (!supabase) return { error: "无权限" };
+
+  const { error } = await supabase
+    .from("products")
+    .update({ is_active: isActive })
+    .eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/products");
+  revalidatePath("/shop");
+  return { success: true };
+}
+
 export async function deleteProduct(id: string): Promise<ActionResult> {
   const supabase = await requireWarehouse();
   if (!supabase) return { error: "无权限" };

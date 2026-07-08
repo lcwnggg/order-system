@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { updateProduct, deleteProduct, type ActionResult } from "./actions";
+import { updateProduct, deleteProduct, toggleProductActive, type ActionResult } from "./actions";
 
 export type Product = {
   id: string;
@@ -11,6 +11,7 @@ export type Product = {
   price: number;
   stock: number;
   image_url: string | null;
+  is_active: boolean;
   created_at: string;
 };
 
@@ -54,6 +55,7 @@ export default function ProductList({ products }: { products: Product[] }) {
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   function openEdit(product: Product) {
@@ -126,6 +128,14 @@ export default function ProductList({ products }: { products: Product[] }) {
     });
   }
 
+  function handleToggleActive(product: Product) {
+    setTogglingId(product.id);
+    startTransition(async () => {
+      await toggleProductActive(product.id, !product.is_active);
+      setTogglingId(null);
+    });
+  }
+
   function handleDelete(product: Product) {
     if (!window.confirm(`确定删除「${product.name}」吗？此操作无法撤销。`)) return;
     setDeletingId(product.id);
@@ -170,14 +180,16 @@ export default function ProductList({ products }: { products: Product[] }) {
               <th className="px-4 py-3 font-medium text-zinc-500">名称</th>
               <th className="px-4 py-3 font-medium text-zinc-500">价格</th>
               <th className="px-4 py-3 font-medium text-zinc-500">库存</th>
+              <th className="px-4 py-3 font-medium text-zinc-500">状态</th>
               <th className="px-4 py-3 font-medium text-zinc-500"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
             {products.map((product) => {
               const isDeleting = deletingId === product.id;
+              const isToggling = togglingId === product.id;
               return (
-                <tr key={product.id} className="hover:bg-zinc-50">
+                <tr key={product.id} className={`hover:bg-zinc-50 ${!product.is_active ? "opacity-50" : ""}`}>
                   <td className="px-4 py-3">
                     {product.image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -214,6 +226,20 @@ export default function ProductList({ products }: { products: Product[] }) {
                     }`}>
                       {product.stock === 0 ? "已售罄" : `${product.stock} 件`}
                     </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      type="button"
+                      disabled={isToggling}
+                      onClick={() => handleToggleActive(product)}
+                      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                        product.is_active
+                          ? "bg-green-50 text-green-700 hover:bg-green-100"
+                          : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+                      }`}
+                    >
+                      {isToggling ? "…" : product.is_active ? "上架 ↓" : "下架 ↑"}
+                    </button>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">

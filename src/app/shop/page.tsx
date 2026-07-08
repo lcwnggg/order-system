@@ -24,6 +24,7 @@ export default async function ShopPage() {
   const { data: products } = await supabase
     .from("products")
     .select("id, name, description, price, stock, image_url")
+    .eq("is_active", true)
     .order("created_at", { ascending: false });
 
   return (
