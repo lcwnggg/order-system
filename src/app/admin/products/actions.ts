@@ -35,6 +35,7 @@ export async function addProduct(
   const stock = parseInt(formData.get("stock") as string, 10);
   // image_url is uploaded client-side; the form passes the resulting public URL
   const image_url = (formData.get("image_url") as string) || null;
+  const category_id = (formData.get("category_id") as string) || null;
 
   if (!name) return { error: "商品名称不能为空" };
   if (isNaN(price) || price < 0) return { error: "请输入有效价格" };
@@ -42,7 +43,7 @@ export async function addProduct(
 
   const { error } = await supabase
     .from("products")
-    .insert({ name, description, price, stock, image_url });
+    .insert({ name, description, price, stock, image_url, category_id });
 
   if (error) return { error: error.message };
 
@@ -58,12 +59,13 @@ export async function updateProduct(
     price: number;
     stock: number;
     newImageUrl?: string;
+    category_id?: string | null;
   }
 ): Promise<ActionResult> {
   const supabase = await requireWarehouse();
   if (!supabase) return { error: "无权限" };
 
-  const { name, description, price, stock, newImageUrl } = fields;
+  const { name, description, price, stock, newImageUrl, category_id } = fields;
   if (!name) return { error: "商品名称不能为空" };
   if (isNaN(price) || price < 0) return { error: "请输入有效价格" };
   if (isNaN(stock) || stock < 0) return { error: "请输入有效库存数量" };
@@ -75,6 +77,7 @@ export async function updateProduct(
     stock,
   };
   if (newImageUrl !== undefined) updateData.image_url = newImageUrl;
+  if (category_id !== undefined) updateData.category_id = category_id;
 
   const { error } = await supabase.from("products").update(updateData).eq("id", id);
   if (error) return { error: error.message };

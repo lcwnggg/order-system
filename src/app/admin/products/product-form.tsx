@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { addProduct, type ActionResult } from "./actions";
+import type { Category } from "@/app/admin/categories/categories-client";
 
 function compressToJpeg(file: File, maxWidth = 1200, quality = 0.8): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -33,7 +34,11 @@ function compressToJpeg(file: File, maxWidth = 1200, quality = 0.8): Promise<Blo
 
 type UploadPhase = "idle" | "compressing" | "uploading" | "done" | "error";
 
-export default function ProductForm() {
+export default function ProductForm({ categories = [] }: { categories?: Category[] }) {
+  const parentCategories = categories.filter((c) => !c.parent_id);
+  function childrenOf(parentId: string) {
+    return categories.filter((c) => c.parent_id === parentId);
+  }
   const [state, action, pending] = useActionState<ActionResult | null, FormData>(
     addProduct,
     null
@@ -45,6 +50,8 @@ export default function ProductForm() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [selectedParentCatId, setSelectedParentCatId] = useState("");
+  const [selectedChildCatId, setSelectedChildCatId] = useState("");
 
   useEffect(() => {
     if (state && "success" in state) {
@@ -53,6 +60,8 @@ export default function ProductForm() {
       setPreview(null);
       setPhase("idle");
       setUploadError(null);
+      setSelectedParentCatId("");
+      setSelectedChildCatId("");
     }
   }, [state]);
 
@@ -102,6 +111,11 @@ export default function ProductForm() {
 
       <form ref={formRef} action={action} className="space-y-4">
         {imageUrl && <input type="hidden" name="image_url" value={imageUrl} />}
+        <input
+          type="hidden"
+          name="category_id"
+          value={selectedChildCatId || selectedParentCatId}
+        />
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
@@ -144,6 +158,36 @@ export default function ProductForm() {
             className="w-full resize-none rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
           />
         </div>
+
+        {parentCategories.length > 0 && (
+          <div>
+            <label className="mb-1.5 block text-sm font-medium text-zinc-700">商品分类</label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <select
+                value={selectedParentCatId}
+                onChange={(e) => { setSelectedParentCatId(e.target.value); setSelectedChildCatId(""); }}
+                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+              >
+                <option value="">不选大类</option>
+                {parentCategories.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              {selectedParentCatId && childrenOf(selectedParentCatId).length > 0 && (
+                <select
+                  value={selectedChildCatId}
+                  onChange={(e) => setSelectedChildCatId(e.target.value)}
+                  className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                >
+                  <option value="">不选小类</option>
+                  {childrenOf(selectedParentCatId).map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>

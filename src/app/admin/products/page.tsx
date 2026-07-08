@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/actions/auth";
 import ProductForm from "./product-form";
 import ProductList, { type Product } from "./product-list";
+import type { Category } from "@/app/admin/categories/categories-client";
 
 export default async function AdminProductsPage() {
   const supabase = await createClient();
@@ -25,6 +26,14 @@ export default async function AdminProductsPage() {
     .from("products")
     .select("*")
     .order("created_at", { ascending: false });
+
+  const { data: categoriesData } = await supabase
+    .from("categories")
+    .select("id, name, parent_id, sort_order")
+    .order("sort_order")
+    .order("created_at");
+
+  const categories = (categoriesData ?? []) as Category[];
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -53,6 +62,13 @@ export default async function AdminProductsPage() {
             >
               门店管理
             </Link>
+            <span className="text-zinc-300">/</span>
+            <Link
+              href="/admin/categories"
+              className="text-sm text-zinc-500 transition-colors hover:text-zinc-900"
+            >
+              分类管理
+            </Link>
           </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-zinc-500">{user.email}</span>
@@ -69,7 +85,7 @@ export default async function AdminProductsPage() {
       </header>
 
       <main className="mx-auto max-w-5xl space-y-8 px-6 py-8">
-        <ProductForm />
+        <ProductForm categories={categories} />
 
         <div>
           <h2 className="mb-4 text-base font-semibold text-zinc-900">
@@ -81,7 +97,7 @@ export default async function AdminProductsPage() {
             )}
           </h2>
 
-          <ProductList products={(products ?? []) as Product[]} />
+          <ProductList products={(products ?? []) as Product[]} categories={categories} />
         </div>
       </main>
     </div>

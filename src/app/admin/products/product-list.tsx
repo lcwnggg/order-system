@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { updateProduct, deleteProduct, toggleProductActive, type ActionResult } from "./actions";
+import type { Category } from "@/app/admin/categories/categories-client";
 
 export type Product = {
   id: string;
@@ -12,6 +13,7 @@ export type Product = {
   stock: number;
   image_url: string | null;
   is_active: boolean;
+  category_id: string | null;
   created_at: string;
 };
 
@@ -41,7 +43,25 @@ function compressToJpeg(file: File, maxWidth = 1200, quality = 0.8): Promise<Blo
 
 type UploadPhase = "idle" | "compressing" | "uploading" | "done" | "error";
 
-export default function ProductList({ products }: { products: Product[] }) {
+export default function ProductList({
+  products,
+  categories,
+}: {
+  products: Product[];
+  categories: Category[];
+}) {
+  const parentCategories = categories.filter((c) => !c.parent_id);
+  function childrenOf(parentId: string) {
+    return categories.filter((c) => c.parent_id === parentId);
+  }
+  function categoryLabel(categoryId: string | null) {
+    if (!categoryId) return null;
+    const cat = categories.find((c) => c.id === categoryId);
+    if (!cat) return null;
+    if (!cat.parent_id) return cat.name;
+    const parent = categories.find((c) => c.id === cat.parent_id);
+    return parent ? `${parent.name} › ${cat.name}` : cat.name;
+  }
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editName, setEditName] = useState("");
   const [editDescription, setEditDescription] = useState("");
@@ -56,6 +76,8 @@ export default function ProductList({ products }: { products: Product[] }) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [editParentCatId, setEditParentCatId] = useState("");
+  const [editChildCatId, setEditChildCatId] = useState("");
   const [, startTransition] = useTransition();
 
   function openEdit(product: Product) {
@@ -69,6 +91,18 @@ export default function ProductList({ products }: { products: Product[] }) {
     setPhase("idle");
     setUploadError(null);
     setSaveResult(null);
+    // 初始化分类选择
+    const cat = categories.find((c) => c.id === product.category_id);
+    if (!cat) {
+      setEditParentCatId("");
+      setEditChildCatId("");
+    } else if (cat.parent_id) {
+      setEditParentCatId(cat.parent_id);
+      setEditChildCatId(cat.id);
+    } else {
+      setEditParentCatId(cat.id);
+      setEditChildCatId("");
+    }
   }
 
   function closeEdit() {
@@ -118,6 +152,7 @@ export default function ProductList({ products }: { products: Product[] }) {
         price: parseFloat(editPrice),
         stock: parseInt(editStock, 10),
         newImageUrl,
+        category_id: editChildCatId || editParentCatId || null,
       });
       setIsSaving(false);
       if ("success" in result) {
@@ -211,6 +246,11 @@ export default function ProductList({ products }: { products: Product[] }) {
                   </td>
                   <td className="px-4 py-3">
                     <p className="font-medium text-zinc-900">{product.name}</p>
+                    {categoryLabel(product.category_id) && (
+                      <p className="mt-0.5 text-xs text-zinc-400">
+                        {categoryLabel(product.category_id)}
+                      </p>
+                    )}
                     {product.description && (
                       <p className="mt-0.5 line-clamp-1 text-xs text-zinc-400">{product.description}</p>
                     )}
@@ -344,6 +384,37 @@ export default function ProductList({ products }: { products: Product[] }) {
                   className="w-full resize-none rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
                 />
               </div>
+
+              {/* 分类 */}
+              {parentCategories.length > 0 && (
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-zinc-700">商品分类</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <select
+                      value={editParentCatId}
+                      onChange={(e) => { setEditParentCatId(e.target.value); setEditChildCatId(""); }}
+                      className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                    >
+                      <option value="">不选大类</option>
+                      {parentCategories.map((p) => (
+                        <option key={p.id} value={p.id}>{p.name}</option>
+                      ))}
+                    </select>
+                    {editParentCatId && childrenOf(editParentCatId).length > 0 && (
+                      <select
+                        value={editChildCatId}
+                        onChange={(e) => setEditChildCatId(e.target.value)}
+                        className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                      >
+                        <option value="">不选小类</option>
+                        {childrenOf(editParentCatId).map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* 图片 */}
               <div>
