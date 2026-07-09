@@ -21,15 +21,23 @@ export default async function AdminOrdersPage() {
   if (profile?.role !== "warehouse") redirect("/login");
 
   // 拉取所有订单，嵌套商品明细
-  const { data: rawOrders } = await supabase
-    .from("orders")
-    .select(
-      `id, store_id, status, created_at,
-       order_items ( id, quantity,
-         products ( id, name, price )
-       )`
-    )
-    .order("created_at", { ascending: false });
+  const [{ data: rawOrders }, { data: categoriesData }] = await Promise.all([
+    supabase
+      .from("orders")
+      .select(
+        `id, store_id, status, created_at,
+         order_items ( id, quantity,
+           products ( id, name, price, category_id )
+         )`
+      )
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("categories")
+      .select("id, name, parent_id")
+      .order("sort_order")
+      .order("created_at"),
+  ]);
+  const categories = (categoriesData ?? []) as { id: string; name: string; parent_id: string | null }[];
 
   // 拉取下单门店的 profile（store_name）+ email（via RPC）
   const storeIds = [...new Set((rawOrders ?? []).map((o) => o.store_id as string))];
@@ -65,7 +73,7 @@ export default async function AdminOrdersPage() {
       const item = raw as {
         id: string;
         quantity: number;
-        products: { id: string; name: string; price: number };
+        products: { id: string; name: string; price: number; category_id: string | null };
       };
       return {
         id: item.id,
@@ -122,7 +130,7 @@ export default async function AdminOrdersPage() {
           <h1 className="text-xl font-semibold text-zinc-900">订单管理</h1>
           <span className="text-sm text-zinc-400">共 {orders.length} 笔订单</span>
         </div>
-        <OrdersClient orders={orders} />
+        <OrdersClient orders={orders} categories={categories} />
       </main>
     </div>
   );

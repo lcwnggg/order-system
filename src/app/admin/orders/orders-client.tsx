@@ -3,7 +3,8 @@
 import { useMemo, useState, useTransition } from "react";
 import { updateOrderStatus } from "./actions";
 
-type Product = { id: string; name: string; price: number };
+type Product = { id: string; name: string; price: number; category_id: string | null };
+type CategoryItem = { id: string; name: string; parent_id: string | null };
 export type OrderItem = { id: string; quantity: number; product: Product };
 export type Order = {
   id: string;
@@ -44,7 +45,7 @@ function formatDateTime(iso: string): string {
   return `${y}-${mo}-${day} ${h}:${mi}`;
 }
 
-export default function OrdersClient({ orders }: { orders: Order[] }) {
+export default function OrdersClient({ orders, categories }: { orders: Order[]; categories: CategoryItem[] }) {
   const [filter, setFilter] = useState<FilterValue>("all");
   const [summaryView, setSummaryView] = useState<SummaryView>("product");
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -102,30 +103,95 @@ export default function OrdersClient({ orders }: { orders: Order[] }) {
       month: "2-digit",
       day: "2-digit",
     });
-    const tableRows = productSummary
-      .map(
-        ([name, qty]) =>
-          `<tr><td>${name}</td><td class="qty">${qty}</td></tr>`
-      )
+
+    // Build product → { total, categoryId, stores }
+    const productMap = new Map<
+      string,
+      { name: string; total: number; categoryId: string | null; stores: Map<string, number> }
+    >();
+    for (const order of pendingOrders) {
+      const storeName = displayStore(order);
+      for (const item of order.items) {
+        const key = item.product.id;
+        if (!productMap.has(key)) {
+          productMap.set(key, {
+            name: item.product.name,
+            total: 0,
+            categoryId: item.product.category_id,
+            stores: new Map(),
+          });
+        }
+        const p = productMap.get(key)!;
+        p.total += item.quantity;
+        p.stores.set(storeName, (p.stores.get(storeName) ?? 0) + item.quantity);
+      }
+    }
+
+    // Category label helper
+    function catLabel(catId: string | null): { parent: string; child: string } {
+      if (!catId) return { parent: "未分类", child: "" };
+      const cat = categories.find((c) => c.id === catId);
+      if (!cat) return { parent: "未分类", child: "" };
+      if (!cat.parent_id) return { parent: cat.name, child: "" };
+      const par = categories.find((c) => c.id === cat.parent_id);
+      return { parent: par?.name ?? "未分类", child: cat.name };
+    }
+
+    // Sort by parent category → child category → product name
+    const rows = [...productMap.values()].sort((a, b) => {
+      const la = catLabel(a.categoryId);
+      const lb = catLabel(b.categoryId);
+      const pc = la.parent.localeCompare(lb.parent, "zh-CN");
+      if (pc !== 0) return pc;
+      const cc = la.child.localeCompare(lb.child, "zh-CN");
+      if (cc !== 0) return cc;
+      return a.name.localeCompare(b.name, "zh-CN");
+    });
+
+    // Build HTML rows, with category section headers
+    let lastParent = "";
+    const tableRows = rows
+      .map((p) => {
+        const { parent, child } = catLabel(p.categoryId);
+        const storeDetail = [...p.stores.entries()]
+          .map(([s, q]) => `<span class="store-tag">${s}×${q}</span>`)
+          .join(" ");
+        let header = "";
+        if (parent !== lastParent) {
+          lastParent = parent;
+          header = `<tr class="cat-row"><td colspan="2">${parent}</td></tr>`;
+        }
+        return `${header}<tr>
+<td><div class="pname">${p.name}</div>${child ? `<div class="cname">${parent} › ${child}</div>` : ""}<div class="stores">${storeDetail}</div></td>
+<td class="qty">${p.total}</td></tr>`;
+      })
       .join("");
+
     const html = `<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8">
 <title>备货单 ${dateStr}</title>
 <style>
 body{font-family:sans-serif;margin:2cm;color:#111;font-size:14px}
 h1{font-size:20px;margin-bottom:4px}
-.sub{color:#666;font-size:12px;margin-bottom:24px}
+.sub{color:#555;font-size:12px;margin-bottom:24px}
 table{width:100%;border-collapse:collapse}
-th{text-align:left;border-bottom:2px solid #000;padding:8px 4px;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+th{text-align:left;border-bottom:2px solid #111;padding:8px 4px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#444}
 th.qty,td.qty{text-align:right}
-td{padding:8px 4px;border-bottom:1px solid #ddd}
-td.qty{font-weight:700;font-size:16px}
+td{padding:9px 4px;border-bottom:1px solid #e5e7eb;vertical-align:top}
+td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padding-top:11px}
+.pname{font-weight:600;margin-bottom:3px}
+.cname{font-size:11px;color:#9ca3af;margin-bottom:4px}
+.stores{display:flex;flex-wrap:wrap;gap:4px}
+.store-tag{font-size:11px;color:#374151;background:#f3f4f6;padding:1px 7px;border-radius:999px}
+.cat-row{background:#f9fafb}
+.cat-row td{padding:10px 4px 3px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:1px solid #d1d5db}
 @media print{body{margin:1cm}}
 </style></head><body>
 <h1>备货单</h1>
-<div class="sub">生成时间：${dateStr}　·　共 ${pendingOrders.length} 笔待处理订单</div>
-<table><thead><tr><th>商品名称</th><th class="qty">需备数量</th></tr></thead>
+<div class="sub">生成时间：${dateStr}　·　${pendingOrders.length} 笔待处理订单　·　${rows.length} 种商品</div>
+<table><thead><tr><th>商品（门店需求明细）</th><th class="qty">合计</th></tr></thead>
 <tbody>${tableRows}</tbody></table>
 </body></html>`;
+
     const win = window.open("", "_blank");
     if (win) {
       win.document.write(html);
