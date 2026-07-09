@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
-type OrderItem = { productId: string; quantity: number };
+type OrderItem = { productId: string; quantity: number; variantId?: string };
 type OrderResult = { success: true; orderId: string } | { error: string };
 
 export async function submitOrder(items: OrderItem[]): Promise<OrderResult> {
@@ -25,6 +25,7 @@ export async function submitOrder(items: OrderItem[]): Promise<OrderResult> {
   const p_items = items.map((item) => ({
     product_id: item.productId,
     quantity: item.quantity,
+    ...(item.variantId ? { variant_id: item.variantId } : {}),
   }));
 
   const { data: orderId, error } = await supabase.rpc("place_order", {

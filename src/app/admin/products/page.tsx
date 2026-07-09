@@ -5,6 +5,7 @@ import { signOut } from "@/app/actions/auth";
 import ProductForm from "./product-form";
 import ProductList, { type Product } from "./product-list";
 import type { Category } from "@/app/admin/categories/categories-client";
+import type { ProductVariant } from "./actions";
 
 export default async function AdminProductsPage() {
   const supabase = await createClient();
@@ -33,7 +34,13 @@ export default async function AdminProductsPage() {
     .order("sort_order")
     .order("created_at");
 
+  const { data: productVariantsData } = await supabase
+    .from("product_variants")
+    .select("id, product_id, color, stock, sort_order")
+    .order("sort_order");
+
   const categories = (categoriesData ?? []) as Category[];
+  const productVariants = (productVariantsData ?? []) as ProductVariant[];
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -97,7 +104,7 @@ export default async function AdminProductsPage() {
             )}
           </h2>
 
-          <ProductList products={(products ?? []) as Product[]} categories={categories} />
+          <ProductList products={(products ?? []) as Product[]} categories={categories} variants={productVariants} />
         </div>
       </main>
     </div>

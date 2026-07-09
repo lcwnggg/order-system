@@ -21,10 +21,10 @@ export default async function ShopPage() {
   if (profile?.role === "warehouse") redirect("/admin/products");
   if (profile?.role !== "store") redirect("/login");
 
-  const [{ data: products }, { data: categoriesData }, { data: lastOrders }] = await Promise.all([
+  const [{ data: products }, { data: categoriesData }, { data: lastOrders }, { data: variantsData }] = await Promise.all([
     supabase
       .from("products")
-      .select("id, name, description, price, stock, image_url, category_id")
+      .select("id, name, description, price, stock, image_url, category_id, has_variants")
       .eq("is_active", true)
       .order("created_at", { ascending: false }),
     supabase
@@ -34,14 +34,18 @@ export default async function ShopPage() {
       .order("created_at"),
     supabase
       .from("orders")
-      .select("order_items(product_id, quantity)")
+      .select("order_items(product_id, variant_id, quantity)")
       .eq("store_id", user.id)
       .order("created_at", { ascending: false })
       .limit(1),
+    supabase
+      .from("product_variants")
+      .select("id, product_id, color, stock, sort_order")
+      .order("sort_order"),
   ]);
 
   const lastOrderItems =
-    (lastOrders?.[0]?.order_items ?? []) as { product_id: string; quantity: number }[];
+    (lastOrders?.[0]?.order_items ?? []) as { product_id: string; variant_id: string | null; quantity: number }[];
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -75,6 +79,7 @@ export default async function ShopPage() {
         products={products ?? []}
         categories={(categoriesData ?? []) as { id: string; name: string; parent_id: string | null }[]}
         lastOrderItems={lastOrderItems}
+        variants={(variantsData ?? []) as { id: string; product_id: string; color: string; stock: number; sort_order: number }[]}
       />
     </div>
   );
