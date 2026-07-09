@@ -85,3 +85,41 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
   revalidateAll();
   return { success: true };
 }
+
+export async function assignProductsToCategory(
+  categoryId: string,
+  productIds: string[]
+): Promise<ActionResult> {
+  const supabase = await requireWarehouse();
+  if (!supabase) return { error: "无权限" };
+  if (!productIds.length) return { error: "请至少选择一个商品" };
+
+  const { error } = await supabase
+    .from("products")
+    .update({ category_id: categoryId })
+    .in("id", productIds);
+
+  if (error) return { error: error.message };
+
+  revalidateAll();
+  revalidatePath("/shop");
+  return { success: true };
+}
+
+export async function removeProductFromCategory(
+  productId: string
+): Promise<ActionResult> {
+  const supabase = await requireWarehouse();
+  if (!supabase) return { error: "无权限" };
+
+  const { error } = await supabase
+    .from("products")
+    .update({ category_id: null })
+    .eq("id", productId);
+
+  if (error) return { error: error.message };
+
+  revalidateAll();
+  revalidatePath("/shop");
+  return { success: true };
+}

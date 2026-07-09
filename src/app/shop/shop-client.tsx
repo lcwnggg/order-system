@@ -10,13 +10,24 @@ export type Product = {
   price: number;
   stock: number;
   image_url: string | null;
+  category_id: string | null;
 };
+
+type CategoryItem = { id: string; name: string; parent_id: string | null };
 
 type CartMap = Record<string, { product: Product; quantity: number }>;
 
-export default function ShopClient({ products }: { products: Product[] }) {
+const UNCATEGORIZED = "__uncategorized__";
+
+export default function ShopClient({
+  products,
+  categories,
+}: {
+  products: Product[];
+  categories: CategoryItem[];
+}) {
+  // ── Cart state (unchanged) ──
   const [cart, setCart] = useState<CartMap>({});
-  // Per-card quantity inputs
   const [inputQty, setInputQty] = useState<Record<string, number>>(
     () => Object.fromEntries(products.map((p) => [p.id, 0]))
   );
@@ -25,7 +36,45 @@ export default function ShopClient({ products }: { products: Product[] }) {
     null | { success: true; orderId: string } | { error: string }
   >(null);
 
-  /* ── cart helpers ── */
+  // ── Category + search state ──
+  const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // ── Derived category data ──
+  const parentCategories = categories.filter((c) => !c.parent_id);
+  const currentChildren =
+    selectedParentId && selectedParentId !== UNCATEGORIZED
+      ? categories.filter((c) => c.parent_id === selectedParentId)
+      : [];
+
+  function allChildIds(parentId: string) {
+    return categories.filter((c) => c.parent_id === parentId).map((c) => c.id);
+  }
+
+  // ── Filtered products ──
+  const filteredProducts = products.filter((p) => {
+    if (selectedChildId) {
+      if (p.category_id !== selectedChildId) return false;
+    } else if (selectedParentId === UNCATEGORIZED) {
+      if (p.category_id !== null) return false;
+    } else if (selectedParentId) {
+      const valid = new Set([selectedParentId, ...allChildIds(selectedParentId)]);
+      if (!p.category_id || !valid.has(p.category_id)) return false;
+    }
+    if (searchQuery.trim()) {
+      return p.name.toLowerCase().includes(searchQuery.trim().toLowerCase());
+    }
+    return true;
+  });
+
+  // ── Category nav helpers ──
+  function selectParent(id: string | null) {
+    setSelectedParentId(id);
+    setSelectedChildId(null);
+  }
+
+  // ── Cart helpers (unchanged) ──
   function addToCart(product: Product) {
     const qty = inputQty[product.id] ?? 0;
     if (qty <= 0 || product.stock === 0) return;
@@ -86,19 +135,135 @@ export default function ShopClient({ products }: { products: Product[] }) {
   const cartCount = cartItems.reduce((n, item) => n + item.quantity, 0);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-      <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
-        {/* ── 商品列表 ── */}
-        <div className="flex-1">
-          <h2 className="mb-5 text-lg font-semibold text-zinc-900">全部商品</h2>
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+        {/* ── 商品区 ── */}
+        <div className="flex-1 min-w-0">
+          {/* 大类导航 */}
+          <div className="mb-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => selectParent(null)}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                selectedParentId === null
+                  ? "bg-zinc-900 text-white"
+                  : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
+              }`}
+            >
+              全部
+            </button>
+            {parentCategories.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => selectParent(cat.id)}
+                className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                  selectedParentId === cat.id
+                    ? "bg-zinc-900 text-white"
+                    : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
+                }`}
+              >
+                {cat.name}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => selectParent(UNCATEGORIZED)}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                selectedParentId === UNCATEGORIZED
+                  ? "bg-zinc-900 text-white"
+                  : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
+              }`}
+            >
+              未分类
+            </button>
+          </div>
 
-          {products.length === 0 ? (
+          {/* 小类导航 */}
+          {currentChildren.length > 0 && (
+            <div className="mb-3 flex flex-wrap gap-2 pl-2">
+              <button
+                type="button"
+                onClick={() => setSelectedChildId(null)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  selectedChildId === null
+                    ? "bg-zinc-700 text-white"
+                    : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                }`}
+              >
+                全部小类
+              </button>
+              {currentChildren.map((child) => (
+                <button
+                  key={child.id}
+                  type="button"
+                  onClick={() => setSelectedChildId(child.id)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                    selectedChildId === child.id
+                      ? "bg-zinc-700 text-white"
+                      : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
+                  }`}
+                >
+                  {child.name}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* 搜索框 */}
+          <div className="relative mb-4">
+            <svg
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="搜索商品名称…"
+              className="w-full rounded-xl border border-zinc-200 bg-white py-2.5 pl-10 pr-10 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* 商品数量提示 */}
+          <p className="mb-4 text-sm font-medium text-zinc-700">
+            {filteredProducts.length === 0
+              ? "暂无商品"
+              : `共 ${filteredProducts.length} 件商品`}
+            {searchQuery && (
+              <span className="ml-1 font-normal text-zinc-400">
+                · 搜索「{searchQuery}」
+              </span>
+            )}
+          </p>
+
+          {filteredProducts.length === 0 ? (
             <div className="rounded-xl border border-dashed border-zinc-300 bg-white py-20 text-center">
-              <p className="text-sm text-zinc-400">暂无商品</p>
+              <p className="text-sm text-zinc-400">
+                {searchQuery ? "未找到匹配的商品" : "暂无商品"}
+              </p>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {products.map((product) => {
+              {filteredProducts.map((product) => {
                 const outOfStock = product.stock === 0;
                 const qty = inputQty[product.id] ?? 0;
                 return (
@@ -230,7 +395,7 @@ export default function ShopClient({ products }: { products: Product[] }) {
           )}
         </div>
 
-        {/* ── 购物车 ── */}
+        {/* ── 购物车 (unchanged) ── */}
         <div className="w-full lg:w-80 lg:shrink-0">
           <div className="sticky top-4 rounded-xl border border-zinc-200 bg-white shadow-sm">
             <div className="border-b border-zinc-100 px-5 py-4">
