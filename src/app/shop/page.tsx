@@ -21,7 +21,7 @@ export default async function ShopPage() {
   if (profile?.role === "warehouse") redirect("/admin/products");
   if (profile?.role !== "store") redirect("/login");
 
-  const [{ data: products }, { data: categoriesData }] = await Promise.all([
+  const [{ data: products }, { data: categoriesData }, { data: lastOrders }] = await Promise.all([
     supabase
       .from("products")
       .select("id, name, description, price, stock, image_url, category_id")
@@ -32,7 +32,16 @@ export default async function ShopPage() {
       .select("id, name, parent_id")
       .order("sort_order")
       .order("created_at"),
+    supabase
+      .from("orders")
+      .select("order_items(product_id, quantity)")
+      .eq("store_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(1),
   ]);
+
+  const lastOrderItems =
+    (lastOrders?.[0]?.order_items ?? []) as { product_id: string; quantity: number }[];
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -65,6 +74,7 @@ export default async function ShopPage() {
       <ShopClient
         products={products ?? []}
         categories={(categoriesData ?? []) as { id: string; name: string; parent_id: string | null }[]}
+        lastOrderItems={lastOrderItems}
       />
     </div>
   );

@@ -85,6 +85,12 @@ export default async function Home() {
                 >
                   门店管理
                 </Link>
+                <Link
+                  href="/admin/categories"
+                  className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+                >
+                  分类管理
+                </Link>
               </>
             )}
             {isStore && (
@@ -166,13 +172,18 @@ export default async function Home() {
               <p className="mt-2 text-3xl font-bold text-green-600">{productCount}</p>
               <p className="mt-1 text-xs text-zinc-400">件</p>
             </div>
-            <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
+            <Link
+              href="/admin/stock-alert"
+              className={`rounded-xl border bg-white p-5 shadow-sm transition-shadow hover:shadow-md ${
+                lowStockCount > 0 ? "border-red-200 hover:border-red-300" : "border-zinc-200"
+              }`}
+            >
               <p className="text-xs font-medium text-zinc-500">库存告急</p>
               <p className={`mt-2 text-3xl font-bold ${lowStockCount > 0 ? "text-red-600" : "text-zinc-400"}`}>
                 {lowStockCount}
               </p>
-              <p className="mt-1 text-xs text-zinc-400">库存 ≤ 5 件</p>
-            </div>
+              <p className="mt-1 text-xs text-zinc-400">库存 ≤ 5 件 → 点击查看</p>
+            </Link>
           </div>
 
           {/* 功能入口 */}

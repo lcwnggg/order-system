@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { updateProduct, deleteProduct, toggleProductActive, type ActionResult } from "./actions";
+import { updateProduct, deleteProduct, toggleProductActive, adjustStock, type ActionResult } from "./actions";
 import type { Category } from "@/app/admin/categories/categories-client";
 
 export type Product = {
@@ -76,6 +76,9 @@ export default function ProductList({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [adjustingId, setAdjustingId] = useState<string | null>(null);
+  const [adjustQty, setAdjustQty] = useState<Record<string, string>>({});
+  const [adjustErrors, setAdjustErrors] = useState<Record<string, string>>({});
   const [editParentCatId, setEditParentCatId] = useState("");
   const [editChildCatId, setEditChildCatId] = useState("");
   const [, startTransition] = useTransition();
@@ -171,6 +174,27 @@ export default function ProductList({
     });
   }
 
+  function handleAdjust(productId: string, delta: number | null) {
+    let d: number;
+    if (delta === null) {
+      d = parseInt(adjustQty[productId] ?? "0", 10);
+      if (isNaN(d) || d <= 0) return;
+    } else {
+      d = delta;
+    }
+    setAdjustingId(productId);
+    setAdjustErrors((prev) => ({ ...prev, [productId]: "" }));
+    startTransition(async () => {
+      const result = await adjustStock(productId, d);
+      setAdjustingId(null);
+      if ("error" in result) {
+        setAdjustErrors((prev) => ({ ...prev, [productId]: result.error }));
+      } else if (delta === null) {
+        setAdjustQty((prev) => ({ ...prev, [productId]: "" }));
+      }
+    });
+  }
+
   function handleDelete(product: Product) {
     if (!window.confirm(`确定删除「${product.name}」吗？此操作无法撤销。`)) return;
     setDeletingId(product.id);
@@ -257,15 +281,53 @@ export default function ProductList({
                   </td>
                   <td className="px-4 py-3 text-zinc-700">¥{Number(product.price).toFixed(2)}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                      product.stock === 0
-                        ? "bg-red-50 text-red-600"
-                        : product.stock < 10
-                          ? "bg-amber-50 text-amber-600"
-                          : "bg-green-50 text-green-600"
-                    }`}>
-                      {product.stock === 0 ? "已售罄" : `${product.stock} 件`}
-                    </span>
+                    <div className="space-y-1.5">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                        product.stock === 0
+                          ? "bg-red-50 text-red-600"
+                          : product.stock < 10
+                            ? "bg-amber-50 text-amber-600"
+                            : "bg-green-50 text-green-600"
+                      }`}>
+                        {product.stock === 0 ? "已售罄" : `${product.stock} 件`}
+                      </span>
+                      <div className="flex flex-wrap items-center gap-1">
+                        {([1, 10] as const).map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            disabled={adjustingId === product.id}
+                            onClick={() => handleAdjust(product.id, n)}
+                            className="rounded px-1.5 py-0.5 text-xs font-medium bg-zinc-100 text-zinc-700 hover:bg-zinc-200 disabled:opacity-40 transition-colors"
+                          >
+                            +{n}
+                          </button>
+                        ))}
+                        <div className="flex items-center gap-0.5">
+                          <input
+                            type="number"
+                            min="1"
+                            value={adjustQty[product.id] ?? ""}
+                            onChange={(e) =>
+                              setAdjustQty((prev) => ({ ...prev, [product.id]: e.target.value }))
+                            }
+                            placeholder="N"
+                            className="w-10 rounded border border-zinc-200 px-1 py-0.5 text-xs text-zinc-900 outline-none focus:border-zinc-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                          />
+                          <button
+                            type="button"
+                            disabled={adjustingId === product.id || !adjustQty[product.id]}
+                            onClick={() => handleAdjust(product.id, null)}
+                            className="rounded px-1.5 py-0.5 text-xs font-medium bg-zinc-100 text-zinc-700 hover:bg-zinc-200 disabled:opacity-40 transition-colors"
+                          >
+                            {adjustingId === product.id ? "…" : "增加"}
+                          </button>
+                        </div>
+                      </div>
+                      {adjustErrors[product.id] && (
+                        <p className="text-xs text-red-500">{adjustErrors[product.id]}</p>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <button

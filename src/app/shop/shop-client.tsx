@@ -22,9 +22,11 @@ const UNCATEGORIZED = "__uncategorized__";
 export default function ShopClient({
   products,
   categories,
+  lastOrderItems,
 }: {
   products: Product[];
   categories: CategoryItem[];
+  lastOrderItems: { product_id: string; quantity: number }[];
 }) {
   // ── Cart state (unchanged) ──
   const [cart, setCart] = useState<CartMap>({});
@@ -125,6 +127,20 @@ export default function ShopClient({
       setResult(res);
       if ("success" in res) setCart({});
     });
+  }
+
+  function handleRepeatOrder() {
+    const newCart: CartMap = {};
+    for (const item of lastOrderItems) {
+      const product = products.find((p) => p.id === item.product_id);
+      if (!product || product.stock === 0) continue;
+      const qty = Math.min(item.quantity, product.stock);
+      newCart[product.id] = { product, quantity: qty };
+    }
+    if (!Object.keys(newCart).length) return;
+    setCart(newCart);
+    setInputQty(Object.fromEntries(products.map((p) => [p.id, 0])));
+    setResult(null);
   }
 
   const cartItems = Object.values(cart);
@@ -490,11 +506,20 @@ export default function ShopClient({
                 </p>
               )}
 
+              {lastOrderItems.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleRepeatOrder}
+                  className="mt-3 w-full rounded-lg border border-zinc-200 py-2 text-sm font-medium text-zinc-600 transition hover:bg-zinc-50"
+                >
+                  再来一单
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleSubmit}
                 disabled={cartItems.length === 0 || isPending}
-                className="mt-4 w-full rounded-lg bg-zinc-900 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
+                className="mt-2 w-full rounded-lg bg-zinc-900 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 {isPending ? "提交中…" : "提交订单"}
               </button>

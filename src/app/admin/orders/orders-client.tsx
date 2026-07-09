@@ -34,6 +34,16 @@ function displayStore(order: Order): string {
   return order.storeName ?? order.storeEmail ?? `门店 ${order.store_id.slice(0, 8)}…`;
 }
 
+function formatDateTime(iso: string): string {
+  const d = new Date(iso);
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const h = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  return `${y}-${mo}-${day} ${h}:${mi}`;
+}
+
 export default function OrdersClient({ orders }: { orders: Order[] }) {
   const [filter, setFilter] = useState<FilterValue>("all");
   const [summaryView, setSummaryView] = useState<SummaryView>("product");
@@ -86,6 +96,44 @@ export default function OrdersClient({ orders }: { orders: Order[] }) {
     }));
   }, [pendingOrders]);
 
+  function handlePrint() {
+    const dateStr = new Date().toLocaleDateString("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+    const tableRows = productSummary
+      .map(
+        ([name, qty]) =>
+          `<tr><td>${name}</td><td class="qty">${qty}</td></tr>`
+      )
+      .join("");
+    const html = `<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8">
+<title>备货单 ${dateStr}</title>
+<style>
+body{font-family:sans-serif;margin:2cm;color:#111;font-size:14px}
+h1{font-size:20px;margin-bottom:4px}
+.sub{color:#666;font-size:12px;margin-bottom:24px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;border-bottom:2px solid #000;padding:8px 4px;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
+th.qty,td.qty{text-align:right}
+td{padding:8px 4px;border-bottom:1px solid #ddd}
+td.qty{font-weight:700;font-size:16px}
+@media print{body{margin:1cm}}
+</style></head><body>
+<h1>备货单</h1>
+<div class="sub">生成时间：${dateStr}　·　共 ${pendingOrders.length} 笔待处理订单</div>
+<table><thead><tr><th>商品名称</th><th class="qty">需备数量</th></tr></thead>
+<tbody>${tableRows}</tbody></table>
+</body></html>`;
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+      win.print();
+    }
+  }
+
   function handleUpdateStatus(orderId: string, newStatus: "preparing" | "done") {
     setPendingId(orderId);
     startTransition(async () => {
@@ -117,29 +165,40 @@ export default function OrdersClient({ orders }: { orders: Order[] }) {
               （{pendingOrders.length} 个待处理订单）
             </span>
           </h2>
-          <div className="flex gap-1 rounded-lg border border-amber-200 bg-white p-0.5">
-            <button
-              type="button"
-              onClick={() => setSummaryView("product")}
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                summaryView === "product"
-                  ? "bg-amber-600 text-white"
-                  : "text-amber-700 hover:bg-amber-50"
-              }`}
-            >
-              按商品汇总
-            </button>
-            <button
-              type="button"
-              onClick={() => setSummaryView("store")}
-              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
-                summaryView === "store"
-                  ? "bg-amber-600 text-white"
-                  : "text-amber-700 hover:bg-amber-50"
-              }`}
-            >
-              按门店分组
-            </button>
+          <div className="flex items-center gap-2">
+            {pendingOrders.length > 0 && (
+              <button
+                type="button"
+                onClick={handlePrint}
+                className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-50"
+              >
+                打印备货单
+              </button>
+            )}
+            <div className="flex gap-1 rounded-lg border border-amber-200 bg-white p-0.5">
+              <button
+                type="button"
+                onClick={() => setSummaryView("product")}
+                className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                  summaryView === "product"
+                    ? "bg-amber-600 text-white"
+                    : "text-amber-700 hover:bg-amber-50"
+                }`}
+              >
+                按商品汇总
+              </button>
+              <button
+                type="button"
+                onClick={() => setSummaryView("store")}
+                className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                  summaryView === "store"
+                    ? "bg-amber-600 text-white"
+                    : "text-amber-700 hover:bg-amber-50"
+                }`}
+              >
+                按门店分组
+              </button>
+            </div>
           </div>
         </div>
 
@@ -236,12 +295,7 @@ export default function OrdersClient({ orders }: { orders: Order[] }) {
                       {displayStore(order)}
                     </span>
                     <span className="text-xs text-zinc-400">
-                      {new Date(order.created_at).toLocaleString("zh-CN", {
-                        month: "2-digit",
-                        day: "2-digit",
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatDateTime(order.created_at)}
                     </span>
                     <span
                       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[order.status]}`}

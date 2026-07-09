@@ -115,3 +115,26 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
   revalidatePath("/admin/products");
   return { success: true };
 }
+
+export async function adjustStock(id: string, delta: number): Promise<ActionResult> {
+  const supabase = await requireWarehouse();
+  if (!supabase) return { error: "无权限" };
+  if (!Number.isInteger(delta) || delta <= 0) return { error: "增加数量必须是正整数" };
+
+  const { data: product } = await supabase
+    .from("products")
+    .select("stock")
+    .eq("id", id)
+    .single();
+  if (!product) return { error: "商品不存在" };
+
+  const { error } = await supabase
+    .from("products")
+    .update({ stock: product.stock + delta })
+    .eq("id", id);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/products");
+  revalidatePath("/shop");
+  return { success: true };
+}
