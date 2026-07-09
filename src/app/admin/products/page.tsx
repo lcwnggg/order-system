@@ -26,7 +26,7 @@ export default async function AdminProductsPage() {
   const { data: products } = await supabase
     .from("products")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("name");
 
   const { data: categoriesData } = await supabase
     .from("categories")

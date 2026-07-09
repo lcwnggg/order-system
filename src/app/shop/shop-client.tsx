@@ -12,6 +12,7 @@ export type Product = {
   image_url: string | null;
   category_id: string | null;
   has_variants: boolean;
+  brand: string | null;
 };
 
 export type ProductVariant = {
@@ -87,7 +88,11 @@ export default function ShopClient({
       if (!p.category_id || !valid.has(p.category_id)) return false;
     }
     if (searchQuery.trim()) {
-      return p.name.toLowerCase().includes(searchQuery.trim().toLowerCase());
+      const q = searchQuery.trim().toLowerCase();
+      return (
+        p.name.toLowerCase().includes(q) ||
+        (p.brand?.toLowerCase().includes(q) ?? false)
+      );
     }
     return true;
   });
@@ -333,6 +338,9 @@ export default function ShopClient({
 
                     <div className="flex flex-1 flex-col p-4">
                       <p className="font-semibold text-zinc-900">{product.name}</p>
+                      {product.brand && (
+                        <p className="mt-0.5 text-xs font-medium text-zinc-500">{product.brand}</p>
+                      )}
                       {product.description && (
                         <p className="mt-0.5 line-clamp-2 text-xs text-zinc-400">{product.description}</p>
                       )}

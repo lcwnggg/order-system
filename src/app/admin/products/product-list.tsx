@@ -24,6 +24,7 @@ export type Product = {
   is_active: boolean;
   category_id: string | null;
   has_variants: boolean;
+  brand: string | null;
   created_at: string;
 };
 
@@ -75,9 +76,9 @@ export default function ProductList({
     return categories.filter((c) => c.parent_id === parentId);
   }
   function categoryLabel(categoryId: string | null) {
-    if (!categoryId) return null;
+    if (!categoryId) return "未分类";
     const cat = categories.find((c) => c.id === categoryId);
-    if (!cat) return null;
+    if (!cat) return "未分类";
     if (!cat.parent_id) return cat.name;
     const parent = categories.find((c) => c.id === cat.parent_id);
     return parent ? `${parent.name} › ${cat.name}` : cat.name;
@@ -86,9 +87,13 @@ export default function ProductList({
     return variants.filter((v) => v.product_id === productId);
   }
 
+  // ── 列表搜索 ──
+  const [adminSearch, setAdminSearch] = useState("");
+
   // ── 编辑弹窗状态 ──
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editName, setEditName] = useState("");
+  const [editBrand, setEditBrand] = useState("");
   const [editDescription, setEditDescription] = useState("");
   const [editPrice, setEditPrice] = useState("");
   const [editStock, setEditStock] = useState("");
@@ -114,10 +119,22 @@ export default function ProductList({
 
   const [, startTransition] = useTransition();
 
+  // ── 搜索过滤 ──
+  const filteredProducts = adminSearch.trim()
+    ? products.filter((p) => {
+        const q = adminSearch.trim().toLowerCase();
+        return (
+          p.name.toLowerCase().includes(q) ||
+          (p.brand?.toLowerCase().includes(q) ?? false)
+        );
+      })
+    : products;
+
   // ── 打开/关闭编辑弹窗 ──
   function openEdit(product: Product) {
     setEditingProduct(product);
     setEditName(product.name);
+    setEditBrand(product.brand ?? "");
     setEditDescription(product.description ?? "");
     setEditPrice(String(product.price));
     setEditStock(String(product.stock));
@@ -176,7 +193,6 @@ export default function ProductList({
   }
 
   async function handleDeleteImage() {
-    // 删除新上传的图（如果有）
     const urlToDelete = typeof newImageUrl === "string" ? newImageUrl : editingProduct?.image_url;
     if (urlToDelete) {
       try {
@@ -186,7 +202,7 @@ export default function ProductList({
         }
       } catch { /* 忽略存储错误 */ }
     }
-    setNewImageUrl(null); // null = 保存时将 image_url 置空
+    setNewImageUrl(null);
     setPreview(null);
     setPhase("idle");
     setUploadError(null);
@@ -226,13 +242,13 @@ export default function ProductList({
         newImageUrl,
         category_id: editChildCatId || editParentCatId || null,
         has_variants: editHasVariants,
+        brand: editBrand.trim() || null,
       });
       if ("error" in result) {
         setSaveResult(result);
         setIsSaving(false);
         return;
       }
-      // 保存变体变更
       const variantInputs = editVariants.map((v, i) => ({
         id: v.id,
         color: v.color,
@@ -319,13 +335,35 @@ export default function ProductList({
         </div>
       )}
 
+      {/* 搜索框 */}
+      <div className="relative mb-3">
+        <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+        <input
+          type="text"
+          value={adminSearch}
+          onChange={(e) => setAdminSearch(e.target.value)}
+          placeholder="按名称或品牌搜索…"
+          className="w-full rounded-xl border border-zinc-200 bg-white py-2.5 pl-10 pr-10 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
+        />
+        {adminSearch && (
+          <button type="button" onClick={() => setAdminSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600">✕</button>
+        )}
+      </div>
+      {adminSearch && (
+        <p className="mb-2 text-xs text-zinc-500">
+          找到 {filteredProducts.length} / {products.length} 件
+        </p>
+      )}
+
       <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-zinc-100 bg-zinc-50 text-left">
                 <th className="px-4 py-3 font-medium text-zinc-500">图片</th>
-                <th className="px-4 py-3 font-medium text-zinc-500">名称</th>
+                <th className="px-4 py-3 font-medium text-zinc-500">商品 / 品牌 / 分类</th>
                 <th className="px-4 py-3 font-medium text-zinc-500">价格</th>
                 <th className="px-4 py-3 font-medium text-zinc-500">库存</th>
                 <th className="px-4 py-3 font-medium text-zinc-500">状态</th>
@@ -333,7 +371,13 @@ export default function ProductList({
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100">
-              {products.map((product) => {
+              {filteredProducts.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-10 text-center text-sm text-zinc-400">
+                    {adminSearch ? `未找到含「${adminSearch}」的商品` : "暂无商品"}
+                  </td>
+                </tr>
+              ) : filteredProducts.map((product) => {
                 const isDeleting = deletingId === product.id;
                 const isToggling = togglingId === product.id;
                 const pvs = variantsFor(product.id);
@@ -354,29 +398,35 @@ export default function ProductList({
                       )}
                     </td>
 
-                    {/* 名称 */}
+                    {/* 名称 / 品牌 / 分类 */}
                     <td className="px-4 py-3">
-                      <p className="font-medium text-zinc-900">{product.name}</p>
-                      {categoryLabel(product.category_id) && (
-                        <p className="mt-0.5 text-xs text-zinc-400">{categoryLabel(product.category_id)}</p>
-                      )}
+                      <p className="font-medium text-zinc-900 leading-snug">{product.name}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                        {product.brand && (
+                          <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600">
+                            {product.brand}
+                          </span>
+                        )}
+                        <span className={`text-xs ${product.category_id ? "text-zinc-400" : "text-zinc-300"}`}>
+                          {categoryLabel(product.category_id)}
+                        </span>
+                      </div>
                       {product.description && (
                         <p className="mt-0.5 line-clamp-1 text-xs text-zinc-400">{product.description}</p>
                       )}
                       {product.has_variants && (
-                        <span className="mt-0.5 inline-block rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-600">
+                        <span className="mt-1 inline-block rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-600">
                           {pvs.length} 种颜色
                         </span>
                       )}
                     </td>
 
                     {/* 价格 */}
-                    <td className="px-4 py-3 text-zinc-700">¥{Number(product.price).toFixed(2)}</td>
+                    <td className="px-4 py-3 text-zinc-700 whitespace-nowrap">¥{Number(product.price).toFixed(2)}</td>
 
                     {/* 库存 */}
                     <td className="px-4 py-3">
                       {product.has_variants ? (
-                        /* 变体库存 */
                         <div className="space-y-1.5">
                           {pvs.length === 0 ? (
                             <span className="text-xs text-zinc-400">暂无变体</span>
@@ -393,23 +443,49 @@ export default function ProductList({
                                 }`}>
                                   {variant.stock === 0 ? "售罄" : variant.stock}
                                 </span>
-                                {([1, 10] as const).map((n) => (
+                                <button
+                                  type="button"
+                                  disabled={adjustingVariantId === variant.id}
+                                  onClick={() => handleAdjustVariant(variant.id, 1)}
+                                  className="rounded px-1.5 py-0.5 text-xs font-medium bg-zinc-100 text-zinc-700 hover:bg-zinc-200 disabled:opacity-40 transition-colors"
+                                >
+                                  +1
+                                </button>
+                                <div className="flex items-center gap-0.5">
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    value={adjustQty[variant.id] ?? ""}
+                                    onChange={(e) =>
+                                      setAdjustQty((prev) => ({ ...prev, [variant.id]: e.target.value }))
+                                    }
+                                    placeholder="N"
+                                    className="w-10 rounded border border-zinc-200 px-1 py-0.5 text-xs text-zinc-900 outline-none focus:border-zinc-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                  />
                                   <button
-                                    key={n}
                                     type="button"
-                                    disabled={adjustingVariantId === variant.id}
-                                    onClick={() => handleAdjustVariant(variant.id, n)}
+                                    disabled={adjustingVariantId === variant.id || !adjustQty[variant.id]}
+                                    onClick={() => {
+                                      const d = parseInt(adjustQty[variant.id] ?? "0", 10);
+                                      if (!isNaN(d) && d > 0) {
+                                        setAdjustingVariantId(variant.id);
+                                        startTransition(async () => {
+                                          await adjustVariantStock(variant.id, d);
+                                          setAdjustingVariantId(null);
+                                          setAdjustQty((prev) => ({ ...prev, [variant.id]: "" }));
+                                        });
+                                      }
+                                    }}
                                     className="rounded px-1.5 py-0.5 text-xs font-medium bg-zinc-100 text-zinc-700 hover:bg-zinc-200 disabled:opacity-40 transition-colors"
                                   >
-                                    +{n}
+                                    {adjustingVariantId === variant.id ? "…" : "加"}
                                   </button>
-                                ))}
+                                </div>
                               </div>
                             ))
                           )}
                         </div>
                       ) : (
-                        /* 普通库存 + 快捷调整 */
                         <div className="space-y-1.5">
                           <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                             product.stock === 0
@@ -421,17 +497,14 @@ export default function ProductList({
                             {product.stock === 0 ? "已售罄" : `${product.stock} 件`}
                           </span>
                           <div className="flex flex-wrap items-center gap-1">
-                            {([1, 10] as const).map((n) => (
-                              <button
-                                key={n}
-                                type="button"
-                                disabled={adjustingId === product.id}
-                                onClick={() => handleAdjust(product.id, n)}
-                                className="rounded px-1.5 py-0.5 text-xs font-medium bg-zinc-100 text-zinc-700 hover:bg-zinc-200 disabled:opacity-40 transition-colors"
-                              >
-                                +{n}
-                              </button>
-                            ))}
+                            <button
+                              type="button"
+                              disabled={adjustingId === product.id}
+                              onClick={() => handleAdjust(product.id, 1)}
+                              className="rounded px-1.5 py-0.5 text-xs font-medium bg-zinc-100 text-zinc-700 hover:bg-zinc-200 disabled:opacity-40 transition-colors"
+                            >
+                              +1
+                            </button>
                             <div className="flex items-center gap-0.5">
                               <input
                                 type="number"
@@ -449,7 +522,7 @@ export default function ProductList({
                                 onClick={() => handleAdjust(product.id, null)}
                                 className="rounded px-1.5 py-0.5 text-xs font-medium bg-zinc-100 text-zinc-700 hover:bg-zinc-200 disabled:opacity-40 transition-colors"
                               >
-                                {adjustingId === product.id ? "…" : "增加"}
+                                {adjustingId === product.id ? "…" : "加"}
                               </button>
                             </div>
                           </div>
@@ -511,7 +584,6 @@ export default function ProductList({
           onClick={(e) => { if (e.target === e.currentTarget) closeEdit(); }}
         >
           <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-            {/* 弹窗标题 */}
             <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-6 py-4">
               <h2 className="text-base font-semibold text-zinc-900">编辑商品</h2>
               <button type="button" onClick={closeEdit} className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600">
@@ -521,7 +593,6 @@ export default function ProductList({
               </button>
             </div>
 
-            {/* 弹窗主体（可滚动） */}
             <div className="flex-1 overflow-y-auto">
               <div className="space-y-4 px-6 py-5">
                 {/* 名称 */}
@@ -534,6 +605,18 @@ export default function ProductList({
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                     className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                  />
+                </div>
+
+                {/* 品牌 */}
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-zinc-700">品牌</label>
+                  <input
+                    type="text"
+                    value={editBrand}
+                    onChange={(e) => setEditBrand(e.target.value)}
+                    placeholder="如 Xiaomi、Temco（可选）"
+                    className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
                   />
                 </div>
 
@@ -594,6 +677,7 @@ export default function ProductList({
                       <p className="mb-2 text-xs font-medium text-zinc-500">颜色变体（各颜色独立库存）</p>
                       <div className="space-y-2">
                         {visibleEditVariants.map((v, displayIdx) => {
+                          void displayIdx;
                           const realIdx = editVariants.indexOf(v);
                           return (
                             <div key={realIdx} className="flex items-center gap-2">
@@ -733,7 +817,6 @@ export default function ProductList({
               </div>
             </div>
 
-            {/* 弹窗底部 */}
             <div className="flex shrink-0 items-center justify-end gap-3 border-t border-zinc-100 px-6 py-4">
               <button
                 type="button"

@@ -146,7 +146,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
         <input type="hidden" name="has_variants" value={hasVariants ? "true" : "false"} />
         {hasVariants && <input type="hidden" name="variants" value={variantsJson} />}
 
-        {/* 名称 + 价格 */}
+        {/* 名称 + 品牌 + 价格 */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-zinc-700">
@@ -161,19 +161,28 @@ export default function ProductForm({ categories = [] }: { categories?: Category
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-700">
-              价格（元）<span className="text-red-500">*</span>
-            </label>
+            <label className="mb-1.5 block text-sm font-medium text-zinc-700">品牌</label>
             <input
-              name="price"
-              type="number"
-              required
-              min="0"
-              step="0.01"
-              placeholder="0.00"
+              name="brand"
+              type="text"
+              placeholder="如 Xiaomi、Temco（可选）"
               className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
             />
           </div>
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-zinc-700">
+            价格（元）<span className="text-red-500">*</span>
+          </label>
+          <input
+            name="price"
+            type="number"
+            required
+            min="0"
+            step="0.01"
+            placeholder="0.00"
+            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+          />
         </div>
 
         {/* 描述 */}

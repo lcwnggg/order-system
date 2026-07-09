@@ -52,6 +52,7 @@ export async function addProduct(
   const stock = has_variants ? 0 : parseInt(formData.get("stock") as string, 10);
   const image_url = (formData.get("image_url") as string) || null;
   const category_id = (formData.get("category_id") as string) || null;
+  const brand = (formData.get("brand") as string)?.trim() || null;
   const variantsJson = (formData.get("variants") as string) || "[]";
 
   if (!name) return { error: "商品名称不能为空" };
@@ -71,7 +72,7 @@ export async function addProduct(
 
   const { data: product, error: insertErr } = await supabase
     .from("products")
-    .insert({ name, description: description || null, price, stock, image_url, category_id, has_variants })
+    .insert({ name, description: description || null, price, stock, image_url, category_id, has_variants, brand })
     .select("id")
     .single();
   if (insertErr) return { error: insertErr.message };
@@ -103,12 +104,13 @@ export async function updateProduct(
     newImageUrl?: string | null; // null = 删除图片，undefined = 保留原图
     category_id?: string | null;
     has_variants?: boolean;
+    brand?: string | null;
   }
 ): Promise<ActionResult> {
   const supabase = await requireWarehouse();
   if (!supabase) return { error: "无权限" };
 
-  const { name, description, price, stock, newImageUrl, category_id, has_variants } = fields;
+  const { name, description, price, stock, newImageUrl, category_id, has_variants, brand } = fields;
   if (!name) return { error: "商品名称不能为空" };
   if (isNaN(price) || price < 0) return { error: "请输入有效价格" };
   if (has_variants !== true && (isNaN(stock) || stock < 0)) return { error: "请输入有效库存数量" };
@@ -122,6 +124,7 @@ export async function updateProduct(
   if (newImageUrl !== undefined) updateData.image_url = newImageUrl;
   if (category_id !== undefined) updateData.category_id = category_id;
   if (has_variants !== undefined) updateData.has_variants = has_variants;
+  if (brand !== undefined) updateData.brand = brand;
 
   const { error } = await supabase.from("products").update(updateData).eq("id", id);
   if (error) return { error: error.message };
