@@ -151,16 +151,16 @@ export default function ShopClient({
   const cartCount = cartItems.reduce((n, item) => n + item.quantity, 0);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <div className={`mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8${cartCount > 0 ? " pb-28 lg:pb-6" : ""}`}>
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
         {/* ── 商品区 ── */}
         <div className="flex-1 min-w-0">
           {/* 大类导航 */}
-          <div className="mb-3 flex flex-wrap gap-2">
+          <div className="mb-3 flex gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button
               type="button"
               onClick={() => selectParent(null)}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
                 selectedParentId === null
                   ? "bg-zinc-900 text-white"
                   : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
@@ -173,7 +173,7 @@ export default function ShopClient({
                 key={cat.id}
                 type="button"
                 onClick={() => selectParent(cat.id)}
-                className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
                   selectedParentId === cat.id
                     ? "bg-zinc-900 text-white"
                     : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
@@ -185,7 +185,7 @@ export default function ShopClient({
             <button
               type="button"
               onClick={() => selectParent(UNCATEGORIZED)}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
                 selectedParentId === UNCATEGORIZED
                   ? "bg-zinc-900 text-white"
                   : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50"
@@ -197,11 +197,11 @@ export default function ShopClient({
 
           {/* 小类导航 */}
           {currentChildren.length > 0 && (
-            <div className="mb-3 flex flex-wrap gap-2 pl-2">
+            <div className="mb-3 flex gap-2 overflow-x-auto pb-2 pl-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <button
                 type="button"
                 onClick={() => setSelectedChildId(null)}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                   selectedChildId === null
                     ? "bg-zinc-700 text-white"
                     : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
@@ -214,7 +214,7 @@ export default function ShopClient({
                   key={child.id}
                   type="button"
                   onClick={() => setSelectedChildId(child.id)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                  className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
                     selectedChildId === child.id
                       ? "bg-zinc-700 text-white"
                       : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"
@@ -359,7 +359,7 @@ export default function ShopClient({
                                 [product.id]: Math.max(0, qty - 1),
                               }))
                             }
-                            className="flex h-8 w-8 items-center justify-center text-zinc-500 transition hover:text-zinc-900 disabled:opacity-30"
+                            className="flex h-11 w-11 items-center justify-center text-zinc-500 transition hover:text-zinc-900 disabled:opacity-30 sm:h-8 sm:w-8"
                           >
                             −
                           </button>
@@ -378,7 +378,7 @@ export default function ShopClient({
                                 ),
                               }))
                             }
-                            className="w-10 bg-transparent text-center text-sm text-zinc-900 outline-none disabled:opacity-40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            className="w-12 bg-transparent text-center text-sm text-zinc-900 outline-none disabled:opacity-40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none sm:w-10"
                           />
                           <button
                             type="button"
@@ -389,7 +389,7 @@ export default function ShopClient({
                                 [product.id]: Math.min(product.stock, qty + 1),
                               }))
                             }
-                            className="flex h-8 w-8 items-center justify-center text-zinc-500 transition hover:text-zinc-900 disabled:opacity-30"
+                            className="flex h-11 w-11 items-center justify-center text-zinc-500 transition hover:text-zinc-900 disabled:opacity-30 sm:h-8 sm:w-8"
                           >
                             +
                           </button>
@@ -398,7 +398,7 @@ export default function ShopClient({
                           type="button"
                           disabled={outOfStock || qty <= 0}
                           onClick={() => addToCart(product)}
-                          className="flex-1 rounded-lg bg-zinc-900 py-2 text-xs font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
+                          className="flex-1 rounded-lg bg-zinc-900 py-3 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 sm:py-2 sm:text-xs"
                         >
                           {outOfStock ? "缺货" : "加入购物车"}
                         </button>
@@ -510,7 +510,7 @@ export default function ShopClient({
                 <button
                   type="button"
                   onClick={handleRepeatOrder}
-                  className="mt-3 w-full rounded-lg border border-zinc-200 py-2 text-sm font-medium text-zinc-600 transition hover:bg-zinc-50"
+                  className="mt-3 w-full rounded-xl border-2 border-zinc-300 py-3.5 text-base font-semibold text-zinc-700 transition hover:bg-zinc-50 sm:border sm:py-2 sm:text-sm sm:font-medium"
                 >
                   再来一单
                 </button>
@@ -519,7 +519,7 @@ export default function ShopClient({
                 type="button"
                 onClick={handleSubmit}
                 disabled={cartItems.length === 0 || isPending}
-                className="mt-2 w-full rounded-lg bg-zinc-900 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
+                className="mt-2 w-full rounded-lg bg-zinc-900 py-3.5 text-base font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40 sm:py-2.5 sm:text-sm"
               >
                 {isPending ? "提交中…" : "提交订单"}
               </button>
@@ -527,6 +527,34 @@ export default function ShopClient({
           </div>
         </div>
       </div>
+
+      {/* 手机底部固定购物车操作栏 */}
+      {cartCount > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-zinc-200 bg-white px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,.10)] lg:hidden">
+          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-zinc-900">已选 {cartCount} 件</p>
+              <p className="text-xs text-zinc-500">合计 ¥{total.toFixed(2)}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isPending}
+              className="shrink-0 rounded-xl bg-zinc-900 px-8 py-3 text-base font-semibold text-white transition hover:bg-zinc-700 disabled:opacity-50"
+            >
+              {isPending ? "提交中…" : "提交订单"}
+            </button>
+          </div>
+          {result && "error" in result && (
+            <p className="mt-2 text-center text-xs text-red-600">{result.error}</p>
+          )}
+          {result && "success" in result && (
+            <p className="mt-2 text-center text-xs text-green-600">
+              订单提交成功！单号 {result.orderId.slice(0, 8)}…
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

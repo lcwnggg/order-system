@@ -31,8 +31,8 @@ export default async function StockAlertPage() {
   return (
     <div className="min-h-screen bg-zinc-50">
       <header className="border-b border-zinc-200 bg-white px-6 py-4">
-        <div className="mx-auto flex max-w-3xl items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="mx-auto flex max-w-3xl items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <Link href="/" className="text-sm text-zinc-500 transition-colors hover:text-zinc-900">
               ← 首页
             </Link>
@@ -43,8 +43,8 @@ export default async function StockAlertPage() {
             <span className="text-zinc-300">/</span>
             <span className="text-sm font-semibold text-zinc-900">库存告急</span>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-zinc-500">{user.email}</span>
+          <div className="flex shrink-0 items-center gap-3">
+            <span className="hidden text-sm text-zinc-500 sm:block">{user.email}</span>
             <form action={signOut}>
               <button
                 type="submit"

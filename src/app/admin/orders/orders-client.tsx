@@ -224,7 +224,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
       {/* ── 待备货汇总 ── */}
       <div className="rounded-xl border border-amber-200 bg-amber-50 overflow-hidden">
         {/* 汇总标题 + 视图切换 */}
-        <div className="flex items-center justify-between px-5 pt-4 pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 pb-3">
           <h2 className="text-sm font-semibold text-amber-800">
             待备货汇总
             <span className="ml-2 font-normal text-amber-600">

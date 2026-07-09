@@ -57,8 +57,8 @@ export default async function ShopPage() {
             <span className="text-zinc-300">/</span>
             <span className="text-sm font-semibold text-zinc-900">门店下单</span>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-zinc-500">{user.email}</span>
+          <div className="flex shrink-0 items-center gap-3">
+            <span className="hidden text-sm text-zinc-500 sm:block">{user.email}</span>
             <form action={signOut}>
               <button
                 type="submit"

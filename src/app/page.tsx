@@ -54,9 +54,9 @@ export default async function Home() {
       <header className="border-b border-zinc-200 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-5xl items-center justify-between">
           <span className="text-sm font-semibold text-zinc-900">我的小店</span>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {isWarehouse && (
-              <>
+              <div className="hidden items-center gap-2 sm:flex">
                 <Link
                   href="/admin/products"
                   className="rounded-lg bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
@@ -81,7 +81,7 @@ export default async function Home() {
                 >
                   分类管理
                 </Link>
-              </>
+              </div>
             )}
             {isStore && (
               <Link

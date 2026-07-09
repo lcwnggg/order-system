@@ -232,6 +232,7 @@ export default function ProductList({
         </div>
       )}
       <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+        <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-zinc-100 bg-zinc-50 text-left">
@@ -367,6 +368,7 @@ export default function ProductList({
             })}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* ── 编辑弹窗 ── */}
