@@ -75,6 +75,8 @@ export default function ShopClient({
     localStorage.setItem(VIEW_MODE_KEY, mode);
   }
 
+  const [mobileCartOpen, setMobileCartOpen] = useState(false);
+
   // ── 分类派生 ──
   const parentCategories = categories.filter((c) => !c.parent_id);
   const currentChildren =
@@ -573,21 +575,123 @@ export default function ShopClient({
         </div>
       </div>
 
-      {/* 手机底部固定操作栏 */}
+      {/* 手机底部固定购物车入口 */}
       {cartCount > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-zinc-200 bg-white px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,.10)] lg:hidden">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
-            <div className="min-w-0">
+        <button
+          type="button"
+          onClick={() => setMobileCartOpen(true)}
+          className="fixed inset-x-0 bottom-0 z-40 flex w-full items-center justify-between border-t border-zinc-200 bg-white px-5 py-3.5 shadow-[0_-4px_16px_rgba(0,0,0,.10)] lg:hidden"
+        >
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <svg className="h-6 w-6 text-zinc-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-zinc-900 text-[10px] font-bold text-white">
+                {cartCount > 9 ? "9+" : cartCount}
+              </span>
+            </div>
+            <div className="text-left">
               <p className="text-sm font-semibold text-zinc-900">已选 {cartCount} 件</p>
               <p className="text-xs text-zinc-500">合计 ¥{total.toFixed(2)}</p>
             </div>
-            <button type="button" onClick={handleSubmit} disabled={isPending}
-              className="shrink-0 rounded-xl bg-zinc-900 px-8 py-3 text-base font-semibold text-white transition hover:bg-zinc-700 disabled:opacity-50">
-              {isPending ? "提交中…" : "提交订单"}
-            </button>
           </div>
-          {result && "error" in result && <p className="mt-2 text-center text-xs text-red-600">{result.error}</p>}
-          {result && "success" in result && <p className="mt-2 text-center text-xs text-green-600">订单提交成功！单号 {result.orderId.slice(0, 8)}…</p>}
+          <span className="rounded-xl bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white">查看购物车</span>
+        </button>
+      )}
+
+      {/* 手机购物车滑出面板 */}
+      {mobileCartOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setMobileCartOpen(false)} />
+          <div className="absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-2xl bg-white">
+            {/* 面板头部 */}
+            <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-5 py-4">
+              <h2 className="font-semibold text-zinc-900">
+                购物车
+                {cartCount > 0 && (
+                  <span className="ml-2 rounded-full bg-zinc-900 px-2 py-0.5 text-xs font-medium text-white">{cartCount}</span>
+                )}
+              </h2>
+              <button type="button" onClick={() => setMobileCartOpen(false)}
+                className="rounded-lg p-1 text-zinc-400 hover:text-zinc-600">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* 商品列表 */}
+            <div className="flex-1 overflow-y-auto px-5 py-2">
+              {cartEntries.length === 0 ? (
+                <p className="py-12 text-center text-sm text-zinc-400">购物车为空</p>
+              ) : (
+                <ul className="divide-y divide-zinc-100">
+                  {cartEntries.map(([key, { product, variant, quantity }]) => (
+                    <li key={key} className="flex items-start gap-3 py-3">
+                      {product.image_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={product.image_url} alt={product.name} className="h-14 w-14 shrink-0 rounded-lg object-cover" />
+                      ) : (
+                        <div className="h-14 w-14 shrink-0 rounded-lg bg-zinc-100" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium leading-snug text-zinc-900">
+                          {product.name}
+                          {variant && <span className="ml-1 text-zinc-400">· {variant.color}</span>}
+                        </p>
+                        <p className="mt-0.5 text-xs text-zinc-400">¥{Number(product.price).toFixed(2)} / 件</p>
+                        <p className="mt-1 text-sm font-bold text-zinc-900">¥{(product.price * quantity).toFixed(2)}</p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-2">
+                        <button type="button" onClick={() => removeFromCart(key)}
+                          className="text-zinc-300 hover:text-red-400">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                        <div className="flex items-center rounded-lg border border-zinc-200">
+                          <button type="button" onClick={() => changeCartQty(key, -1)}
+                            className="flex h-9 w-9 items-center justify-center text-zinc-500 hover:text-zinc-900">−</button>
+                          <span className="w-8 text-center text-sm font-medium text-zinc-900">{quantity}</span>
+                          <button type="button" onClick={() => changeCartQty(key, 1)}
+                            disabled={quantity >= (variant ? variant.stock : product.stock)}
+                            className="flex h-9 w-9 items-center justify-center text-zinc-500 hover:text-zinc-900 disabled:opacity-30">+</button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* 面板底部操作区 */}
+            <div className="shrink-0 border-t border-zinc-100 px-5 pb-8 pt-4">
+              <div className="mb-4 flex items-baseline justify-between">
+                <span className="text-sm text-zinc-500">共 {cartCount} 件</span>
+                <span className="text-xl font-bold text-zinc-900">¥{total.toFixed(2)}</span>
+              </div>
+              {result && "error" in result && (
+                <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{result.error}</p>
+              )}
+              {result && "success" in result && (
+                <p className="mb-3 rounded-lg bg-green-50 px-3 py-2 text-xs text-green-600">
+                  订单提交成功！订单号：{result.orderId.slice(0, 8)}…
+                </p>
+              )}
+              {lastOrderItems.length > 0 && (
+                <button type="button" onClick={handleRepeatOrder}
+                  className="mb-2 w-full rounded-xl border-2 border-zinc-300 py-3 text-base font-semibold text-zinc-700 transition hover:bg-zinc-50">
+                  再来一单
+                </button>
+              )}
+              <button type="button" onClick={handleSubmit} disabled={cartEntries.length === 0 || isPending}
+                className="w-full rounded-xl bg-zinc-900 py-3.5 text-base font-semibold text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-40">
+                {isPending ? "提交中…" : "提交订单"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

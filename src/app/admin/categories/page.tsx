@@ -28,7 +28,7 @@ export default async function AdminCategoriesPage() {
 
   const { data: productsData } = await supabase
     .from("products")
-    .select("id, name, category_id")
+    .select("id, name, category_id, price, stock")
     .order("name");
 
   const flat = (allCategories ?? []) as Category[];

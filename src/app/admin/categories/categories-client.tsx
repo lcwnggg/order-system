@@ -23,6 +23,8 @@ export type ProductSummary = {
   id: string;
   name: string;
   category_id: string | null;
+  price: number;
+  stock: number;
 };
 
 export default function CategoriesClient({
@@ -55,8 +57,9 @@ export default function CategoriesClient({
   const [deleteResults, setDeleteResults] = useState<Record<string, ActionResult>>({});
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  // ── 展开小类商品列表 ──
+  // ── 展开商品列表 ──
   const [expandedChildId, setExpandedChildId] = useState<string | null>(null);
+  const [expandedParentId, setExpandedParentId] = useState<string | null>(null);
 
   // ── 移出分类 ──
   const [removingProductId, setRemovingProductId] = useState<string | null>(null);
@@ -74,7 +77,8 @@ export default function CategoriesClient({
   }
 
   function countInParent(parent: CategoryTree) {
-    return parent.children.reduce(
+    const direct = productsInCategory(parent.id).length;
+    return direct + parent.children.reduce(
       (sum, child) => sum + productsInCategory(child.id).length,
       0
     );
@@ -326,6 +330,15 @@ export default function CategoriesClient({
                     )}
                     {editingId !== parent.id && (
                       <div className="flex items-center gap-1">
+                        {productsInCategory(parent.id).length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setExpandedParentId(expandedParentId === parent.id ? null : parent.id)}
+                            className={`${btnOutlineCls} min-w-[52px]`}
+                          >
+                            {expandedParentId === parent.id ? "收起" : "展开"}
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => startRename(parent)}
@@ -354,6 +367,46 @@ export default function CategoriesClient({
                   {renameResults[parent.id] && "error" in renameResults[parent.id] && (
                     <div className="border-b border-red-100 bg-red-50 px-5 py-2 text-xs text-red-600">
                       {(renameResults[parent.id] as { error: string }).error}
+                    </div>
+                  )}
+
+                  {/* 直属商品展开区（挂在大类上的商品） */}
+                  {expandedParentId === parent.id && (
+                    <div className="border-t border-zinc-50 bg-zinc-50/60 px-8 py-3">
+                      {productsInCategory(parent.id).length === 0 ? (
+                        <p className="py-2 text-xs text-zinc-400">暂无直接归属商品</p>
+                      ) : (
+                        <ul className="mb-3 space-y-1">
+                          {productsInCategory(parent.id).map((p) => (
+                            <li key={p.id} className="flex items-center gap-2">
+                              <span className="min-w-0 flex-1 truncate text-xs text-zinc-700">{p.name}</span>
+                              <span className="shrink-0 text-xs text-zinc-500">¥{Number(p.price).toFixed(2)}</span>
+                              <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-xs font-medium leading-none ${
+                                p.stock === 0 ? "bg-red-50 text-red-600"
+                                  : p.stock <= 5 ? "bg-amber-50 text-amber-600"
+                                  : "bg-green-50 text-green-600"
+                              }`}>
+                                {p.stock === 0 ? "售罄" : p.stock}
+                              </span>
+                              <button
+                                type="button"
+                                disabled={removingProductId === p.id}
+                                onClick={() => handleRemoveProduct(p.id, p.name)}
+                                className="shrink-0 rounded px-2 py-0.5 text-xs text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-40"
+                              >
+                                {removingProductId === p.id ? "…" : "移出分类"}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => openAddModal(parent.id, parent.name)}
+                        className="rounded-lg border border-dashed border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:border-zinc-400 hover:bg-white hover:text-zinc-700"
+                      >
+                        + 添加商品到此大类
+                      </button>
                     </div>
                   )}
 
@@ -449,9 +502,17 @@ export default function CategoriesClient({
                                     {childProducts.map((p) => (
                                       <li
                                         key={p.id}
-                                        className="flex items-center justify-between gap-2"
+                                        className="flex items-center gap-2"
                                       >
-                                        <span className="text-xs text-zinc-700">{p.name}</span>
+                                        <span className="min-w-0 flex-1 truncate text-xs text-zinc-700">{p.name}</span>
+                                        <span className="shrink-0 text-xs text-zinc-500">¥{Number(p.price).toFixed(2)}</span>
+                                        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-xs font-medium leading-none ${
+                                          p.stock === 0 ? "bg-red-50 text-red-600"
+                                            : p.stock <= 5 ? "bg-amber-50 text-amber-600"
+                                            : "bg-green-50 text-green-600"
+                                        }`}>
+                                          {p.stock === 0 ? "售罄" : p.stock}
+                                        </span>
                                         <button
                                           type="button"
                                           disabled={removingProductId === p.id}
