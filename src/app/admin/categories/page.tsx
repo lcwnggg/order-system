@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/actions/auth";
 import CategoriesClient, { type Category, type CategoryTree, type ProductSummary } from "./categories-client";
+import type { ProductVariant } from "@/app/admin/products/actions";
 
 export default async function AdminCategoriesPage() {
   const supabase = await createClient();
@@ -26,10 +27,16 @@ export default async function AdminCategoriesPage() {
     .order("sort_order")
     .order("created_at");
 
-  const { data: productsData } = await supabase
-    .from("products")
-    .select("id, name, category_id, price, stock")
-    .order("name");
+  const [{ data: productsData }, { data: variantsData }] = await Promise.all([
+    supabase
+      .from("products")
+      .select("id, name, category_id, price, stock, description, image_url, is_active, has_variants, brand, created_at")
+      .order("name"),
+    supabase
+      .from("product_variants")
+      .select("id, product_id, color, stock, sort_order")
+      .order("sort_order"),
+  ]);
 
   const flat = (allCategories ?? []) as Category[];
   const parents = flat.filter((c) => !c.parent_id);
@@ -39,6 +46,7 @@ export default async function AdminCategoriesPage() {
   }));
 
   const products = (productsData ?? []) as ProductSummary[];
+  const variants = (variantsData ?? []) as ProductVariant[];
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -84,7 +92,7 @@ export default async function AdminCategoriesPage() {
             管理两级商品分类目录（大类 › 小类），商品可归属到任意小类。
           </p>
         </div>
-        <CategoriesClient categoryTree={categoryTree} products={products} />
+        <CategoriesClient categoryTree={categoryTree} products={products} variants={variants} />
       </main>
     </div>
   );

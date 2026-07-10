@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   addCategory,
   renameCategory,
@@ -9,6 +10,8 @@ import {
   removeProductFromCategory,
   type ActionResult,
 } from "./actions";
+import type { ProductVariant } from "@/app/admin/products/actions";
+import ProductEditModal from "@/app/admin/products/product-edit-modal";
 
 export type Category = {
   id: string;
@@ -25,16 +28,32 @@ export type ProductSummary = {
   category_id: string | null;
   price: number;
   stock: number;
+  description: string | null;
+  image_url: string | null;
+  is_active: boolean;
+  has_variants: boolean;
+  brand: string | null;
+  created_at: string;
 };
 
 export default function CategoriesClient({
   categoryTree,
   products,
+  variants,
 }: {
   categoryTree: CategoryTree[];
   products: ProductSummary[];
+  variants: ProductVariant[];
 }) {
+  const router = useRouter();
   const [, startTransition] = useTransition();
+
+  // ── 编辑商品弹窗 ──
+  const [editingProduct, setEditingProduct] = useState<ProductSummary | null>(null);
+
+  function variantsFor(productId: string) {
+    return variants.filter((v) => v.product_id === productId);
+  }
 
   // ── 新增大类 ──
   const [newParentName, setNewParentName] = useState("");
@@ -379,7 +398,13 @@ export default function CategoriesClient({
                         <ul className="mb-3 space-y-1">
                           {productsInCategory(parent.id).map((p) => (
                             <li key={p.id} className="flex items-center gap-2">
-                              <span className="min-w-0 flex-1 truncate text-xs text-zinc-700">{p.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => setEditingProduct(p)}
+                                className="min-w-0 flex-1 truncate text-left text-xs text-zinc-700 hover:text-zinc-900 hover:underline"
+                              >
+                                {p.name}
+                              </button>
                               <span className="shrink-0 text-xs text-zinc-500">¥{Number(p.price).toFixed(2)}</span>
                               <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-xs font-medium leading-none ${
                                 p.stock === 0 ? "bg-red-50 text-red-600"
@@ -504,7 +529,13 @@ export default function CategoriesClient({
                                         key={p.id}
                                         className="flex items-center gap-2"
                                       >
-                                        <span className="min-w-0 flex-1 truncate text-xs text-zinc-700">{p.name}</span>
+                                        <button
+                                          type="button"
+                                          onClick={() => setEditingProduct(p)}
+                                          className="min-w-0 flex-1 truncate text-left text-xs text-zinc-700 hover:text-zinc-900 hover:underline"
+                                        >
+                                          {p.name}
+                                        </button>
                                         <span className="shrink-0 text-xs text-zinc-500">¥{Number(p.price).toFixed(2)}</span>
                                         <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-xs font-medium leading-none ${
                                           p.stock === 0 ? "bg-red-50 text-red-600"
@@ -545,6 +576,20 @@ export default function CategoriesClient({
           </div>
         )}
       </div>
+
+      {/* ── 编辑商品弹窗 ── */}
+      {editingProduct && (
+        <ProductEditModal
+          product={editingProduct}
+          categories={categoryTree.flatMap((p) => [
+            { id: p.id, name: p.name, parent_id: p.parent_id, sort_order: p.sort_order },
+            ...p.children.map((c) => ({ id: c.id, name: c.name, parent_id: c.parent_id, sort_order: c.sort_order })),
+          ])}
+          variantsForProduct={variantsFor(editingProduct.id)}
+          onClose={() => setEditingProduct(null)}
+          onSaved={() => router.refresh()}
+        />
+      )}
 
       {/* ── Modal：选择商品 ── */}
       {addModalCatId && (
