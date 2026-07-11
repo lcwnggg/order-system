@@ -237,15 +237,15 @@ export async function adjustStock(id: string, delta: number): Promise<ActionResu
 }
 
 // ── 批量导入 ──
+// 第一版只处理无变体的普通商品；同名行（无论是否与已有商品同名）一律走
+// 跳过/覆盖/全部新建 三选一处理。变体商品请继续用单个创建/编辑界面。
 
 export type BulkImportRow = {
   nombre: string;
   marca: string | null;
   categoryId: string | null;
   precio: number;
-  hasVariants: boolean;
-  stock: number; // 无变体时使用
-  variants: { color: string; stock: number }[]; // 有变体时使用
+  stock: number;
   isDuplicate: boolean;
   existingProductId?: string;
 };
@@ -276,11 +276,11 @@ export async function bulkImportProducts(
 
   skipped += toSkip.length;
 
-  // 覆盖已有商品：逐条更新（数量通常较少）
+  // 覆盖已有商品：逐条更新（数量通常较少），只更新 products 表的普通字段
   for (const row of toOverwrite) {
     if (!row.existingProductId) {
-      failed++;
-      errors.push(`${row.nombre}: 缺少原商品 ID`);
+      // 同名但不是已有商品的重复（文件内重名，找不到可覆盖的目标）
+      skipped++;
       continue;
     }
     const { error: updErr } = await supabase
@@ -289,8 +289,7 @@ export async function bulkImportProducts(
         price: row.precio,
         brand: row.marca,
         category_id: row.categoryId,
-        has_variants: row.hasVariants,
-        stock: row.hasVariants ? 0 : row.stock,
+        stock: row.stock,
       })
       .eq("id", row.existingProductId);
     if (updErr) {
@@ -298,83 +297,27 @@ export async function bulkImportProducts(
       errors.push(`${row.nombre}: ${updErr.message}`);
       continue;
     }
-
-    if (row.hasVariants) {
-      const { data: existingVariants } = await supabase
-        .from("product_variants")
-        .select("id, color")
-        .eq("product_id", row.existingProductId);
-      let variantErr: string | null = null;
-      for (const v of row.variants) {
-        const match = (existingVariants ?? []).find(
-          (ev) => ev.color.trim().toLowerCase() === v.color.trim().toLowerCase()
-        );
-        if (match) {
-          const { error } = await supabase
-            .from("product_variants")
-            .update({ stock: v.stock })
-            .eq("id", match.id);
-          if (error) variantErr = error.message;
-        } else {
-          const { error } = await supabase.from("product_variants").insert({
-            product_id: row.existingProductId,
-            color: v.color,
-            stock: v.stock,
-            sort_order: existingVariants?.length ?? 0,
-          });
-          if (error) variantErr = error.message;
-        }
-      }
-      if (variantErr) {
-        failed++;
-        errors.push(`${row.nombre}: ${variantErr}`);
-        continue;
-      }
-    }
     imported++;
   }
 
-  // 新商品：批量插入商品行，再批量插入变体行
+  // 新商品：批量插入
   if (toInsertNew.length > 0) {
-    const { data: insertedProducts, error: insErr } = await supabase
-      .from("products")
-      .insert(
-        toInsertNew.map((row) => ({
-          name: row.nombre,
-          brand: row.marca,
-          category_id: row.categoryId,
-          price: row.precio,
-          has_variants: row.hasVariants,
-          stock: row.hasVariants ? 0 : row.stock,
-        }))
-      )
-      .select("id");
+    const { error: insErr } = await supabase.from("products").insert(
+      toInsertNew.map((row) => ({
+        name: row.nombre,
+        brand: row.marca,
+        category_id: row.categoryId,
+        price: row.precio,
+        has_variants: false,
+        stock: row.stock,
+      }))
+    );
 
-    if (insErr || !insertedProducts) {
+    if (insErr) {
       failed += toInsertNew.length;
-      errors.push(`批量新增商品失败：${insErr?.message ?? "未知错误"}`);
+      errors.push(`批量新增商品失败：${insErr.message}`);
     } else {
-      const variantRows: { product_id: string; color: string; stock: number; sort_order: number }[] = [];
-      insertedProducts.forEach((p, i) => {
-        const row = toInsertNew[i];
-        if (row.hasVariants) {
-          row.variants.forEach((v, vi) =>
-            variantRows.push({ product_id: p.id, color: v.color, stock: v.stock, sort_order: vi })
-          );
-        }
-      });
-
-      if (variantRows.length > 0) {
-        const { error: varErr } = await supabase.from("product_variants").insert(variantRows);
-        if (varErr) {
-          failed += toInsertNew.length;
-          errors.push(`商品已创建，但变体写入失败：${varErr.message}`);
-        } else {
-          imported += toInsertNew.length;
-        }
-      } else {
-        imported += toInsertNew.length;
-      }
+      imported += toInsertNew.length;
     }
   }
 

@@ -37,7 +37,6 @@ type CellKey = "nombre" | "categoria" | "subcategoria" | "precio" | "stock";
 
 type RowValidation = {
   cellErrors: Partial<Record<CellKey, string>>;
-  rowErrors: string[];
   isDuplicate: boolean;
   existingProductId?: string;
 };
@@ -47,7 +46,7 @@ function normalize(s: string) {
 }
 
 function rowHasError(rv: RowValidation) {
-  return Object.keys(rv.cellErrors).length > 0 || rv.rowErrors.length > 0;
+  return Object.keys(rv.cellErrors).length > 0;
 }
 
 function matchCategoryId(raw: string, candidates: CategoryRow[]): string {
@@ -56,16 +55,18 @@ function matchCategoryId(raw: string, candidates: CategoryRow[]): string {
   return hit ? hit.id : "";
 }
 
-function appendRowError(map: Map<string, RowValidation>, key: string, msg: string) {
-  const rv = map.get(key);
-  if (rv && !rv.rowErrors.includes(msg)) rv.rowErrors.push(msg);
-}
-
+// 第一版只导入普通商品：不做变体分组。同名行（不论是与已有商品同名，
+// 还是文件内多行同名）一律标记为“重复”，统一走跳过/覆盖/全部新建。
 function validateRows(
   rows: ImportRow[],
   existingProducts: ExistingProduct[]
 ): Map<string, RowValidation> {
   const result = new Map<string, RowValidation>();
+
+  const existingByName = new Map<string, ExistingProduct>();
+  for (const p of existingProducts) existingByName.set(normalize(p.name), p);
+
+  const seenInFile = new Set<string>();
 
   for (const row of rows) {
     const cellErrors: Partial<Record<CellKey, string>> = {};
@@ -86,77 +87,16 @@ function validateRows(
       cellErrors.stock = "库存须为非负整数";
     }
 
-    result.set(row.key, { cellErrors, rowErrors: [], isDuplicate: false });
-  }
+    const norm = normalize(row.nombre);
+    const dbMatch = norm !== "" ? existingByName.get(norm) : undefined;
+    const fileDup = norm !== "" && seenInFile.has(norm);
+    if (norm !== "") seenInFile.add(norm);
 
-  // 按商品名称分组（大小写不敏感），用于重复检测与变体一致性校验
-  const groups = new Map<string, ImportRow[]>();
-  for (const row of rows) {
-    if (row.nombre.trim() === "") continue;
-    const key = normalize(row.nombre);
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key)!.push(row);
-  }
-
-  const existingByName = new Map<string, ExistingProduct>();
-  for (const p of existingProducts) existingByName.set(normalize(p.name), p);
-
-  for (const [key, groupRows] of groups) {
-    const existing = existingByName.get(key);
-    for (const row of groupRows) {
-      const rv = result.get(row.key)!;
-      rv.isDuplicate = !!existing;
-      rv.existingProductId = existing?.id;
-    }
-
-    if (groupRows.length > 1) {
-      const colorsFilled = groupRows.map((r) => r.color.trim() !== "");
-      const anyFilled = colorsFilled.some(Boolean);
-      const allFilled = colorsFilled.every(Boolean);
-
-      if (anyFilled && !allFilled) {
-        for (const row of groupRows) {
-          appendRowError(
-            result,
-            row.key,
-            "同一商品名下的行需统一：要么每行都填颜色（作为该商品的变体），要么该商品只有一行且不填颜色"
-          );
-        }
-      } else if (allFilled) {
-        const counts = new Map<string, number>();
-        for (const row of groupRows) {
-          const c = normalize(row.color);
-          counts.set(c, (counts.get(c) ?? 0) + 1);
-        }
-        for (const row of groupRows) {
-          if ((counts.get(normalize(row.color)) ?? 0) > 1) {
-            appendRowError(result, row.key, "同一商品下颜色重复");
-          }
-        }
-      }
-
-      const first = groupRows[0];
-      for (const row of groupRows.slice(1)) {
-        if (row.marca !== first.marca) {
-          appendRowError(result, row.key, "同一商品的品牌需保持一致");
-          appendRowError(result, first.key, "同一商品的品牌需保持一致");
-        }
-        if (row.categoriaId !== first.categoriaId) {
-          appendRowError(result, row.key, "同一商品的分类需保持一致");
-          appendRowError(result, first.key, "同一商品的分类需保持一致");
-        }
-        if (row.subcategoriaId !== first.subcategoriaId) {
-          appendRowError(result, row.key, "同一商品的子分类需保持一致");
-          appendRowError(result, first.key, "同一商品的子分类需保持一致");
-        }
-        const p1 = Number(first.precio);
-        const p2 = Number(row.precio);
-        if (!isNaN(p1) && !isNaN(p2) && p1 !== p2) {
-          appendRowError(result, row.key, "同一商品的价格需保持一致（价格是商品级字段，不能分颜色设置）");
-          appendRowError(result, first.key, "同一商品的价格需保持一致（价格是商品级字段，不能分颜色设置）");
-        }
-      }
-    }
+    result.set(row.key, {
+      cellErrors,
+      isDuplicate: !!dbMatch || fileDup,
+      existingProductId: dbMatch?.id,
+    });
   }
 
   return result;
@@ -166,32 +106,14 @@ function buildSubmission(
   rows: ImportRow[],
   validationMap: Map<string, RowValidation>
 ): BulkImportRow[] {
-  const groups = new Map<string, ImportRow[]>();
-  const order: string[] = [];
-  for (const row of rows) {
-    const key = normalize(row.nombre);
-    if (!groups.has(key)) {
-      groups.set(key, []);
-      order.push(key);
-    }
-    groups.get(key)!.push(row);
-  }
-
-  return order.map((key) => {
-    const groupRows = groups.get(key)!;
-    const first = groupRows[0];
-    const rv = validationMap.get(first.key)!;
-    const hasVariants = groupRows.some((r) => r.color.trim() !== "");
+  return rows.map((row) => {
+    const rv = validationMap.get(row.key)!;
     return {
-      nombre: first.nombre,
-      marca: first.marca.trim() === "" ? null : first.marca,
-      categoryId: first.subcategoriaId || first.categoriaId || null,
-      precio: Number(first.precio),
-      hasVariants,
-      stock: hasVariants ? 0 : parseInt(first.stock, 10),
-      variants: hasVariants
-        ? groupRows.map((r) => ({ color: r.color, stock: parseInt(r.stock, 10) }))
-        : [],
+      nombre: row.nombre,
+      marca: row.marca.trim() === "" ? null : row.marca,
+      categoryId: row.subcategoriaId || row.categoriaId || null,
+      precio: Number(row.precio),
+      stock: parseInt(row.stock, 10),
       isDuplicate: rv.isDuplicate,
       existingProductId: rv.existingProductId,
     };
@@ -410,7 +332,8 @@ export default function ImportClient({
         <div>
           <p className="text-sm font-medium text-zinc-900">1. 下载模板，按格式填写商品数据</p>
           <p className="mt-1 text-xs text-zinc-400">
-            列固定为 nombre、marca、categoria、subcategoria、color、precio、stock。同一商品有多个颜色时，每个颜色一行、商品名称保持一致。
+            列固定为 nombre、marca、categoria、subcategoria、color、precio、stock。当前版本批量导入只创建无变体的普通商品：
+            color 列会保留在预览表中供参考，但不会写入、也不会自动创建颜色变体；如需分颜色库存，请导入后到商品编辑页手动添加。
           </p>
         </div>
         <button
@@ -464,7 +387,7 @@ export default function ImportClient({
           {hasDuplicates && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
               <p className="mb-2 text-sm font-medium text-amber-900">
-                检测到与现有商品同名的行，请选择处理方式：
+                检测到重名商品（与已有商品同名，或文件内多行同名），请选择处理方式：
               </p>
               <div className="flex flex-wrap gap-4">
                 {(
@@ -497,7 +420,7 @@ export default function ImportClient({
                   <th className="px-3 py-2 text-xs font-medium text-zinc-400">marca</th>
                   <th className="px-3 py-2 text-xs font-medium text-zinc-400">categoria</th>
                   <th className="px-3 py-2 text-xs font-medium text-zinc-400">subcategoria</th>
-                  <th className="px-3 py-2 text-xs font-medium text-zinc-400">color</th>
+                  <th className="px-3 py-2 text-xs font-medium text-zinc-400">color（仅参考，不导入）</th>
                   <th className="px-3 py-2 text-xs font-medium text-zinc-400">precio</th>
                   <th className="px-3 py-2 text-xs font-medium text-zinc-400">stock</th>
                   <th className="px-3 py-2 text-xs font-medium text-zinc-400">状态</th>
@@ -615,11 +538,6 @@ export default function ImportClient({
                               正常
                             </span>
                           )}
-                          {rv.rowErrors.map((e, i) => (
-                            <p key={i} className="text-[11px] text-red-600">
-                              {e}
-                            </p>
-                          ))}
                         </div>
                       </td>
                     </tr>
