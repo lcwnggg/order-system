@@ -5,7 +5,7 @@ import { updateOrderStatus, deleteOrder } from "./actions";
 
 type Product = { id: string; name: string; price: number; category_id: string | null };
 type CategoryItem = { id: string; name: string; parent_id: string | null };
-export type OrderItem = { id: string; quantity: number; product: Product; variantColor: string | null };
+export type OrderItem = { id: string; quantity: number; product: Product; unitPrice: number; variantColor: string | null };
 export type Order = {
   id: string;
   store_id: string;
@@ -229,7 +229,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
   }
 
   function orderTotal(items: OrderItem[]) {
-    return items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
+    return items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
   }
 
   const filterTabs: { value: FilterValue; label: string }[] = [
@@ -447,10 +447,10 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                         )}
                       </span>
                       <span className="text-zinc-400">
-                        €{Number(item.product.price).toFixed(2)} × {item.quantity}
+                        €{Number(item.unitPrice).toFixed(2)} × {item.quantity}
                       </span>
                       <span className="w-20 text-right font-medium text-zinc-900">
-                        €{(item.product.price * item.quantity).toFixed(2)}
+                        €{(item.unitPrice * item.quantity).toFixed(2)}
                       </span>
                     </div>
                   ))}

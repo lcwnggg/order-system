@@ -180,17 +180,11 @@ export async function adjustVariantStock(variantId: string, delta: number): Prom
   if (!supabase) return { error: "无权限" };
   if (!Number.isInteger(delta) || delta <= 0) return { error: "增加数量必须是正整数" };
 
-  const { data: variant } = await supabase
-    .from("product_variants")
-    .select("stock")
-    .eq("id", variantId)
-    .single();
-  if (!variant) return { error: "变体不存在" };
-
-  const { error } = await supabase
-    .from("product_variants")
-    .update({ stock: variant.stock + delta })
-    .eq("id", variantId);
+  // 原子自增，避免读-改-写竞态（两人同时 +N 会丢更新）
+  const { error } = await supabase.rpc("adjust_variant_stock", {
+    p_id: variantId,
+    p_delta: delta,
+  });
   if (error) return { error: error.message };
 
   revalidatePath("/admin/products");
@@ -214,6 +208,19 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
   const supabase = await requireWarehouse();
   if (!supabase) return { error: "无权限" };
 
+  // 保护历史：被历史订单引用过的商品禁止硬删除（会破坏订单明细/金额）。
+  // 这类商品应「下架」（is_active=false）而不是删除。仅从未被下单过的商品可真正删除。
+  const { count, error: countErr } = await supabase
+    .from("order_items")
+    .select("id", { count: "exact", head: true })
+    .eq("product_id", id);
+  if (countErr) return { error: countErr.message };
+  if ((count ?? 0) > 0) {
+    return {
+      error: "该商品已存在于历史订单，不能删除（会破坏订单记录）。请改用「下架」隐藏它。",
+    };
+  }
+
   const { error } = await supabase.from("products").delete().eq("id", id);
   if (error) return { error: error.message };
 
@@ -226,17 +233,11 @@ export async function adjustStock(id: string, delta: number): Promise<ActionResu
   if (!supabase) return { error: "无权限" };
   if (!Number.isInteger(delta) || delta <= 0) return { error: "增加数量必须是正整数" };
 
-  const { data: product } = await supabase
-    .from("products")
-    .select("stock")
-    .eq("id", id)
-    .single();
-  if (!product) return { error: "商品不存在" };
-
-  const { error } = await supabase
-    .from("products")
-    .update({ stock: product.stock + delta })
-    .eq("id", id);
+  // 原子自增，避免读-改-写竞态（两人同时 +N 会丢更新）
+  const { error } = await supabase.rpc("adjust_product_stock", {
+    p_id: id,
+    p_delta: delta,
+  });
   if (error) return { error: error.message };
 
   revalidatePath("/admin/products");

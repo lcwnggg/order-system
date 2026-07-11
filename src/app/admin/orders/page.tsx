@@ -26,7 +26,7 @@ export default async function AdminOrdersPage() {
       .from("orders")
       .select(
         `id, store_id, status, created_at, note,
-         order_items ( id, quantity, variant_id,
+         order_items ( id, quantity, variant_id, unit_price,
            products ( id, name, price, category_id )
          )`
       )
@@ -92,12 +92,15 @@ export default async function AdminOrdersPage() {
         id: string;
         quantity: number;
         variant_id: string | null;
+        unit_price: number | null;
         products: { id: string; name: string; price: number; category_id: string | null };
       };
       return {
         id: item.id,
         quantity: item.quantity,
         product: item.products,
+        // 下单时的价格快照；旧订单可能为空，回退到当前商品价
+        unitPrice: item.unit_price ?? item.products.price,
         variantColor: item.variant_id ? variantColorMap.get(item.variant_id) ?? null : null,
       } satisfies OrderItem;
     }),
