@@ -23,6 +23,7 @@ export type Product = {
   category_id: string | null;
   has_variants: boolean;
   brand: string | null;
+  barcode: string | null;
   created_at: string;
 };
 
@@ -292,6 +293,11 @@ export default function ProductList({
           ¥{Number(product.price).toFixed(2)}
         </td>
 
+        {/* 条码 */}
+        <td className="px-3 py-1.5 whitespace-nowrap font-mono text-xs text-zinc-500">
+          {product.barcode ? product.barcode : <span className="text-zinc-300">—</span>}
+        </td>
+
         {/* 库存 */}
         <td className="px-3 py-1.5" onClick={(e) => e.stopPropagation()}>
           {product.has_variants ? (
@@ -449,6 +455,15 @@ export default function ProductList({
               )}
             </div>
             <p className="mt-1 text-sm font-bold text-zinc-900">¥{Number(product.price).toFixed(2)}</p>
+            {product.barcode && (
+              <p className="mt-0.5 flex items-center gap-1 font-mono text-[11px] text-zinc-400">
+                <svg className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M4 5a1 1 0 011-1h1m12 0h1a1 1 0 011 1v1m0 12v1a1 1 0 01-1 1h-1M6 20H5a1 1 0 01-1-1v-1M4 12h16M8 8v8m4-8v8m4-8v8" />
+                </svg>
+                <span className="truncate">{product.barcode}</span>
+              </p>
+            )}
           </div>
           <button
             type="button"
@@ -554,6 +569,7 @@ export default function ProductList({
         <th className="px-3 py-2 text-xs font-medium text-zinc-400 w-12">图</th>
         <th className="px-3 py-2 text-xs font-medium text-zinc-400">商品 / 品牌 / 分类</th>
         <th className="px-3 py-2 text-xs font-medium text-zinc-400 whitespace-nowrap">价格</th>
+        <th className="px-3 py-2 text-xs font-medium text-zinc-400 whitespace-nowrap">条码</th>
         <th className="px-3 py-2 text-xs font-medium text-zinc-400">库存</th>
         <th className="px-3 py-2 text-xs font-medium text-zinc-400">状态</th>
         <th className="px-3 py-2 w-20"></th>

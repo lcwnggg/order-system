@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { isValidBarcodeFormat, normalizeBarcode } from "@/lib/barcode";
 
 export type ActionResult = { error: string } | { success: true };
 
@@ -53,11 +54,13 @@ export async function addProduct(
   const image_url = (formData.get("image_url") as string) || null;
   const category_id = (formData.get("category_id") as string) || null;
   const brand = (formData.get("brand") as string)?.trim() || null;
+  const barcode = normalizeBarcode(formData.get("barcode") as string);
   const variantsJson = (formData.get("variants") as string) || "[]";
 
   if (!name) return { error: "商品名称不能为空" };
   if (isNaN(price) || price < 0) return { error: "请输入有效价格" };
   if (!has_variants && (isNaN(stock) || stock < 0)) return { error: "请输入有效库存数量" };
+  if (!isValidBarcodeFormat(barcode)) return { error: "条码格式无效（只允许数字、字母、连字符）" };
 
   let variants: { color: string; stock: number }[] = [];
   if (has_variants) {
@@ -72,7 +75,7 @@ export async function addProduct(
 
   const { data: product, error: insertErr } = await supabase
     .from("products")
-    .insert({ name, description: description || null, price, stock, image_url, category_id, has_variants, brand })
+    .insert({ name, description: description || null, price, stock, image_url, category_id, has_variants, brand, barcode })
     .select("id")
     .single();
   if (insertErr) return { error: insertErr.message };
@@ -105,15 +108,19 @@ export async function updateProduct(
     category_id?: string | null;
     has_variants?: boolean;
     brand?: string | null;
+    barcode?: string | null;
   }
 ): Promise<ActionResult> {
   const supabase = await requireWarehouse();
   if (!supabase) return { error: "无权限" };
 
-  const { name, description, price, stock, newImageUrl, category_id, has_variants, brand } = fields;
+  const { name, description, price, stock, newImageUrl, category_id, has_variants, brand, barcode } = fields;
   if (!name) return { error: "商品名称不能为空" };
   if (isNaN(price) || price < 0) return { error: "请输入有效价格" };
   if (has_variants !== true && (isNaN(stock) || stock < 0)) return { error: "请输入有效库存数量" };
+  if (barcode !== undefined && !isValidBarcodeFormat(barcode)) {
+    return { error: "条码格式无效（只允许数字、字母、连字符）" };
+  }
 
   const updateData: Record<string, unknown> = {
     name,
@@ -125,6 +132,7 @@ export async function updateProduct(
   if (category_id !== undefined) updateData.category_id = category_id;
   if (has_variants !== undefined) updateData.has_variants = has_variants;
   if (brand !== undefined) updateData.brand = brand;
+  if (barcode !== undefined) updateData.barcode = normalizeBarcode(barcode);
 
   const { error } = await supabase.from("products").update(updateData).eq("id", id);
   if (error) return { error: error.message };
@@ -246,6 +254,7 @@ export type BulkImportRow = {
   categoryId: string | null;
   precio: number;
   stock: number;
+  barcode: string | null;
   isDuplicate: boolean;
   existingProductId?: string;
 };
@@ -290,6 +299,7 @@ export async function bulkImportProducts(
         brand: row.marca,
         category_id: row.categoryId,
         stock: row.stock,
+        barcode: normalizeBarcode(row.barcode),
       })
       .eq("id", row.existingProductId);
     if (updErr) {
@@ -310,6 +320,7 @@ export async function bulkImportProducts(
         price: row.precio,
         has_variants: false,
         stock: row.stock,
+        barcode: normalizeBarcode(row.barcode),
       }))
     );
 

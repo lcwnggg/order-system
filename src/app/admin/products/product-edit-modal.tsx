@@ -3,6 +3,7 @@
 import { useState, useTransition, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { updateProduct, upsertVariants, type ActionResult } from "./actions";
+import BarcodeField from "./barcode-scanner";
 
 type Product = {
   id: string;
@@ -15,6 +16,7 @@ type Product = {
   category_id: string | null;
   has_variants: boolean;
   brand: string | null;
+  barcode: string | null;
   created_at: string;
 };
 
@@ -91,6 +93,7 @@ export default function ProductEditModal({
 
   const [editName, setEditName] = useState(product.name);
   const [editBrand, setEditBrand] = useState(product.brand ?? "");
+  const [editBarcode, setEditBarcode] = useState(product.barcode ?? "");
   const [editDescription, setEditDescription] = useState(product.description ?? "");
   const [editPrice, setEditPrice] = useState(String(product.price));
   const [editStock, setEditStock] = useState(String(product.stock));
@@ -193,6 +196,7 @@ export default function ProductEditModal({
         category_id: editChildCatId || editParentCatId || null,
         has_variants: editHasVariants,
         brand: editBrand.trim() || null,
+        barcode: editBarcode,
       });
       if ("error" in result) { setSaveResult(result); setIsSaving(false); return; }
       const variantInputs = editVariants.map((v, i) => ({
@@ -278,6 +282,9 @@ export default function ProductEditModal({
                 className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
               />
             </div>
+
+            {/* 条码（可选，支持手机摄像头扫码） */}
+            <BarcodeField value={editBarcode} onChange={setEditBarcode} inputId={`edit-barcode-${product.id}`} />
 
             {/* 价格 */}
             <div>

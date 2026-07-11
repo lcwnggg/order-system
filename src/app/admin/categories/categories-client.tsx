@@ -34,6 +34,7 @@ export type ProductSummary = {
   is_active: boolean;
   has_variants: boolean;
   brand: string | null;
+  barcode: string | null;
   created_at: string;
 };
 

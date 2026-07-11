@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { addProduct, type ActionResult } from "./actions";
 import type { Category } from "@/app/admin/categories/categories-client";
+import BarcodeField from "./barcode-scanner";
 
 function compressToJpeg(file: File, maxWidth = 1200, quality = 0.8): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -53,6 +54,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
   const [selectedChildCatId, setSelectedChildCatId] = useState("");
   const [hasVariants, setHasVariants] = useState(false);
   const [variants, setVariants] = useState<VariantDraft[]>([{ color: "", stock: "0" }]);
+  const [barcode, setBarcode] = useState("");
 
   useEffect(() => {
     if (state && "success" in state) {
@@ -65,6 +67,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
       setSelectedChildCatId("");
       setHasVariants(false);
       setVariants([{ color: "", stock: "0" }]);
+      setBarcode("");
     }
   }, [state]);
 
@@ -184,6 +187,9 @@ export default function ProductForm({ categories = [] }: { categories?: Category
             className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
           />
         </div>
+
+        {/* 条码（可选，支持手机摄像头扫码） */}
+        <BarcodeField name="barcode" value={barcode} onChange={setBarcode} inputId="new-barcode" />
 
         {/* 描述 */}
         <div>

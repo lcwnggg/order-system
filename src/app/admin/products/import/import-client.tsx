@@ -4,6 +4,7 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import * as XLSX from "xlsx";
 import { bulkImportProducts, type BulkImportMode, type BulkImportRow } from "../actions";
+import { isValidBarcodeFormat } from "@/lib/barcode";
 
 type CategoryRow = { id: string; name: string; parent_id: string | null };
 type ExistingProduct = {
@@ -17,7 +18,7 @@ type ExistingProduct = {
 };
 
 // 固定的模板列，顺序与含义均不可由用户/自动推断改变
-const EXPECTED_HEADERS = ["nombre", "marca", "categoria", "subcategoria", "color", "precio", "stock"] as const;
+const EXPECTED_HEADERS = ["nombre", "marca", "categoria", "subcategoria", "color", "precio", "stock", "codigo_barras"] as const;
 type HeaderKey = (typeof EXPECTED_HEADERS)[number];
 
 type ImportRow = {
@@ -31,9 +32,10 @@ type ImportRow = {
   color: string;
   precio: string;
   stock: string;
+  codigoBarras: string;
 };
 
-type CellKey = "nombre" | "categoria" | "subcategoria" | "precio" | "stock";
+type CellKey = "nombre" | "categoria" | "subcategoria" | "precio" | "stock" | "codigo_barras";
 
 type RowValidation = {
   cellErrors: Partial<Record<CellKey, string>>;
@@ -86,6 +88,10 @@ function validateRows(
     if (!/^\d+$/.test(row.stock.trim())) {
       cellErrors.stock = "库存须为非负整数";
     }
+    // 条码：空的允许；填了就检查格式（只允许数字/字母/连字符）
+    if (!isValidBarcodeFormat(row.codigoBarras)) {
+      cellErrors.codigo_barras = "条码格式无效";
+    }
 
     const norm = normalize(row.nombre);
     const dbMatch = norm !== "" ? existingByName.get(norm) : undefined;
@@ -114,6 +120,7 @@ function buildSubmission(
       categoryId: row.subcategoriaId || row.categoriaId || null,
       precio: Number(row.precio),
       stock: parseInt(row.stock, 10),
+      barcode: row.codigoBarras.trim() === "" ? null : row.codigoBarras.trim(),
       isDuplicate: rv.isDuplicate,
       existingProductId: rv.existingProductId,
     };
@@ -123,8 +130,8 @@ function buildSubmission(
 function downloadTemplate() {
   const header = EXPECTED_HEADERS.join(",");
   const sampleRows = [
-    "Cargador USB-C 20W,Anker,Cargadores,,,15.99,50",
-    "Cable USB-C a Lightning,Anker,Cables,,Negro,9.99,30",
+    "Cargador USB-C 20W,Anker,Cargadores,,,15.99,50,8412345678905",
+    "Cable USB-C a Lightning,Anker,Cables,,Negro,9.99,30,",
   ];
   const csv = [header, ...sampleRows].join("\r\n");
   const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
@@ -235,6 +242,7 @@ export default function ImportClient({
           color: get("color"),
           precio: get("precio"),
           stock: get("stock"),
+          codigoBarras: get("codigo_barras"),
         };
       });
 
@@ -244,7 +252,7 @@ export default function ImportClient({
     }
   }
 
-  function updateField(key: string, field: "nombre" | "marca" | "color" | "precio" | "stock", value: string) {
+  function updateField(key: string, field: "nombre" | "marca" | "color" | "precio" | "stock" | "codigoBarras", value: string) {
     setRows((prev) => (prev ? prev.map((r) => (r.key === key ? { ...r, [field]: value } : r)) : prev));
   }
 
@@ -332,8 +340,9 @@ export default function ImportClient({
         <div>
           <p className="text-sm font-medium text-zinc-900">1. 下载模板，按格式填写商品数据</p>
           <p className="mt-1 text-xs text-zinc-400">
-            列固定为 nombre、marca、categoria、subcategoria、color、precio、stock。当前版本批量导入只创建无变体的普通商品：
+            列固定为 nombre、marca、categoria、subcategoria、color、precio、stock、codigo_barras。当前版本批量导入只创建无变体的普通商品：
             color 列会保留在预览表中供参考，但不会写入、也不会自动创建颜色变体；如需分颜色库存，请导入后到商品编辑页手动添加。
+            codigo_barras（条码）为可选，填写则会写入商品；留空即可。
           </p>
         </div>
         <button
@@ -423,6 +432,7 @@ export default function ImportClient({
                   <th className="px-3 py-2 text-xs font-medium text-zinc-400">color（仅参考，不导入）</th>
                   <th className="px-3 py-2 text-xs font-medium text-zinc-400">precio</th>
                   <th className="px-3 py-2 text-xs font-medium text-zinc-400">stock</th>
+                  <th className="px-3 py-2 text-xs font-medium text-zinc-400">codigo_barras</th>
                   <th className="px-3 py-2 text-xs font-medium text-zinc-400">状态</th>
                 </tr>
               </thead>
@@ -519,6 +529,17 @@ export default function ImportClient({
                         />
                         {rv.cellErrors.stock && (
                           <p className="mt-0.5 text-[11px] text-red-600">{rv.cellErrors.stock}</p>
+                        )}
+                      </td>
+                      <td className="px-3 py-1.5 align-top">
+                        <input
+                          value={row.codigoBarras}
+                          onChange={(e) => updateField(row.key, "codigoBarras", e.target.value)}
+                          placeholder="（可留空）"
+                          className={inputCls(rv.cellErrors.codigo_barras)}
+                        />
+                        {rv.cellErrors.codigo_barras && (
+                          <p className="mt-0.5 text-[11px] text-red-600">{rv.cellErrors.codigo_barras}</p>
                         )}
                       </td>
                       <td className="px-3 py-1.5 align-top">
