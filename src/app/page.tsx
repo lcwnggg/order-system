@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/actions/auth";
+import { isLowStock } from "@/lib/stock";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -26,18 +27,29 @@ export default async function Home() {
   let categoryCount = 0;
 
   if (isWarehouse) {
-    const [pending, total, lowStock, stores, cats] = await Promise.all([
+    const [pending, total, stores, cats, prodStock, varStock] = await Promise.all([
       supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "pending"),
       supabase.from("products").select("id", { count: "exact", head: true }),
-      supabase.from("products").select("id", { count: "exact", head: true }).lte("stock", 5),
       supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "store"),
       supabase.from("categories").select("id", { count: "exact", head: true }).is("parent_id", null),
+      // 库存告急需按变体口径统计：拉全部商品的 has_variants/stock 与所有变体库存，在内存中判断
+      supabase.from("products").select("id, has_variants, stock"),
+      supabase.from("product_variants").select("product_id, stock"),
     ]);
     pendingCount = pending.count ?? 0;
     productCount = total.count ?? 0;
-    lowStockCount = lowStock.count ?? 0;
     storeCount = stores.count ?? 0;
     categoryCount = cats.count ?? 0;
+
+    const variantsByProduct = new Map<string, { stock: number }[]>();
+    for (const v of varStock.data ?? []) {
+      const arr = variantsByProduct.get(v.product_id) ?? [];
+      arr.push({ stock: v.stock });
+      variantsByProduct.set(v.product_id, arr);
+    }
+    lowStockCount = (prodStock.data ?? []).filter((p) =>
+      isLowStock(p, variantsByProduct.get(p.id) ?? [])
+    ).length;
   }
 
   const dateStr = new Date().toLocaleDateString("zh-CN", {

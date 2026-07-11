@@ -109,6 +109,7 @@ export default function ProductEditModal({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [saveResult, setSaveResult] = useState<ActionResult | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [zoomOpen, setZoomOpen] = useState(false); // 图片放大灯箱
 
   const initialCat = categories.find((c) => c.id === product.category_id);
   const [editParentCatId, setEditParentCatId] = useState<string>(() => {
@@ -212,6 +213,31 @@ export default function ProductEditModal({
   }
 
   return (
+    <>
+    {/* 图片放大灯箱 */}
+    {zoomOpen && displayImage && (
+      <div
+        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4"
+        onClick={() => setZoomOpen(false)}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={displayImage}
+          alt="放大预览"
+          className="max-h-full max-w-full rounded-lg object-contain shadow-2xl"
+        />
+        <button
+          type="button"
+          onClick={() => setZoomOpen(false)}
+          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-zinc-700 shadow hover:bg-white"
+          aria-label="关闭"
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    )}
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
@@ -402,7 +428,13 @@ export default function ProductEditModal({
                 {displayImage && (
                   <div className="relative flex-shrink-0">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={displayImage} alt="图片预览" className="h-16 w-16 rounded-lg object-cover ring-1 ring-zinc-200" />
+                    <img
+                      src={displayImage}
+                      alt="图片预览"
+                      onClick={() => setZoomOpen(true)}
+                      title="点击放大查看"
+                      className="h-16 w-16 cursor-zoom-in rounded-lg object-cover ring-1 ring-zinc-200 transition hover:ring-zinc-400"
+                    />
                     <button
                       type="button"
                       onClick={handleDeleteImage}
@@ -461,5 +493,6 @@ export default function ProductEditModal({
         </div>
       </div>
     </div>
+    </>
   );
 }

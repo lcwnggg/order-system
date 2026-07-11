@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/actions/auth";
+import { getTotalStock, isLowStock } from "@/lib/stock";
 
 export default async function StockAlertPage() {
   const supabase = await createClient();
@@ -19,14 +20,35 @@ export default async function StockAlertPage() {
 
   if (profile?.role !== "warehouse") redirect("/login");
 
-  const { data: products } = await supabase
-    .from("products")
-    .select("id, name, stock, image_url, is_active")
-    .lte("stock", 5)
-    .order("stock", { ascending: true })
-    .order("name");
+  const [{ data: products }, { data: variantsData }] = await Promise.all([
+    supabase
+      .from("products")
+      .select("id, name, stock, image_url, is_active, has_variants")
+      .order("name"),
+    supabase
+      .from("product_variants")
+      .select("id, product_id, color, stock, sort_order")
+      .order("sort_order"),
+  ]);
 
-  const list = products ?? [];
+  const variantsByProduct = new Map<
+    string,
+    { id: string; color: string; stock: number }[]
+  >();
+  for (const v of variantsData ?? []) {
+    const arr = variantsByProduct.get(v.product_id) ?? [];
+    arr.push({ id: v.id, color: v.color, stock: v.stock });
+    variantsByProduct.set(v.product_id, arr);
+  }
+
+  // 按统一库存口径筛出告急商品：无变体看 products.stock，有变体看任一颜色 ≤5
+  const list = (products ?? [])
+    .map((p) => {
+      const variants = variantsByProduct.get(p.id) ?? [];
+      return { ...p, variants, totalStock: getTotalStock(p, variants) };
+    })
+    .filter((p) => isLowStock(p, p.variants))
+    .sort((a, b) => a.totalStock - b.totalStock || a.name.localeCompare(b.name));
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -110,14 +132,40 @@ export default async function StockAlertPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3 text-right">
-                      <span
-                        className={`text-lg font-bold ${
-                          product.stock === 0 ? "text-red-600" : "text-amber-600"
-                        }`}
-                      >
-                        {product.stock}
-                      </span>
-                      <span className="ml-1 text-xs text-zinc-400">件</span>
+                      {product.has_variants ? (
+                        <div className="flex flex-wrap items-center justify-end gap-1">
+                          {product.variants.length === 0 ? (
+                            <span className="text-xs text-zinc-400">暂无变体</span>
+                          ) : (
+                            product.variants.map((v) => (
+                              <span
+                                key={v.id}
+                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                                  v.stock === 0
+                                    ? "bg-red-50 text-red-600"
+                                    : v.stock <= 5
+                                    ? "bg-amber-50 text-amber-600"
+                                    : "bg-green-50 text-green-600"
+                                }`}
+                              >
+                                <span className="text-zinc-500">{v.color}</span>
+                                {v.stock === 0 ? "售罄" : v.stock}
+                              </span>
+                            ))
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <span
+                            className={`text-lg font-bold ${
+                              product.stock === 0 ? "text-red-600" : "text-amber-600"
+                            }`}
+                          >
+                            {product.stock}
+                          </span>
+                          <span className="ml-1 text-xs text-zinc-400">件</span>
+                        </>
+                      )}
                     </td>
                     <td className="px-5 py-3 text-right">
                       <Link

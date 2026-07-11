@@ -12,6 +12,7 @@ import {
 } from "./actions";
 import type { ProductVariant } from "@/app/admin/products/actions";
 import ProductEditModal from "@/app/admin/products/product-edit-modal";
+import { getTotalStock, isLowStock } from "@/lib/stock";
 
 export type Category = {
   id: string;
@@ -53,6 +54,26 @@ export default function CategoriesClient({
 
   function variantsFor(productId: string) {
     return variants.filter((v) => v.product_id === productId);
+  }
+
+  // 统一库存口径的小徽章：有变体时取各颜色合计，颜色按是否告急/售罄区分
+  function renderStockBadge(p: ProductSummary) {
+    const pvs = variantsFor(p.id);
+    const total = getTotalStock(p, pvs);
+    const low = isLowStock(p, pvs);
+    return (
+      <span
+        className={`shrink-0 rounded-full px-1.5 py-0.5 text-xs font-medium leading-none ${
+          total === 0
+            ? "bg-red-50 text-red-600"
+            : low
+            ? "bg-amber-50 text-amber-600"
+            : "bg-green-50 text-green-600"
+        }`}
+      >
+        {total === 0 ? "售罄" : total}
+      </span>
+    );
   }
 
   // ── 新增大类 ──
@@ -406,13 +427,7 @@ export default function CategoriesClient({
                                 {p.name}
                               </button>
                               <span className="shrink-0 text-xs text-zinc-500">¥{Number(p.price).toFixed(2)}</span>
-                              <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-xs font-medium leading-none ${
-                                p.stock === 0 ? "bg-red-50 text-red-600"
-                                  : p.stock <= 5 ? "bg-amber-50 text-amber-600"
-                                  : "bg-green-50 text-green-600"
-                              }`}>
-                                {p.stock === 0 ? "售罄" : p.stock}
-                              </span>
+                              {renderStockBadge(p)}
                               <button
                                 type="button"
                                 disabled={removingProductId === p.id}
@@ -537,13 +552,7 @@ export default function CategoriesClient({
                                           {p.name}
                                         </button>
                                         <span className="shrink-0 text-xs text-zinc-500">¥{Number(p.price).toFixed(2)}</span>
-                                        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-xs font-medium leading-none ${
-                                          p.stock === 0 ? "bg-red-50 text-red-600"
-                                            : p.stock <= 5 ? "bg-amber-50 text-amber-600"
-                                            : "bg-green-50 text-green-600"
-                                        }`}>
-                                          {p.stock === 0 ? "售罄" : p.stock}
-                                        </span>
+                                        {renderStockBadge(p)}
                                         <button
                                           type="button"
                                           disabled={removingProductId === p.id}

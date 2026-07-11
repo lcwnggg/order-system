@@ -10,6 +10,7 @@ import {
 } from "./actions";
 import type { Category } from "@/app/admin/categories/categories-client";
 import ProductEditModal from "./product-edit-modal";
+import { getTotalStock, isLowStock as isLowStockOf } from "@/lib/stock";
 
 export type Product = {
   id: string;
@@ -69,17 +70,19 @@ export default function ProductList({
   }
 
   function isLowStock(product: Product) {
-    if (product.has_variants) {
-      const pvs = variantsFor(product.id);
-      return pvs.length > 0 && pvs.some((v) => v.stock <= 5);
-    }
-    return product.stock <= 5;
+    return isLowStockOf(product, variantsFor(product.id));
+  }
+
+  // 商品总库存（有变体则为各颜色合计，否则为 products.stock）
+  function totalStockOf(product: Product) {
+    return getTotalStock(product, variantsFor(product.id));
   }
 
   // ── 筛选 & 标签页状态 ──
   const [adminSearch, setAdminSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterStatus, setFilterStatus] = useState<StatusFilter>("all");
+  const [stockLessThan, setStockLessThan] = useState(""); // 按库存合计筛选：少于 N 件
   const [activeTab, setActiveTab] = useState<Tab>("recent");
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
@@ -115,10 +118,12 @@ export default function ProductList({
       if (filterStatus === "active" && !p.is_active) return false;
       if (filterStatus === "inactive" && p.is_active) return false;
       if (filterStatus === "low-stock" && !isLowStock(p)) return false;
+      const lt = parseInt(stockLessThan, 10);
+      if (!isNaN(lt) && lt > 0 && totalStockOf(p) >= lt) return false;
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [products, adminSearch, filterCategory, filterStatus, categories, variants]);
+  }, [products, adminSearch, filterCategory, filterStatus, stockLessThan, categories, variants]);
 
   // "最近添加" tab：按 created_at 倒序
   const recentProducts = useMemo(
@@ -239,7 +244,9 @@ export default function ProductList({
     return (
       <tr
         key={product.id}
-        className={`group hover:bg-zinc-50/80 ${!product.is_active ? "opacity-50" : ""}`}
+        onClick={() => openEdit(product)}
+        title="点击编辑商品"
+        className={`group cursor-pointer hover:bg-zinc-50/80 ${!product.is_active ? "opacity-50" : ""}`}
       >
         {/* 图片 */}
         <td className="px-3 py-1.5">
@@ -286,7 +293,7 @@ export default function ProductList({
         </td>
 
         {/* 库存 */}
-        <td className="px-3 py-1.5">
+        <td className="px-3 py-1.5" onClick={(e) => e.stopPropagation()}>
           {product.has_variants ? (
             <div className="space-y-1">
               {pvs.length === 0 ? (
@@ -375,7 +382,7 @@ export default function ProductList({
           <button
             type="button"
             disabled={isToggling}
-            onClick={() => handleToggleActive(product)}
+            onClick={(e) => { e.stopPropagation(); handleToggleActive(product); }}
             className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
               product.is_active
                 ? "bg-green-50 text-green-700 hover:bg-green-100"
@@ -386,16 +393,9 @@ export default function ProductList({
           </button>
         </td>
 
-        {/* 操作 */}
-        <td className="px-3 py-1.5">
+        {/* 操作（桌面端：整行可点击编辑，这里仅保留删除） */}
+        <td className="px-3 py-1.5" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-end gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-            <button
-              type="button"
-              onClick={() => openEdit(product)}
-              className="rounded px-2.5 py-1 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100"
-            >
-              编辑
-            </button>
             <button
               type="button"
               disabled={isDeleting}
@@ -453,7 +453,7 @@ export default function ProductList({
           <button
             type="button"
             disabled={isToggling}
-            onClick={() => handleToggleActive(product)}
+            onClick={(e) => { e.stopPropagation(); handleToggleActive(product); }}
             className={`shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
               product.is_active
                 ? "bg-green-50 text-green-700 hover:bg-green-100"
@@ -588,7 +588,7 @@ export default function ProductList({
   }
 
   const hasActiveFilters =
-    adminSearch.trim() !== "" || filterCategory !== "" || filterStatus !== "all";
+    adminSearch.trim() !== "" || filterCategory !== "" || filterStatus !== "all" || stockLessThan.trim() !== "";
 
   return (
     <>
@@ -643,11 +643,25 @@ export default function ProductList({
           <option value="low-stock">库存告急 ≤5</option>
         </select>
 
+        {/* 按库存合计筛选：少于 N 件 */}
+        <div className="flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5">
+          <span className="whitespace-nowrap text-sm text-zinc-500">库存少于</span>
+          <input
+            type="number"
+            min="1"
+            value={stockLessThan}
+            onChange={(e) => setStockLessThan(e.target.value)}
+            placeholder="N"
+            className="w-12 bg-transparent text-sm text-zinc-900 placeholder-zinc-400 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          />
+          <span className="whitespace-nowrap text-sm text-zinc-500">件</span>
+        </div>
+
         {/* 重置 */}
         {hasActiveFilters && (
           <button
             type="button"
-            onClick={() => { setAdminSearch(""); setFilterCategory(""); setFilterStatus("all"); }}
+            onClick={() => { setAdminSearch(""); setFilterCategory(""); setFilterStatus("all"); setStockLessThan(""); }}
             className="rounded-lg border border-zinc-200 px-2.5 py-1.5 text-xs text-zinc-500 hover:bg-zinc-50"
           >
             重置
