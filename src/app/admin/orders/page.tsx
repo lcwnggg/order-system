@@ -25,7 +25,7 @@ export default async function AdminOrdersPage() {
     supabase
       .from("orders")
       .select(
-        `id, store_id, status, created_at,
+        `id, store_id, status, created_at, note,
          order_items ( id, quantity, variant_id,
            products ( id, name, price, category_id )
          )`
@@ -86,6 +86,7 @@ export default async function AdminOrdersPage() {
     storeEmail: emailMap.get(o.store_id as string) ?? null,
     status: o.status as Order["status"],
     created_at: o.created_at as string,
+    note: (o.note as string | null) ?? null,
     items: ((o.order_items as unknown[]) ?? []).map((raw) => {
       const item = raw as {
         id: string;

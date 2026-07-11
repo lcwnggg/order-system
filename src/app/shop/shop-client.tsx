@@ -55,6 +55,7 @@ export default function ShopClient({
     () => Object.fromEntries(products.map((p) => [p.id, 0]))
   );
   const [selectedVariantId, setSelectedVariantId] = useState<Record<string, string>>({});
+  const [note, setNote] = useState("");
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<
     null | { success: true; orderId: string } | { error: string }
@@ -228,9 +229,12 @@ export default function ShopClient({
     }));
     setResult(null);
     startTransition(async () => {
-      const res = await submitOrder(items);
+      const res = await submitOrder(items, note);
       setResult(res);
-      if ("success" in res) setCart({});
+      if ("success" in res) {
+        setCart({});
+        setNote("");
+      }
     });
   }
 
@@ -602,6 +606,13 @@ export default function ShopClient({
                     <span className="text-zinc-500">合计</span>
                     <span className="font-bold text-zinc-900">€{total.toFixed(2)}</span>
                   </div>
+                  <textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="订单备注（选填，如「急」「周五送」）"
+                    rows={2}
+                    className="mt-3 w-full resize-none rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
+                  />
                 </div>
               )}
 
@@ -722,10 +733,19 @@ export default function ShopClient({
 
             {/* 面板底部操作区 */}
             <div className="shrink-0 border-t border-zinc-100 px-5 pb-8 pt-4">
-              <div className="mb-4 flex items-baseline justify-between">
+              <div className="mb-3 flex items-baseline justify-between">
                 <span className="text-sm text-zinc-500">共 {cartCount} 件</span>
                 <span className="text-xl font-bold text-zinc-900">€{total.toFixed(2)}</span>
               </div>
+              {cartEntries.length > 0 && (
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="订单备注（选填，如「急」「周五送」）"
+                  rows={2}
+                  className="mb-3 w-full resize-none rounded-lg border border-zinc-200 px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
+                />
+              )}
               {result && "error" in result && (
                 <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{result.error}</p>
               )}

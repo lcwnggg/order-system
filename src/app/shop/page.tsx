@@ -62,6 +62,12 @@ export default async function ShopPage() {
             <span className="text-sm font-semibold text-zinc-900">门店下单</span>
           </div>
           <div className="flex shrink-0 items-center gap-3">
+            <Link
+              href="/shop/orders"
+              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+            >
+              我的订单
+            </Link>
             <span className="hidden text-sm text-zinc-500 sm:block">{user.email}</span>
             <form action={signOut}>
               <button

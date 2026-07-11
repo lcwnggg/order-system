@@ -11,24 +11,27 @@ export type Order = {
   store_id: string;
   storeName: string | null;
   storeEmail: string | null;
-  status: "pending" | "preparing" | "done";
+  status: "pending" | "preparing" | "done" | "cancelled";
   created_at: string;
+  note: string | null;
   items: OrderItem[];
 };
 
-type FilterValue = "all" | "pending" | "preparing" | "done";
+type FilterValue = "all" | "pending" | "preparing" | "done" | "cancelled";
 type SummaryView = "product" | "store";
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "待处理",
   preparing: "备货中",
   done: "已完成",
+  cancelled: "已取消",
 };
 
 const STATUS_COLOR: Record<string, string> = {
   pending: "bg-amber-50 text-amber-700",
   preparing: "bg-blue-50 text-blue-700",
   done: "bg-green-50 text-green-700",
+  cancelled: "bg-zinc-100 text-zinc-500",
 };
 
 function displayStore(order: Order): string {
@@ -224,6 +227,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
     { value: "pending", label: "待处理" },
     { value: "preparing", label: "备货中" },
     { value: "done", label: "已完成" },
+    { value: "cancelled", label: "已取消" },
   ];
 
   return (
@@ -406,6 +410,12 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                     )}
                   </div>
                 </div>
+
+                {order.note && (
+                  <div className="border-b border-zinc-100 bg-amber-50/50 px-5 py-2 text-xs text-amber-800">
+                    备注：{order.note}
+                  </div>
+                )}
 
                 <div className="divide-y divide-zinc-50 px-5">
                   {order.items.map((item) => (
