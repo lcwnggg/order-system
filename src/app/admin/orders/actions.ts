@@ -34,3 +34,15 @@ export async function updateOrderStatus(
 
   revalidatePath("/admin/orders");
 }
+
+export async function deleteOrder(orderId: string): Promise<{ error?: string }> {
+  const supabase = await requireWarehouse();
+  if (!supabase) return { error: "无权限" };
+
+  // delete_order RPC 内部再次校验角色 + 状态（仅 done/cancelled 可删），连带删 order_items
+  const { error } = await supabase.rpc("delete_order", { p_order_id: orderId });
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/orders");
+  return {};
+}

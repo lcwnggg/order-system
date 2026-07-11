@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { updateOrderStatus } from "./actions";
+import { updateOrderStatus, deleteOrder } from "./actions";
 
 type Product = { id: string; name: string; price: number; category_id: string | null };
 type CategoryItem = { id: string; name: string; parent_id: string | null };
@@ -57,6 +57,7 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
   const [filter, setFilter] = useState<FilterValue>("all");
   const [summaryView, setSummaryView] = useState<SummaryView>("product");
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   const filtered = useMemo(
@@ -215,6 +216,15 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
     startTransition(async () => {
       await updateOrderStatus(orderId, newStatus);
       setPendingId(null);
+    });
+  }
+
+  function handleDelete(orderId: string) {
+    if (!window.confirm("确定删除这笔订单吗？删除后不可恢复（不影响库存）。")) return;
+    setDeletingId(orderId);
+    startTransition(async () => {
+      await deleteOrder(orderId);
+      setDeletingId(null);
     });
   }
 
@@ -405,8 +415,15 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                         {isThisPending ? "处理中…" : "标记完成"}
                       </button>
                     )}
-                    {order.status === "done" && (
-                      <span className="text-xs text-zinc-400">已完成</span>
+                    {(order.status === "done" || order.status === "cancelled") && (
+                      <button
+                        type="button"
+                        disabled={deletingId === order.id}
+                        onClick={() => handleDelete(order.id)}
+                        className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                      >
+                        {deletingId === order.id ? "删除中…" : "删除"}
+                      </button>
                     )}
                   </div>
                 </div>
