@@ -36,6 +36,7 @@ type ViewMode = "grid" | "compact";
 
 const UNCATEGORIZED = "__uncategorized__";
 const VIEW_MODE_KEY = "shopViewMode";
+const CART_KEY = "shopCart";
 
 export default function ShopClient({
   products,
@@ -76,6 +77,59 @@ export default function ShopClient({
   }
 
   const [mobileCartOpen, setMobileCartOpen] = useState(false);
+
+  // ── 购物车持久化（localStorage） ──
+  // 只存最小结构 {productId, variantId, quantity}，挂载时按当前商品/变体重新水合，
+  // 避免持久化了过期的价格/库存或已下架商品。
+  const [cartHydrated, setCartHydrated] = useState(false);
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(CART_KEY);
+      if (saved) {
+        const rows = JSON.parse(saved) as { productId: string; variantId?: string; quantity: number }[];
+        const restored: CartMap = {};
+        for (const row of rows) {
+          const product = products.find((p) => p.id === row.productId);
+          if (!product) continue;
+          if (row.variantId) {
+            const variant = variants.find((v) => v.id === row.variantId);
+            if (!variant || variant.stock === 0) continue;
+            const qty = Math.min(row.quantity, variant.stock);
+            if (qty <= 0) continue;
+            restored[cartKey(product.id, variant.id)] = {
+              product,
+              variant: { id: variant.id, color: variant.color, stock: variant.stock },
+              quantity: qty,
+            };
+          } else {
+            if (product.stock === 0) continue;
+            const qty = Math.min(row.quantity, product.stock);
+            if (qty <= 0) continue;
+            restored[product.id] = { product, quantity: qty };
+          }
+        }
+        // 从 localStorage 水合客户端状态，避免 SSR 首屏水合不一致（与 viewMode 同一模式）
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        if (Object.keys(restored).length) setCart(restored);
+      }
+    } catch {
+      // 解析失败忽略
+    }
+    setCartHydrated(true);
+    // 仅在挂载时水合一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 水合完成后，购物车变化即写回 localStorage
+  useEffect(() => {
+    if (!cartHydrated) return;
+    const rows = Object.values(cart).map((item) => ({
+      productId: item.product.id,
+      variantId: item.variant?.id,
+      quantity: item.quantity,
+    }));
+    localStorage.setItem(CART_KEY, JSON.stringify(rows));
+  }, [cart, cartHydrated]);
 
   // ── 分类派生 ──
   const parentCategories = categories.filter((c) => !c.parent_id);
@@ -364,7 +418,7 @@ export default function ShopClient({
                       {product.brand && <p className="mt-0.5 text-xs font-medium text-zinc-500">{product.brand}</p>}
                       {product.description && <p className="mt-0.5 line-clamp-2 text-xs text-zinc-400">{product.description}</p>}
                       <div className="mt-2 flex items-center justify-between">
-                        <span className="text-lg font-bold text-zinc-900">¥{Number(product.price).toFixed(2)}</span>
+                        <span className="text-lg font-bold text-zinc-900">€{Number(product.price).toFixed(2)}</span>
                         <span className={`text-xs ${outOfStock ? "text-red-500" : effectiveStock < 10 ? "text-amber-500" : "text-zinc-400"}`}>
                           库存 {effectiveStock}
                         </span>
@@ -445,7 +499,7 @@ export default function ShopClient({
 
                       {/* 价格 + 库存 */}
                       <div className="mt-0.5 flex items-baseline justify-between gap-1">
-                        <span className="text-sm font-bold text-zinc-900">¥{Number(product.price).toFixed(2)}</span>
+                        <span className="text-sm font-bold text-zinc-900">€{Number(product.price).toFixed(2)}</span>
                         <span className={`shrink-0 text-xs ${outOfStock ? "text-red-400" : effectiveStock < 10 ? "text-amber-400" : "text-zinc-400"}`}>
                           {effectiveStock}件
                         </span>
@@ -526,7 +580,7 @@ export default function ShopClient({
                           {product.name}
                           {variant && <span className="ml-1 text-zinc-400">· {variant.color}</span>}
                         </p>
-                        <p className="text-xs text-zinc-400">¥{Number(product.price).toFixed(2)} × {quantity}</p>
+                        <p className="text-xs text-zinc-400">€{Number(product.price).toFixed(2)} × {quantity}</p>
                       </div>
                       <div className="flex items-center gap-1">
                         <button type="button" onClick={() => changeCartQty(key, -1)}
@@ -546,7 +600,7 @@ export default function ShopClient({
                 <div className="mt-4 border-t border-zinc-100 pt-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-zinc-500">合计</span>
-                    <span className="font-bold text-zinc-900">¥{total.toFixed(2)}</span>
+                    <span className="font-bold text-zinc-900">€{total.toFixed(2)}</span>
                   </div>
                 </div>
               )}
@@ -594,7 +648,7 @@ export default function ShopClient({
             </div>
             <div className="text-left">
               <p className="text-sm font-semibold text-zinc-900">已选 {cartCount} 件</p>
-              <p className="text-xs text-zinc-500">合计 ¥{total.toFixed(2)}</p>
+              <p className="text-xs text-zinc-500">合计 €{total.toFixed(2)}</p>
             </div>
           </div>
           <span className="rounded-xl bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white">查看购物车</span>
@@ -641,8 +695,8 @@ export default function ShopClient({
                           {product.name}
                           {variant && <span className="ml-1 text-zinc-400">· {variant.color}</span>}
                         </p>
-                        <p className="mt-0.5 text-xs text-zinc-400">¥{Number(product.price).toFixed(2)} / 件</p>
-                        <p className="mt-1 text-sm font-bold text-zinc-900">¥{(product.price * quantity).toFixed(2)}</p>
+                        <p className="mt-0.5 text-xs text-zinc-400">€{Number(product.price).toFixed(2)} / 件</p>
+                        <p className="mt-1 text-sm font-bold text-zinc-900">€{(product.price * quantity).toFixed(2)}</p>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-2">
                         <button type="button" onClick={() => removeFromCart(key)}
@@ -670,7 +724,7 @@ export default function ShopClient({
             <div className="shrink-0 border-t border-zinc-100 px-5 pb-8 pt-4">
               <div className="mb-4 flex items-baseline justify-between">
                 <span className="text-sm text-zinc-500">共 {cartCount} 件</span>
-                <span className="text-xl font-bold text-zinc-900">¥{total.toFixed(2)}</span>
+                <span className="text-xl font-bold text-zinc-900">€{total.toFixed(2)}</span>
               </div>
               {result && "error" in result && (
                 <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{result.error}</p>

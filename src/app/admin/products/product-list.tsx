@@ -290,7 +290,7 @@ export default function ProductList({
 
         {/* 价格 */}
         <td className="px-3 py-1.5 whitespace-nowrap text-sm text-zinc-700">
-          ¥{Number(product.price).toFixed(2)}
+          €{Number(product.price).toFixed(2)}
         </td>
 
         {/* 条码 */}
@@ -454,7 +454,7 @@ export default function ProductList({
                 <span className="text-xs text-blue-500">{pvs.length}色</span>
               )}
             </div>
-            <p className="mt-1 text-sm font-bold text-zinc-900">¥{Number(product.price).toFixed(2)}</p>
+            <p className="mt-1 text-sm font-bold text-zinc-900">€{Number(product.price).toFixed(2)}</p>
             {product.barcode && (
               <p className="mt-0.5 flex items-center gap-1 font-mono text-[11px] text-zinc-400">
                 <svg className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

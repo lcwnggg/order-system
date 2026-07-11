@@ -220,7 +220,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
         </div>
         <div>
           <label className="mb-1.5 block text-sm font-medium text-zinc-700">
-            价格（元）<span className="text-red-500">*</span>
+            价格（€）<span className="text-red-500">*</span>
           </label>
           <input
             name="price"

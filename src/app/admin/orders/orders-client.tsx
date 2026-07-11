@@ -5,7 +5,7 @@ import { updateOrderStatus } from "./actions";
 
 type Product = { id: string; name: string; price: number; category_id: string | null };
 type CategoryItem = { id: string; name: string; parent_id: string | null };
-export type OrderItem = { id: string; quantity: number; product: Product };
+export type OrderItem = { id: string; quantity: number; product: Product; variantColor: string | null };
 export type Order = {
   id: string;
   store_id: string;
@@ -33,6 +33,11 @@ const STATUS_COLOR: Record<string, string> = {
 
 function displayStore(order: Order): string {
   return order.storeName ?? order.storeEmail ?? `门店 ${order.store_id.slice(0, 8)}…`;
+}
+
+// 商品名（带颜色变体），用于明细展示与按商品聚合
+function itemLabel(item: OrderItem): string {
+  return item.variantColor ? `${item.product.name} · ${item.variantColor}` : item.product.name;
 }
 
 function formatDateTime(iso: string): string {
@@ -63,7 +68,8 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
     const map = new Map<string, number>();
     for (const order of pendingOrders) {
       for (const item of order.items) {
-        map.set(item.product.name, (map.get(item.product.name) ?? 0) + item.quantity);
+        const label = itemLabel(item);
+        map.set(label, (map.get(label) ?? 0) + item.quantity);
       }
     }
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
@@ -87,7 +93,8 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
       const g = groups.get(key)!;
       g.orderCount++;
       for (const item of order.items) {
-        g.products.set(item.product.name, (g.products.get(item.product.name) ?? 0) + item.quantity);
+        const label = itemLabel(item);
+        g.products.set(label, (g.products.get(label) ?? 0) + item.quantity);
       }
     }
     return Array.from(groups.values()).map((g) => ({
@@ -112,10 +119,10 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
     for (const order of pendingOrders) {
       const storeName = displayStore(order);
       for (const item of order.items) {
-        const key = item.product.id;
+        const key = item.variantColor ? `${item.product.id}-${item.variantColor}` : item.product.id;
         if (!productMap.has(key)) {
           productMap.set(key, {
-            name: item.product.name,
+            name: itemLabel(item),
             total: 0,
             categoryId: item.product.category_id,
             stores: new Map(),
@@ -372,7 +379,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
 
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-bold text-zinc-900">
-                      ¥{total.toFixed(2)}
+                      €{total.toFixed(2)}
                     </span>
                     {order.status === "pending" && (
                       <button
@@ -406,12 +413,17 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                       key={item.id}
                       className="flex items-center justify-between py-3 text-sm"
                     >
-                      <span className="text-zinc-700">{item.product.name}</span>
+                      <span className="text-zinc-700">
+                        {item.product.name}
+                        {item.variantColor && (
+                          <span className="ml-1 text-zinc-400">· {item.variantColor}</span>
+                        )}
+                      </span>
                       <span className="text-zinc-400">
-                        ¥{Number(item.product.price).toFixed(2)} × {item.quantity}
+                        €{Number(item.product.price).toFixed(2)} × {item.quantity}
                       </span>
                       <span className="w-20 text-right font-medium text-zinc-900">
-                        ¥{(item.product.price * item.quantity).toFixed(2)}
+                        €{(item.product.price * item.quantity).toFixed(2)}
                       </span>
                     </div>
                   ))}

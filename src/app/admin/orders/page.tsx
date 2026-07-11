@@ -26,7 +26,7 @@ export default async function AdminOrdersPage() {
       .from("orders")
       .select(
         `id, store_id, status, created_at,
-         order_items ( id, quantity,
+         order_items ( id, quantity, variant_id,
            products ( id, name, price, category_id )
          )`
       )
@@ -38,6 +38,23 @@ export default async function AdminOrdersPage() {
       .order("created_at"),
   ]);
   const categories = (categoriesData ?? []) as { id: string; name: string; parent_id: string | null }[];
+
+  // 单独取变体颜色（不依赖 order_items→product_variants 的 FK 嵌套关系）
+  const variantIds = [
+    ...new Set(
+      (rawOrders ?? [])
+        .flatMap((o) => (o.order_items as { variant_id: string | null }[] | null) ?? [])
+        .map((it) => it.variant_id)
+        .filter((id): id is string => !!id)
+    ),
+  ];
+  const { data: variantRows } =
+    variantIds.length > 0
+      ? await supabase.from("product_variants").select("id, color").in("id", variantIds)
+      : { data: [] };
+  const variantColorMap = new Map(
+    (variantRows ?? []).map((v) => [v.id as string, v.color as string])
+  );
 
   // 拉取下单门店的 profile（store_name）+ email（via RPC）
   const storeIds = [...new Set((rawOrders ?? []).map((o) => o.store_id as string))];
@@ -73,12 +90,14 @@ export default async function AdminOrdersPage() {
       const item = raw as {
         id: string;
         quantity: number;
+        variant_id: string | null;
         products: { id: string; name: string; price: number; category_id: string | null };
       };
       return {
         id: item.id,
         quantity: item.quantity,
         product: item.products,
+        variantColor: item.variant_id ? variantColorMap.get(item.variant_id) ?? null : null,
       } satisfies OrderItem;
     }),
   }));

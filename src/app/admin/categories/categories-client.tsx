@@ -427,7 +427,7 @@ export default function CategoriesClient({
                               >
                                 {p.name}
                               </button>
-                              <span className="shrink-0 text-xs text-zinc-500">¥{Number(p.price).toFixed(2)}</span>
+                              <span className="shrink-0 text-xs text-zinc-500">€{Number(p.price).toFixed(2)}</span>
                               {renderStockBadge(p)}
                               <button
                                 type="button"
@@ -552,7 +552,7 @@ export default function CategoriesClient({
                                         >
                                           {p.name}
                                         </button>
-                                        <span className="shrink-0 text-xs text-zinc-500">¥{Number(p.price).toFixed(2)}</span>
+                                        <span className="shrink-0 text-xs text-zinc-500">€{Number(p.price).toFixed(2)}</span>
                                         {renderStockBadge(p)}
                                         <button
                                           type="button"
