@@ -76,6 +76,13 @@ export default async function AdminProductsPage() {
             >
               分类管理
             </Link>
+            <span className="text-zinc-300">/</span>
+            <Link
+              href="/admin/products/import"
+              className="text-sm text-zinc-500 transition-colors hover:text-zinc-900"
+            >
+              批量导入
+            </Link>
           </div>
           <div className="flex shrink-0 items-center gap-3">
             <span className="hidden text-sm text-zinc-500 sm:block">{user.email}</span>
@@ -95,14 +102,22 @@ export default async function AdminProductsPage() {
         <ProductForm categories={categories} />
 
         <div>
-          <h2 className="mb-4 text-base font-semibold text-zinc-900">
-            已添加商品
-            {products && products.length > 0 && (
-              <span className="ml-2 text-sm font-normal text-zinc-400">
-                共 {products.length} 件
-              </span>
-            )}
-          </h2>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-base font-semibold text-zinc-900">
+              已添加商品
+              {products && products.length > 0 && (
+                <span className="ml-2 text-sm font-normal text-zinc-400">
+                  共 {products.length} 件
+                </span>
+              )}
+            </h2>
+            <Link
+              href="/admin/products/import"
+              className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+            >
+              批量导入 →
+            </Link>
+          </div>
 
           <ProductList products={(products ?? []) as Product[]} categories={categories} variants={productVariants} />
         </div>
