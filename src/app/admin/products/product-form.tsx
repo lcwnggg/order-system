@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/client";
 import { addProduct, type ActionResult } from "./actions";
 import type { Category } from "@/app/admin/categories/categories-client";
 import BarcodeField from "./barcode-scanner";
+import AiRecognizePanel from "./ai-recognize";
+import type { AiSuggestion } from "./ai-actions";
 
 function compressToJpeg(file: File, maxWidth = 1200, quality = 0.8): Promise<Blob> {
   return new Promise((resolve, reject) => {
@@ -129,6 +131,46 @@ export default function ProductForm({ categories = [] }: { categories?: Category
     setVariants((prev) => prev.map((v, i) => (i === idx ? { ...v, [field]: value } : v)));
   }
 
+  // AI 识别：第一张照片作为商品图
+  function handleAiImage(url: string) {
+    setImageUrl(url);
+    setPreview(url);
+    setPhase("done");
+    setUploadError(null);
+  }
+
+  // AI 识别：把结果填入各字段（名称/品牌/描述为非受控输入，直接写 DOM 值）
+  function applyAiSuggestion(s: AiSuggestion) {
+    const form = formRef.current;
+    if (form) {
+      const setField = (name: string, value: string) => {
+        const el = form.elements.namedItem(name) as
+          | HTMLInputElement
+          | HTMLTextAreaElement
+          | null;
+        if (el && value) el.value = value;
+      };
+      setField("name", s.nombre);
+      setField("brand", s.marca);
+      setField("description", s.descripcion);
+    }
+    // 分类：按名称匹配到已有分类，自动选中大类/小类
+    if (s.categoria) {
+      const cat = categories.find((c) => c.name === s.categoria);
+      if (cat) {
+        if (cat.parent_id) {
+          setSelectedParentCatId(cat.parent_id);
+          setSelectedChildCatId(cat.id);
+        } else {
+          setSelectedParentCatId(cat.id);
+          setSelectedChildCatId("");
+        }
+      }
+    }
+    // 条码候选（格式不对会在字段里标红，用户可改）
+    if (s.codigo_barras) setBarcode(s.codigo_barras);
+  }
+
   const variantsJson = JSON.stringify(
     variants.map((v, i) => ({
       color: v.color.trim(),
@@ -148,6 +190,9 @@ export default function ProductForm({ categories = [] }: { categories?: Category
         <input type="hidden" name="category_id" value={selectedChildCatId || selectedParentCatId} />
         <input type="hidden" name="has_variants" value={hasVariants ? "true" : "false"} />
         {hasVariants && <input type="hidden" name="variants" value={variantsJson} />}
+
+        {/* AI 自动识别（可选）：拍照 → 自动填字段 + 首图作商品图 */}
+        <AiRecognizePanel onImageUploaded={handleAiImage} onSuggestion={applyAiSuggestion} />
 
         {/* 名称 + 品牌 + 价格 */}
         <div className="grid gap-4 sm:grid-cols-2">
