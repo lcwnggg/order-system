@@ -49,34 +49,34 @@ export default async function AdminCategoriesPage() {
   const variants = (variantsData ?? []) as ProductVariant[];
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      <header className="border-b border-zinc-200 bg-white px-6 py-4">
+    <div className="min-h-screen bg-sage-100">
+      <header className="border-b border-sage-200 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2">
           <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <Link href="/" className="text-sm text-zinc-500 transition-colors hover:text-zinc-900">
+            <Link href="/" className="text-sm text-sage-500 transition-colors hover:text-sage-900">
               ← 首页
             </Link>
-            <span className="text-zinc-300">/</span>
-            <Link href="/admin/products" className="text-sm text-zinc-500 transition-colors hover:text-zinc-900">
+            <span className="text-sage-400">/</span>
+            <Link href="/admin/products" className="text-sm text-sage-500 transition-colors hover:text-sage-900">
               商品管理
             </Link>
-            <span className="text-zinc-300">/</span>
-            <Link href="/admin/orders" className="text-sm text-zinc-500 transition-colors hover:text-zinc-900">
+            <span className="text-sage-400">/</span>
+            <Link href="/admin/orders" className="text-sm text-sage-500 transition-colors hover:text-sage-900">
               订单管理
             </Link>
-            <span className="text-zinc-300">/</span>
-            <Link href="/admin/stores" className="text-sm text-zinc-500 transition-colors hover:text-zinc-900">
+            <span className="text-sage-400">/</span>
+            <Link href="/admin/stores" className="text-sm text-sage-500 transition-colors hover:text-sage-900">
               门店管理
             </Link>
-            <span className="text-zinc-300">/</span>
-            <span className="text-sm font-semibold text-zinc-900">分类管理</span>
+            <span className="text-sage-400">/</span>
+            <span className="text-sm font-semibold text-sage-900">分类管理</span>
           </div>
           <div className="flex shrink-0 items-center gap-3">
-            <span className="hidden text-sm text-zinc-500 sm:block">{user.email}</span>
+            <span className="hidden text-sm text-sage-500 sm:block">{user.email}</span>
             <form action={signOut}>
               <button
                 type="submit"
-                className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                className="rounded-lg border border-sage-200 px-3 py-1.5 text-sm text-sage-700 transition-colors hover:bg-sage-100"
               >
                 退出登录
               </button>
@@ -87,8 +87,8 @@ export default async function AdminCategoriesPage() {
 
       <main className="mx-auto max-w-5xl px-6 py-8">
         <div className="mb-6">
-          <h1 className="text-xl font-semibold text-zinc-900">分类管理</h1>
-          <p className="mt-1 text-sm text-zinc-400">
+          <h1 className="text-xl font-semibold text-sage-900">分类管理</h1>
+          <p className="mt-1 text-sm text-sage-500">
             管理两级商品分类目录（大类 › 小类），商品可归属到任意小类。
           </p>
         </div>

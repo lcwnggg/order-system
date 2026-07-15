@@ -31,7 +31,7 @@ const STATUS_COLOR: Record<string, string> = {
   pending: "bg-amber-50 text-amber-700",
   preparing: "bg-blue-50 text-blue-700",
   done: "bg-green-50 text-green-700",
-  cancelled: "bg-zinc-100 text-zinc-500",
+  cancelled: "bg-sage-100 text-sage-500",
 };
 
 function displayStore(order: Order): string {
@@ -298,7 +298,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
               {productSummary.map(([name, qty]) => (
                 <span
                   key={name}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 shadow-sm ring-1 ring-amber-200"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-sage-800 shadow-sm ring-1 ring-amber-200"
                 >
                   <span>{name}</span>
                   <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-bold text-amber-700">
@@ -315,16 +315,16 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                   key={group.storeLabel}
                   className="rounded-lg bg-white p-3 shadow-sm ring-1 ring-amber-200"
                 >
-                  <p className="mb-2 text-xs font-semibold text-zinc-800">
+                  <p className="mb-2 text-xs font-semibold text-sage-800">
                     {group.storeLabel}
-                    <span className="ml-1.5 font-normal text-zinc-400">
+                    <span className="ml-1.5 font-normal text-sage-500">
                       {group.orderCount} 笔订单
                     </span>
                   </p>
                   <ul className="space-y-1">
                     {group.products.map(([name, qty]) => (
                       <li key={name} className="flex items-center justify-between text-xs">
-                        <span className="text-zinc-600">{name}</span>
+                        <span className="text-sage-600">{name}</span>
                         <span className="font-bold text-amber-700">×{qty}</span>
                       </li>
                     ))}
@@ -337,7 +337,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
       </div>
 
       {/* ── 筛选 tabs ── */}
-      <div className="flex w-fit gap-1 rounded-xl border border-zinc-200 bg-white p-1 shadow-sm">
+      <div className="flex w-fit gap-1 rounded-xl border border-sage-200 bg-white p-1 shadow-sm">
         {filterTabs.map(({ value, label }) => {
           const count =
             value === "all" ? orders.length : orders.filter((o) => o.status === value).length;
@@ -347,11 +347,11 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
               type="button"
               onClick={() => setFilter(value)}
               className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
-                filter === value ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-900"
+                filter === value ? "bg-sage-700 text-white" : "text-sage-500 hover:text-sage-900"
               }`}
             >
               {label}
-              <span className={`ml-1.5 text-xs ${filter === value ? "text-zinc-300" : "text-zinc-400"}`}>
+              <span className={`ml-1.5 text-xs ${filter === value ? "text-sage-400" : "text-sage-500"}`}>
                 {count}
               </span>
             </button>
@@ -361,8 +361,8 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
 
       {/* ── 订单列表 ── */}
       {filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-zinc-300 bg-white py-16 text-center">
-          <p className="text-sm text-zinc-400">
+        <div className="rounded-xl border border-dashed border-sage-300 bg-white py-16 text-center">
+          <p className="text-sm text-sage-500">
             {filter === "all" ? "暂无订单" : `暂无${STATUS_LABEL[filter]}订单`}
           </p>
         </div>
@@ -374,14 +374,14 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
             return (
               <div
                 key={order.id}
-                className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm"
+                className="overflow-hidden rounded-xl border border-sage-200 bg-white shadow-sm"
               >
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 bg-zinc-50 px-5 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sage-100 bg-sage-100 px-5 py-3">
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-zinc-900">
+                    <span className="text-sm font-semibold text-sage-900">
                       {displayStore(order)}
                     </span>
-                    <span className="text-xs text-zinc-400">
+                    <span className="text-xs text-sage-500">
                       {formatDateTime(order.created_at)}
                     </span>
                     <span
@@ -392,7 +392,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                   </div>
 
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-bold text-zinc-900">
+                    <span className="text-sm font-bold text-sage-900">
                       €{total.toFixed(2)}
                     </span>
                     {order.status === "pending" && (
@@ -420,7 +420,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                         type="button"
                         disabled={deletingId === order.id}
                         onClick={() => handleDelete(order.id)}
-                        className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                        className="rounded-lg border border-sage-200 px-3 py-1.5 text-xs font-medium text-sage-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                       >
                         {deletingId === order.id ? "删除中…" : "删除"}
                       </button>
@@ -429,27 +429,27 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                 </div>
 
                 {order.note && (
-                  <div className="border-b border-zinc-100 bg-amber-50/50 px-5 py-2 text-xs text-amber-800">
+                  <div className="border-b border-sage-100 bg-amber-50/50 px-5 py-2 text-xs text-amber-800">
                     备注：{order.note}
                   </div>
                 )}
 
-                <div className="divide-y divide-zinc-50 px-5">
+                <div className="divide-y divide-sage-100 px-5">
                   {order.items.map((item) => (
                     <div
                       key={item.id}
                       className="flex items-center justify-between py-3 text-sm"
                     >
-                      <span className="text-zinc-700">
+                      <span className="text-sage-700">
                         {item.product.name}
                         {item.variantColor && (
-                          <span className="ml-1 text-zinc-400">· {item.variantColor}</span>
+                          <span className="ml-1 text-sage-500">· {item.variantColor}</span>
                         )}
                       </span>
-                      <span className="text-zinc-400">
+                      <span className="text-sage-500">
                         €{Number(item.unitPrice).toFixed(2)} × {item.quantity}
                       </span>
-                      <span className="w-20 text-right font-medium text-zinc-900">
+                      <span className="w-20 text-right font-medium text-sage-900">
                         €{(item.unitPrice * item.quantity).toFixed(2)}
                       </span>
                     </div>

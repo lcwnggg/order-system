@@ -35,7 +35,7 @@ const STATUS_COLOR: Record<StoreOrder["status"], string> = {
   pending: "bg-amber-50 text-amber-700",
   preparing: "bg-blue-50 text-blue-700",
   done: "bg-green-50 text-green-700",
-  cancelled: "bg-zinc-100 text-zinc-500",
+  cancelled: "bg-sage-100 text-sage-500",
 };
 
 function formatDateTime(iso: string): string {
@@ -86,11 +86,16 @@ export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }
 
   if (orders.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-zinc-300 bg-white py-20 text-center">
-        <p className="text-sm text-zinc-400">还没有订单</p>
+      <div className="rounded-2xl border border-dashed border-sage-300 bg-sage-25 py-20 text-center">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-sage-100 text-sage-400">
+          <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+        </div>
+        <p className="text-sm text-sage-500">还没有订单</p>
         <a
           href="/shop"
-          className="mt-3 inline-block rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700"
+          className="mt-4 inline-block rounded-xl bg-sage-700 px-5 py-2.5 text-sm font-medium text-white shadow-[0_6px_16px_rgba(74,90,70,0.28)] transition hover:bg-sage-800"
         >
           去下单
         </a>
@@ -101,8 +106,8 @@ export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }
   return (
     <div className="space-y-4">
       <div className="mb-2 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-zinc-900">我的订单</h1>
-        <span className="text-sm text-zinc-400">共 {orders.length} 笔</span>
+        <h1 className="text-xl font-semibold text-sage-900">我的订单</h1>
+        <span className="text-sm text-sage-500">共 {orders.length} 笔</span>
       </div>
 
       {error && (
@@ -115,44 +120,44 @@ export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }
         return (
           <div
             key={order.id}
-            className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm"
+            className="overflow-hidden rounded-2xl border border-sage-200 bg-sage-25 shadow-[0_4px_16px_rgba(91,107,87,0.06)] transition duration-200 hover:shadow-[0_10px_24px_rgba(91,107,87,0.11)]"
           >
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-100 bg-zinc-50 px-5 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-sage-100 bg-sage-50 px-5 py-3">
               <div className="flex items-center gap-3">
-                <span className="text-xs text-zinc-400">{formatDateTime(order.created_at)}</span>
+                <span className="text-xs text-sage-500">{formatDateTime(order.created_at)}</span>
                 <span
                   className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[order.status]}`}
                 >
                   {STATUS_LABEL[order.status]}
                 </span>
               </div>
-              <span className="text-xs text-zinc-400">#{order.id.slice(0, 8)}</span>
+              <span className="text-xs text-sage-500">#{order.id.slice(0, 8)}</span>
             </div>
 
             {order.note && (
-              <div className="border-b border-zinc-100 bg-amber-50/50 px-5 py-2 text-xs text-amber-800">
+              <div className="border-b border-sage-100 bg-amber-50/50 px-5 py-2 text-xs text-amber-800">
                 备注：{order.note}
               </div>
             )}
 
-            <div className="divide-y divide-zinc-50 px-5">
+            <div className="divide-y divide-sage-100 px-5">
               {order.items.map((item) => (
                 <div key={item.id} className="flex items-center justify-between py-2.5 text-sm">
-                  <span className="text-zinc-700">
+                  <span className="text-sage-700">
                     {item.name}
                     {item.variantColor && (
-                      <span className="ml-1 text-zinc-400">· {item.variantColor}</span>
+                      <span className="ml-1 text-sage-500">· {item.variantColor}</span>
                     )}
                   </span>
-                  <span className="text-zinc-400">
+                  <span className="text-sage-500">
                     €{Number(item.price).toFixed(2)} × {item.quantity}
                   </span>
                 </div>
               ))}
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-zinc-100 px-5 py-3">
-              <span className="text-sm font-bold text-zinc-900">€{total.toFixed(2)}</span>
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-sage-100 px-5 py-3">
+              <span className="text-sm font-bold text-sage-900">€{total.toFixed(2)}</span>
               <div className="flex items-center gap-2">
                 {order.status === "pending" && (
                   <button
@@ -167,7 +172,7 @@ export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }
                 <button
                   type="button"
                   onClick={() => handleReorder(order)}
-                  className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-zinc-700"
+                  className="rounded-lg bg-sage-700 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-sage-800"
                 >
                   重新下单
                 </button>

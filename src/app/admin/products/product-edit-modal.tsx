@@ -233,7 +233,7 @@ export default function ProductEditModal({
         <button
           type="button"
           onClick={() => setZoomOpen(false)}
-          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-zinc-700 shadow hover:bg-white"
+          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-sage-700 shadow hover:bg-white"
           aria-label="关闭"
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -247,9 +247,9 @@ export default function ProductEditModal({
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-6 py-4">
-          <h2 className="text-base font-semibold text-zinc-900">编辑商品</h2>
-          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600">
+        <div className="flex shrink-0 items-center justify-between border-b border-sage-100 px-6 py-4">
+          <h2 className="text-base font-semibold text-sage-900">编辑商品</h2>
+          <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-sage-500 transition-colors hover:bg-sage-100 hover:text-sage-600">
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
@@ -260,26 +260,26 @@ export default function ProductEditModal({
           <div className="space-y-4 px-6 py-5">
             {/* 名称 */}
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-zinc-700">
+              <label className="mb-1.5 block text-sm font-medium text-sage-700">
                 商品名称 <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                className="w-full rounded-lg border border-sage-300 px-3 py-2 text-sm text-sage-900 outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-300"
               />
             </div>
 
             {/* 品牌 */}
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-zinc-700">品牌</label>
+              <label className="mb-1.5 block text-sm font-medium text-sage-700">品牌</label>
               <input
                 type="text"
                 value={editBrand}
                 onChange={(e) => setEditBrand(e.target.value)}
                 placeholder="如 Xiaomi、Temco（可选）"
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                className="w-full rounded-lg border border-sage-300 px-3 py-2 text-sm text-sage-900 placeholder-sage-500 outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-300"
               />
             </div>
 
@@ -288,7 +288,7 @@ export default function ProductEditModal({
 
             {/* 价格 */}
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-zinc-700">
+              <label className="mb-1.5 block text-sm font-medium text-sage-700">
                 价格（€）<span className="text-red-500">*</span>
               </label>
               <input
@@ -297,7 +297,7 @@ export default function ProductEditModal({
                 step="0.01"
                 value={editPrice}
                 onChange={(e) => setEditPrice(e.target.value)}
-                className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                className="w-full rounded-lg border border-sage-300 px-3 py-2 text-sm text-sage-900 outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-300"
               />
             </div>
 
@@ -315,16 +315,16 @@ export default function ProductEditModal({
                       setEditVariants([{ color: "", stock: "0", sort_order: 0 }]);
                     }
                   }}
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${editHasVariants ? "bg-zinc-900" : "bg-zinc-300"}`}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${editHasVariants ? "bg-sage-700" : "bg-sage-300"}`}
                 >
                   <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${editHasVariants ? "translate-x-6" : "translate-x-1"}`} />
                 </button>
-                <span className="text-sm font-medium text-zinc-700">分颜色/规格</span>
+                <span className="text-sm font-medium text-sage-700">分颜色/规格</span>
               </div>
 
               {!editHasVariants ? (
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-zinc-700">
+                  <label className="mb-1.5 block text-sm font-medium text-sage-700">
                     库存数量 <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -333,12 +333,12 @@ export default function ProductEditModal({
                     step="1"
                     value={editStock}
                     onChange={(e) => setEditStock(e.target.value)}
-                    className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                    className="w-full rounded-lg border border-sage-300 px-3 py-2 text-sm text-sage-900 outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-300"
                   />
                 </div>
               ) : (
-                <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
-                  <p className="mb-2 text-xs font-medium text-zinc-500">颜色变体（各颜色独立库存）</p>
+                <div className="rounded-lg border border-sage-200 bg-sage-100 p-3">
+                  <p className="mb-2 text-xs font-medium text-sage-500">颜色变体（各颜色独立库存）</p>
                   <div className="space-y-2">
                     {visibleEditVariants.map((v) => {
                       const realIdx = editVariants.indexOf(v);
@@ -349,7 +349,7 @@ export default function ProductEditModal({
                             placeholder='如"黑色"'
                             value={v.color}
                             onChange={(e) => updateVariantRow(realIdx, "color", e.target.value)}
-                            className="flex-1 rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                            className="flex-1 rounded-lg border border-sage-300 px-3 py-2 text-sm text-sage-900 outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-300"
                           />
                           <input
                             type="number"
@@ -358,13 +358,13 @@ export default function ProductEditModal({
                             placeholder="库存"
                             value={v.stock}
                             onChange={(e) => updateVariantRow(realIdx, "stock", e.target.value)}
-                            className="w-20 rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                            className="w-20 rounded-lg border border-sage-300 px-3 py-2 text-sm text-sage-900 outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-300"
                           />
                           {visibleEditVariants.length > 1 && (
                             <button
                               type="button"
                               onClick={() => removeVariantRow(realIdx)}
-                              className="flex-shrink-0 rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-200 hover:text-red-500"
+                              className="flex-shrink-0 rounded-lg p-1.5 text-sage-500 hover:bg-sage-200 hover:text-red-500"
                             >
                               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -375,7 +375,7 @@ export default function ProductEditModal({
                       );
                     })}
                   </div>
-                  <button type="button" onClick={addVariantRow} className="mt-2 text-xs font-medium text-zinc-500 hover:text-zinc-900">
+                  <button type="button" onClick={addVariantRow} className="mt-2 text-xs font-medium text-sage-500 hover:text-sage-900">
                     + 添加颜色
                   </button>
                 </div>
@@ -384,25 +384,25 @@ export default function ProductEditModal({
 
             {/* 描述 */}
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-zinc-700">商品描述</label>
+              <label className="mb-1.5 block text-sm font-medium text-sage-700">商品描述</label>
               <textarea
                 rows={2}
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
                 placeholder="可选"
-                className="w-full resize-none rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                className="w-full resize-none rounded-lg border border-sage-300 px-3 py-2 text-sm text-sage-900 placeholder-sage-500 outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-300"
               />
             </div>
 
             {/* 分类 */}
             {parentCategories.length > 0 && (
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-zinc-700">商品分类</label>
+                <label className="mb-1.5 block text-sm font-medium text-sage-700">商品分类</label>
                 <div className="grid grid-cols-2 gap-3">
                   <select
                     value={editParentCatId}
                     onChange={(e) => { setEditParentCatId(e.target.value); setEditChildCatId(""); }}
-                    className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                    className="w-full rounded-lg border border-sage-300 px-3 py-2 text-sm text-sage-900 outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-300"
                   >
                     <option value="">不选大类</option>
                     {parentCategories.map((p) => (
@@ -413,7 +413,7 @@ export default function ProductEditModal({
                     <select
                       value={editChildCatId}
                       onChange={(e) => setEditChildCatId(e.target.value)}
-                      className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200"
+                      className="w-full rounded-lg border border-sage-300 px-3 py-2 text-sm text-sage-900 outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-300"
                     >
                       <option value="">不选小类</option>
                       {childrenOf(editParentCatId).map((c) => (
@@ -427,9 +427,9 @@ export default function ProductEditModal({
 
             {/* 图片 */}
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-zinc-700">
+              <label className="mb-1.5 block text-sm font-medium text-sage-700">
                 商品图片
-                <span className="ml-1.5 font-normal text-zinc-400">（不选则保留原图）</span>
+                <span className="ml-1.5 font-normal text-sage-500">（不选则保留原图）</span>
               </label>
               <div className="flex items-start gap-3">
                 {displayImage && (
@@ -440,7 +440,7 @@ export default function ProductEditModal({
                       alt="图片预览"
                       onClick={() => setZoomOpen(true)}
                       title="点击放大查看"
-                      className="h-16 w-16 cursor-zoom-in rounded-lg object-cover ring-1 ring-zinc-200 transition hover:ring-zinc-400"
+                      className="h-16 w-16 cursor-zoom-in rounded-lg object-cover ring-1 ring-sage-300 transition hover:ring-sage-400"
                     />
                     <button
                       type="button"
@@ -459,16 +459,16 @@ export default function ProductEditModal({
                     type="file"
                     accept="image/*"
                     onChange={handleFileChange}
-                    className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-600 outline-none file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-zinc-100 file:px-2.5 file:py-1 file:text-xs file:font-medium file:text-zinc-700 hover:file:bg-zinc-200"
+                    className="w-full rounded-lg border border-sage-300 px-3 py-2 text-sm text-sage-600 outline-none file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-sage-100 file:px-2.5 file:py-1 file:text-xs file:font-medium file:text-sage-700 hover:file:bg-sage-200"
                   />
-                  {phase === "compressing" && <p className="mt-1 text-xs text-zinc-500">正在压缩…</p>}
-                  {phase === "uploading" && <p className="mt-1 text-xs text-zinc-500">正在上传…</p>}
+                  {phase === "compressing" && <p className="mt-1 text-xs text-sage-500">正在压缩…</p>}
+                  {phase === "uploading" && <p className="mt-1 text-xs text-sage-500">正在上传…</p>}
                   {phase === "done" && <p className="mt-1 text-xs text-green-600">上传成功</p>}
                   {phase === "error" && <p className="mt-1 text-xs text-red-500">{uploadError}</p>}
                 </div>
               </div>
               {!displayImage && newImageUrl !== null && (
-                <p className="mt-1 text-xs text-zinc-400">无图片 · 上传后可删除/更换</p>
+                <p className="mt-1 text-xs text-sage-500">无图片 · 上传后可删除/更换</p>
               )}
               {newImageUrl === null && (
                 <p className="mt-1 text-xs text-amber-600">图片将在保存后删除</p>
@@ -481,11 +481,11 @@ export default function ProductEditModal({
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-zinc-100 px-6 py-4">
+        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-sage-100 px-6 py-4">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+            className="rounded-lg border border-sage-200 px-4 py-2 text-sm font-medium text-sage-700 transition-colors hover:bg-sage-100"
           >
             取消
           </button>
@@ -493,7 +493,7 @@ export default function ProductEditModal({
             type="button"
             disabled={isSaving || uploading}
             onClick={handleSave}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg bg-sage-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-sage-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isSaving ? "保存中…" : uploading ? "图片上传中…" : "保存"}
           </button>

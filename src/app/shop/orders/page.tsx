@@ -76,25 +76,25 @@ export default async function ShopOrdersPage() {
   }));
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      <header className="border-b border-zinc-200 bg-white px-6 py-4">
+    <div className="min-h-screen bg-sage-100">
+      <header className="border-b border-sage-200 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               href="/shop"
-              className="text-sm text-zinc-500 transition-colors hover:text-zinc-900"
+              className="text-sm text-sage-500 transition-colors hover:text-sage-900"
             >
               ← 返回下单
             </Link>
-            <span className="text-zinc-300">/</span>
-            <span className="text-sm font-semibold text-zinc-900">我的订单</span>
+            <span className="text-sage-400">/</span>
+            <span className="text-sm font-semibold text-sage-900">我的订单</span>
           </div>
           <div className="flex shrink-0 items-center gap-3">
-            <span className="hidden text-sm text-zinc-500 sm:block">{user.email}</span>
+            <span className="hidden text-sm text-sage-500 sm:block">{user.email}</span>
             <form action={signOut}>
               <button
                 type="submit"
-                className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                className="rounded-lg border border-sage-200 px-3 py-1.5 text-sm text-sage-700 transition-colors hover:bg-sage-100"
               >
                 退出登录
               </button>

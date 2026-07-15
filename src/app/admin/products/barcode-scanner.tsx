@@ -126,11 +126,11 @@ function ScannerOverlay({
         {error && (
           <div className="absolute inset-0 flex items-center justify-center p-6">
             <div className="max-w-sm rounded-xl bg-white p-5 text-center shadow-xl">
-              <p className="text-sm text-zinc-700">{error}</p>
+              <p className="text-sm text-sage-700">{error}</p>
               <button
                 type="button"
                 onClick={onClose}
-                className="mt-4 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+                className="mt-4 rounded-lg bg-sage-700 px-4 py-2 text-sm font-medium text-white hover:bg-sage-800"
               >
                 知道了
               </button>
@@ -182,7 +182,7 @@ export default function BarcodeField({
 
   return (
     <div>
-      <label htmlFor={inputId} className="mb-1.5 block text-sm font-medium text-zinc-700">
+      <label htmlFor={inputId} className="mb-1.5 block text-sm font-medium text-sage-700">
         Código de barras
       </label>
       <div className="flex items-stretch gap-2">
@@ -195,16 +195,16 @@ export default function BarcodeField({
           value={value}
           onChange={(e) => { onChange(e.target.value); setDesktopHint(false); }}
           placeholder="opcional"
-          className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:ring-2 ${
+          className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm text-sage-900 placeholder-sage-500 outline-none focus:ring-2 ${
             invalid
               ? "border-red-300 bg-red-50 focus:border-red-400 focus:ring-red-100"
-              : "border-zinc-300 focus:border-zinc-500 focus:ring-zinc-200"
+              : "border-sage-300 focus:border-sage-500 focus:ring-sage-300"
           }`}
         />
         <button
           type="button"
           onClick={handleScanClick}
-          className="flex shrink-0 items-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 active:bg-zinc-100"
+          className="flex shrink-0 items-center gap-1.5 rounded-lg border border-sage-300 bg-white px-3.5 py-2 text-sm font-medium text-sage-700 transition-colors hover:bg-sage-100 active:bg-sage-100"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -220,7 +220,7 @@ export default function BarcodeField({
         </p>
       )}
       {desktopHint && (
-        <p className="mt-1.5 text-xs text-zinc-500">
+        <p className="mt-1.5 text-xs text-sage-500">
           请在手机上打开此页面使用扫码，桌面端请手动输入。
         </p>
       )}
