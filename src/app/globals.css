@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f4f6f1;
+  --foreground: #2f3a2c;
 }
 
 @theme inline {
@@ -10,17 +10,23 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Paleta salvia apagada (E3) */
+  --color-sage-25: #fdfdfb;
+  --color-sage-50: #f4f6f1;
+  --color-sage-100: #eef1ec;
+  --color-sage-200: #e2e6dd;
+  --color-sage-300: #cfd6c6;
+  --color-sage-400: #b9c4ab;
+  --color-sage-500: #9aa891;
+  --color-sage-600: #5b6b57;
+  --color-sage-700: #4a5a46;
+  --color-sage-800: #3a4738;
+  --color-sage-900: #2f3a2c;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
