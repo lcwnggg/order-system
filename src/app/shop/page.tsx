@@ -81,6 +81,16 @@ export default async function ShopPage() {
         </div>
       </header>
 
+      {/* 编辑风页头：mono 印章 + display 标题 */}
+      <div className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
+        <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.24em] text-paper-500">
+          B2B 订货目录 — {products?.length ?? 0} 件商品
+        </p>
+        <h1 className="animate-fade-up mt-3 text-4xl font-normal tracking-tight text-paper-900 sm:text-5xl">
+          挑选商品，一键下单。
+        </h1>
+      </div>
+
       <ShopClient
         products={products ?? []}
         categories={(categoriesData ?? []) as { id: string; name: string; parent_id: string | null }[]}

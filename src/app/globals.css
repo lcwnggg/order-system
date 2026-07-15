@@ -33,6 +33,44 @@
   --color-ember-600: #b04c24;
   --color-ember-700: #8f3d1d;
   --color-ember-800: #6e2f16;
+
+  /* 动效：慢起决停的编辑风曲线（参考 Vivid+Co 的 focus-pull 曲线） */
+  --ease-editorial: cubic-bezier(0.52, 0.01, 0, 1);
+  --animate-fade-up: fade-up 0.8s var(--ease-editorial) both;
+  --animate-fade-in: fade-in 1s var(--ease-editorial) both;
+}
+
+/* keyframes 放在顶层，保证始终被输出（stagger-children 也依赖它） */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 子元素入场交错：加在网格/列表容器上，前 8 个依次浮现，其余一起收尾 */
+.stagger-children > * {
+  animation: fade-up 0.7s var(--ease-editorial) both;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 60ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 180ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 360ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 420ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 480ms; }
+.stagger-children > *:nth-child(n+9) { animation-delay: 520ms; }
+
+/* 尊重系统减弱动效偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-fade-in,
+  .stagger-children > * {
+    animation: none;
+  }
 }
 
 body {

@@ -69,7 +69,8 @@ export default async function AdminCategoriesPage() {
 
       <main className="mx-auto max-w-5xl px-6 py-8">
         <div className="mb-6">
-          <h1 className="text-xl font-semibold text-paper-900">分类管理</h1>
+          <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.22em] text-paper-500">仓库 — 分类</p>
+          <h1 className="animate-fade-up mt-2 text-3xl font-normal tracking-tight text-paper-900">分类管理</h1>
           <p className="mt-1 text-sm text-paper-500">
             管理两级商品分类目录（大类 › 小类），商品可归属到任意小类。
           </p>

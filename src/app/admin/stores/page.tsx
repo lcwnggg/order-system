@@ -60,7 +60,8 @@ export default async function AdminStoresPage() {
 
       <main className="mx-auto max-w-5xl px-6 py-8">
         <div className="mb-6">
-          <h1 className="text-xl font-semibold text-paper-900">门店管理</h1>
+          <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.22em] text-paper-500">仓库 — 门店</p>
+          <h1 className="animate-fade-up mt-2 text-3xl font-normal tracking-tight text-paper-900">门店管理</h1>
           <p className="mt-1 text-sm text-paper-500">
             为每家门店设置易识别的店名，订单管理页将优先显示店名。
           </p>

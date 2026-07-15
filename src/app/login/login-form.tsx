@@ -77,7 +77,7 @@ export function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-sm rounded-2xl border border-paper-200 bg-paper-25 p-7 sm:p-8">
+    <div className="animate-fade-up w-full max-w-sm rounded-2xl border border-paper-200 bg-paper-25 p-7 sm:p-8">
       <div className="mb-7 text-center">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-paper-700">
           <svg className="h-7 w-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

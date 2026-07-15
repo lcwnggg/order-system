@@ -458,7 +458,7 @@ export default function ShopClient({
             </div>
           ) : viewMode === "grid" ? (
             /* ── 大图模式 ── */
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="stagger-children grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {filteredProducts.map((product) => {
                 const pvs = variantsByProduct[product.id] ?? [];
                 const isVariant = product.has_variants;
@@ -560,7 +560,7 @@ export default function ShopClient({
             </div>
           ) : (
             /* ── 紧凑模式 ── */
-            <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+            <div className="stagger-children grid gap-2 grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {filteredProducts.map((product) => {
                 const pvs = variantsByProduct[product.id] ?? [];
                 const isVariant = product.has_variants;

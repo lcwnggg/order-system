@@ -130,10 +130,14 @@ export default async function Home() {
       {/* ── Warehouse 仪表盘 ── */}
       {isWarehouse && (
         <main className="mx-auto max-w-5xl space-y-6 px-6 py-8">
-          {/* 欢迎 */}
-          <div>
-            <h1 className="text-2xl font-semibold text-paper-900">欢迎回来！</h1>
-            <p className="mt-1 text-sm text-paper-500">{dateStr}</p>
+          {/* 欢迎：编辑风 hero —— mono 印章眉标 + 大号 display 标题 */}
+          <div className="pb-2 pt-4">
+            <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.22em] text-paper-500">
+              仓库控制台 — {dateStr}
+            </p>
+            <h1 className="animate-fade-up mt-3 text-5xl font-normal tracking-tight text-paper-900 sm:text-6xl">
+              欢迎回来。
+            </h1>
           </div>
 
           {/* 待备货提醒 */}
@@ -158,7 +162,7 @@ export default async function Home() {
           )}
 
           {/* 5 个可点击数字卡 */}
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="stagger-children grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             <Link
               href="/admin/orders"
               className={`group rounded-2xl border bg-paper-25 p-5 transition duration-200 ${
@@ -236,29 +240,28 @@ export default async function Home() {
         </main>
       )}
 
-      {/* ── Store 首页 ── */}
+      {/* ── Store 首页：编辑风 hero ── */}
       {isStore && (
-        <main className="mx-auto flex max-w-lg flex-col items-center px-6 py-24 text-center">
-          <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-3xl bg-paper-700">
-            <svg className="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-semibold text-paper-900">
-            {profile?.store_name ? `你好，${profile.store_name}！` : "你好！"}
+        <main className="mx-auto flex min-h-[70vh] max-w-3xl flex-col items-center justify-center px-6 py-24 text-center">
+          <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.24em] text-paper-500">
+            门店订货 — B2B 目录
+          </p>
+          <h1 className="animate-fade-up mt-6 text-6xl font-normal leading-[1.05] tracking-tight text-paper-900 sm:text-7xl">
+            {profile?.store_name ? `你好，${profile.store_name}。` : "你好。"}
           </h1>
-          <p className="mt-2 text-sm text-paper-500">准备好下单了吗？浏览商品，加入购物车，一键提交。</p>
-          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row">
+          <p className="animate-fade-up mt-6 max-w-md text-base leading-relaxed text-paper-600 [animation-delay:150ms]">
+            浏览商品，加入购物车，一键提交。
+          </p>
+          <div className="animate-fade-up mt-10 flex flex-col items-center gap-3 [animation-delay:280ms] sm:flex-row">
             <Link
               href="/shop"
-              className="rounded-xl bg-paper-700 px-8 py-4 text-base font-semibold text-white transition-colors hover:bg-paper-800"
+              className="rounded-full bg-paper-800 px-9 py-4 text-base font-medium text-white transition-colors duration-300 hover:bg-paper-700"
             >
               进入商城下单 →
             </Link>
             <Link
               href="/shop/orders"
-              className="rounded-xl border border-paper-200 bg-paper-25 px-6 py-4 text-base font-medium text-paper-700 transition-colors hover:bg-paper-100"
+              className="rounded-full border border-paper-800 px-7 py-4 text-base font-medium text-paper-800 transition-colors duration-300 hover:bg-paper-800 hover:text-white"
             >
               我的订单
             </Link>
@@ -266,20 +269,21 @@ export default async function Home() {
         </main>
       )}
 
-      {/* ── 未登录 ── */}
+      {/* ── 未登录：编辑风 hero ── */}
       {!user && (
-        <main className="mx-auto flex max-w-md flex-col items-center px-6 py-24 text-center">
-          <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-3xl bg-paper-700">
-            <svg className="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-                d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h1 className="text-2xl font-semibold text-paper-900">欢迎使用我的小店</h1>
-          <p className="mt-2 text-sm text-paper-500">供应商与分店的订货管理平台。请登录以继续。</p>
+        <main className="mx-auto flex min-h-[70vh] max-w-3xl flex-col items-center justify-center px-6 py-24 text-center">
+          <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.24em] text-paper-500">
+            供应商 × 分店 — 订货平台
+          </p>
+          <h1 className="animate-fade-up mt-6 text-6xl font-normal leading-[1.05] tracking-tight text-paper-900 sm:text-7xl">
+            我的小店。
+          </h1>
+          <p className="animate-fade-up mt-6 max-w-md text-base leading-relaxed text-paper-600 [animation-delay:150ms]">
+            连接仓库与门店的订货管理平台。请登录以继续。
+          </p>
           <Link
             href="/login"
-            className="mt-8 rounded-xl bg-paper-700 px-8 py-4 text-base font-semibold text-white transition-colors hover:bg-paper-800"
+            className="animate-fade-up mt-10 rounded-full bg-paper-800 px-9 py-4 text-base font-medium text-white transition-colors duration-300 [animation-delay:280ms] hover:bg-paper-700"
           >
             立即登录
           </Link>

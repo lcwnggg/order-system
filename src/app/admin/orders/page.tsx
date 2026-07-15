@@ -127,7 +127,8 @@ export default async function AdminOrdersPage() {
 
       <main className="mx-auto max-w-5xl px-6 py-8">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-paper-900">订单管理</h1>
+          <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.22em] text-paper-500">仓库 — 订单</p>
+          <h1 className="animate-fade-up mt-2 text-3xl font-normal tracking-tight text-paper-900">订单管理</h1>
           <span className="text-sm text-paper-500">共 {orders.length} 笔订单</span>
         </div>
         <OrdersClient orders={orders} categories={categories} />
