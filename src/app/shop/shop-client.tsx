@@ -14,6 +14,7 @@ export type Product = {
   category_id: string | null;
   has_variants: boolean;
   brand: string | null;
+  created_at: string;
 };
 
 export type ProductVariant = {
@@ -66,6 +67,8 @@ export default function ShopClient({
   const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<"default" | "price-asc" | "price-desc" | "name">("default");
+  const [inStockOnly, setInStockOnly] = useState(false);
 
   // ── 视图模式（localStorage 持久化） ──
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -148,28 +151,57 @@ export default function ShopClient({
     return map;
   }, [variants]);
 
+  // 分类 id → 名称，用于卡片上的分类标签
+  const catNameById = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const c of categories) map[c.id] = c.name;
+    return map;
+  }, [categories]);
+
+  // 商品可售库存（含变体口径），用于「只看有货」筛选
+  function totalStock(p: Product) {
+    if (p.has_variants) {
+      return (variantsByProduct[p.id] ?? []).reduce((s, v) => s + v.stock, 0);
+    }
+    return p.stock;
+  }
+
   function allChildIds(parentId: string) {
     return categories.filter((c) => c.parent_id === parentId).map((c) => c.id);
   }
 
-  const filteredProducts = products.filter((p) => {
-    if (selectedChildId) {
-      if (p.category_id !== selectedChildId) return false;
-    } else if (selectedParentId === UNCATEGORIZED) {
-      if (p.category_id !== null) return false;
-    } else if (selectedParentId) {
-      const valid = new Set([selectedParentId, ...allChildIds(selectedParentId)]);
-      if (!p.category_id || !valid.has(p.category_id)) return false;
-    }
-    if (searchQuery.trim()) {
-      const q = searchQuery.trim().toLowerCase();
-      return (
-        p.name.toLowerCase().includes(q) ||
-        (p.brand?.toLowerCase().includes(q) ?? false)
-      );
-    }
-    return true;
-  });
+  const filteredProducts = products
+    .filter((p) => {
+      if (selectedChildId) {
+        if (p.category_id !== selectedChildId) return false;
+      } else if (selectedParentId === UNCATEGORIZED) {
+        if (p.category_id !== null) return false;
+      } else if (selectedParentId) {
+        const valid = new Set([selectedParentId, ...allChildIds(selectedParentId)]);
+        if (!p.category_id || !valid.has(p.category_id)) return false;
+      }
+      if (inStockOnly && totalStock(p) <= 0) return false;
+      if (searchQuery.trim()) {
+        const q = searchQuery.trim().toLowerCase();
+        return (
+          p.name.toLowerCase().includes(q) ||
+          (p.brand?.toLowerCase().includes(q) ?? false)
+        );
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "price-asc":
+          return a.price - b.price;
+        case "price-desc":
+          return b.price - a.price;
+        case "name":
+          return a.name.localeCompare(b.name);
+        default:
+          return 0;
+      }
+    });
 
   function selectParent(id: string | null) {
     setSelectedParentId(id);
@@ -382,10 +414,43 @@ export default function ShopClient({
             </div>
           </div>
 
-          <p className="mb-4 text-sm font-medium text-sage-700">
-            {filteredProducts.length === 0 ? "暂无商品" : `共 ${filteredProducts.length} 件商品`}
-            {searchQuery && <span className="ml-1 font-normal text-sage-500">· 搜索「{searchQuery}」</span>}
-          </p>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-medium text-sage-700">
+              {filteredProducts.length === 0 ? "暂无商品" : `共 ${filteredProducts.length} 件商品`}
+              {searchQuery && <span className="ml-1 font-normal text-sage-500">· 搜索「{searchQuery}」</span>}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setInStockOnly((v) => !v)}
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  inStockOnly
+                    ? "border-sage-300 bg-sage-100 text-sage-700"
+                    : "border-sage-200 bg-sage-25 text-sage-500 hover:border-sage-300"
+                }`}
+              >
+                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                </svg>
+                只看有货
+              </button>
+              <div className="relative">
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                  className="appearance-none rounded-full border border-sage-200 bg-sage-25 py-1.5 pl-3 pr-8 text-xs font-medium text-sage-600 outline-none transition-colors hover:border-sage-300 focus:border-sage-400"
+                >
+                  <option value="default">默认排序</option>
+                  <option value="price-asc">价格从低到高</option>
+                  <option value="price-desc">价格从高到低</option>
+                  <option value="name">名称 A→Z</option>
+                </select>
+                <svg className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+          </div>
 
           {filteredProducts.length === 0 ? (
             <div className="rounded-xl border border-dashed border-sage-300 bg-white py-20 text-center">
@@ -402,36 +467,58 @@ export default function ShopClient({
                 const effectiveStock = isVariant ? (chosenVariant?.stock ?? 0) : product.stock;
                 const outOfStock = effectiveStock === 0;
                 const qty = inputQty[product.id] ?? 0;
+                const isNew = Date.now() - new Date(product.created_at).getTime() < 14 * 864e5;
+                const catName = product.category_id ? catNameById[product.category_id] : null;
+                const [priceInt, priceDec] = Number(product.price).toFixed(2).split(".");
 
                 return (
                   <div key={product.id} className="group flex flex-col overflow-hidden rounded-2xl border border-sage-200 bg-sage-25 shadow-[0_4px_16px_rgba(91,107,87,0.06)] transition duration-200 hover:-translate-y-0.5 hover:border-sage-300 hover:shadow-[0_14px_30px_rgba(91,107,87,0.14)]">
-                    {/* 图片 */}
-                    <div className="relative aspect-square w-full overflow-hidden bg-sage-100">
-                      {product.image_url ? (
-                        <Image
-                          src={product.image_url}
-                          alt={product.name}
-                          fill
-                          sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                          className="object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                      ) : imgPlaceholder("lg")}
-                      {outOfStock && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-sage-900/55">
-                          <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-sage-700">缺货</span>
-                        </div>
-                      )}
+                    {/* 浮动图片区 */}
+                    <div className="relative bg-sage-50 p-3">
+                      {/* 左上：新品 / 分类 */}
+                      <div className="absolute left-4 top-4 z-10 flex flex-wrap gap-1.5">
+                        {isNew && (
+                          <span className="rounded-full bg-sage-700 px-2.5 py-1 text-[10px] font-semibold text-white shadow-sm">新品</span>
+                        )}
+                        {catName && (
+                          <span className="rounded-full bg-white/85 px-2.5 py-1 text-[10px] font-medium text-sage-600 backdrop-blur-sm">{catName}</span>
+                        )}
+                      </div>
+                      {/* 右上：库存徽章 */}
+                      <div className="absolute right-4 top-4 z-10">
+                        {outOfStock ? (
+                          <span className="rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-semibold text-red-600">售罄</span>
+                        ) : effectiveStock < 10 ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-700">
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />仅 {effectiveStock} 件
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-[10px] font-semibold text-green-700">
+                            <span className="h-1.5 w-1.5 rounded-full bg-green-500" />{effectiveStock} 件
+                          </span>
+                        )}
+                      </div>
+                      <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-white">
+                        {product.image_url ? (
+                          <Image
+                            src={product.image_url}
+                            alt={product.name}
+                            fill
+                            sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                            className={`object-cover transition-transform duration-300 group-hover:scale-105 ${outOfStock ? "opacity-60 grayscale" : ""}`}
+                          />
+                        ) : imgPlaceholder("lg")}
+                      </div>
                     </div>
 
-                    <div className="flex flex-1 flex-col p-4">
-                      <p className="font-semibold text-sage-900">{product.name}</p>
-                      {product.brand && <p className="mt-0.5 text-xs font-medium text-sage-500">{product.brand}</p>}
-                      {product.description && <p className="mt-0.5 line-clamp-2 text-xs text-sage-500">{product.description}</p>}
-                      <div className="mt-2 flex items-center justify-between">
-                        <span className="text-lg font-bold text-sage-900">€{Number(product.price).toFixed(2)}</span>
-                        <span className={`text-xs ${outOfStock ? "text-red-500" : effectiveStock < 10 ? "text-amber-500" : "text-sage-500"}`}>
-                          库存 {effectiveStock}
-                        </span>
+                    <div className="flex flex-1 flex-col px-4 pb-4 pt-1">
+                      {product.brand && <p className="text-[10px] font-medium uppercase tracking-wider text-sage-500">{product.brand}</p>}
+                      <p className="mt-1 line-clamp-2 text-sm font-semibold leading-snug text-sage-900">{product.name}</p>
+                      {/* 价格 */}
+                      <div className="mt-2 flex items-baseline gap-0.5">
+                        <span className="text-sm font-semibold text-sage-600">€</span>
+                        <span className="text-xl font-bold tracking-tight text-sage-900">{priceInt}</span>
+                        <span className="text-sm font-semibold text-sage-900">.{priceDec}</span>
                       </div>
 
                       {/* 颜色选择器 */}
@@ -453,23 +540,35 @@ export default function ShopClient({
                       )}
 
                       {/* 数量控制 + 加入购物车 */}
-                      <div className="mt-3 flex items-center gap-2">
-                        <div className="flex items-center rounded-lg border border-sage-200">
-                          <button type="button" disabled={outOfStock || qty <= 0}
-                            onClick={() => setInputQty((p) => ({ ...p, [product.id]: Math.max(0, qty - 1) }))}
-                            className="flex h-11 w-11 items-center justify-center text-sage-500 transition hover:text-sage-900 disabled:opacity-30 sm:h-8 sm:w-8">−</button>
-                          <input type="number" min={0} max={effectiveStock} value={qty} disabled={outOfStock}
-                            onChange={(e) => setInputQty((p) => ({ ...p, [product.id]: Math.min(effectiveStock, Math.max(0, parseInt(e.target.value) || 0)) }))}
-                            className="w-12 bg-transparent text-center text-sm text-sage-900 outline-none disabled:opacity-40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none sm:w-10" />
-                          <button type="button" disabled={outOfStock || qty >= effectiveStock}
-                            onClick={() => setInputQty((p) => ({ ...p, [product.id]: Math.min(effectiveStock, qty + 1) }))}
-                            className="flex h-11 w-11 items-center justify-center text-sage-500 transition hover:text-sage-900 disabled:opacity-30 sm:h-8 sm:w-8">+</button>
-                        </div>
-                        <button type="button" disabled={outOfStock || qty <= 0}
-                          onClick={() => addToCart(product, isVariant ? chosenVariant : undefined)}
-                          className="flex-1 rounded-lg bg-sage-700 py-3 text-sm font-medium text-white transition hover:bg-sage-800 disabled:cursor-not-allowed disabled:opacity-40 sm:py-2 sm:text-xs">
-                          {outOfStock ? "缺货" : "加入购物车"}
-                        </button>
+                      <div className="mt-3 border-t border-sage-100 pt-3">
+                        {outOfStock ? (
+                          <button type="button" disabled
+                            className="w-full cursor-not-allowed rounded-full bg-sage-100 py-2.5 text-xs font-medium text-sage-400">
+                            暂时缺货
+                          </button>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center rounded-full border border-sage-200">
+                              <button type="button" disabled={qty <= 0}
+                                onClick={() => setInputQty((p) => ({ ...p, [product.id]: Math.max(0, qty - 1) }))}
+                                className="flex h-10 w-9 items-center justify-center rounded-l-full text-sage-500 transition hover:text-sage-900 disabled:opacity-30 sm:h-9">−</button>
+                              <input type="number" min={0} max={effectiveStock} value={qty}
+                                onChange={(e) => setInputQty((p) => ({ ...p, [product.id]: Math.min(effectiveStock, Math.max(0, parseInt(e.target.value) || 0)) }))}
+                                className="w-8 bg-transparent text-center text-sm text-sage-900 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
+                              <button type="button" disabled={qty >= effectiveStock}
+                                onClick={() => setInputQty((p) => ({ ...p, [product.id]: Math.min(effectiveStock, qty + 1) }))}
+                                className="flex h-10 w-9 items-center justify-center rounded-r-full text-sage-500 transition hover:text-sage-900 disabled:opacity-30 sm:h-9">+</button>
+                            </div>
+                            <button type="button" disabled={qty <= 0}
+                              onClick={() => addToCart(product, isVariant ? chosenVariant : undefined)}
+                              className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-sage-700 py-2.5 text-xs font-medium text-white transition hover:bg-sage-800 disabled:cursor-not-allowed disabled:opacity-40">
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                              </svg>
+                              加入
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
