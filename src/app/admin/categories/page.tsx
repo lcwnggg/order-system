@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/actions/auth";
+import AdminNav from "@/app/admin/admin-nav";
 import CategoriesClient, { type Category, type CategoryTree, type ProductSummary } from "./categories-client";
 import type { ProductVariant } from "@/app/admin/products/actions";
 
@@ -52,25 +52,7 @@ export default async function AdminCategoriesPage() {
     <div className="min-h-screen bg-sage-100">
       <header className="border-b border-sage-200 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <Link href="/" className="text-sm text-sage-500 transition-colors hover:text-sage-900">
-              ← 首页
-            </Link>
-            <span className="text-sage-400">/</span>
-            <Link href="/admin/products" className="text-sm text-sage-500 transition-colors hover:text-sage-900">
-              商品管理
-            </Link>
-            <span className="text-sage-400">/</span>
-            <Link href="/admin/orders" className="text-sm text-sage-500 transition-colors hover:text-sage-900">
-              订单管理
-            </Link>
-            <span className="text-sage-400">/</span>
-            <Link href="/admin/stores" className="text-sm text-sage-500 transition-colors hover:text-sage-900">
-              门店管理
-            </Link>
-            <span className="text-sage-400">/</span>
-            <span className="text-sm font-semibold text-sage-900">分类管理</span>
-          </div>
+          <AdminNav />
           <div className="flex shrink-0 items-center gap-3">
             <span className="hidden text-sm text-sage-500 sm:block">{user.email}</span>
             <form action={signOut}>

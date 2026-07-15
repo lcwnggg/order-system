@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/actions/auth";
-import ProductForm from "./product-form";
+import AdminNav from "@/app/admin/admin-nav";
+import AddProductPanel from "./add-product-panel";
 import ProductList, { type Product } from "./product-list";
 import type { Category } from "@/app/admin/categories/categories-client";
 import type { ProductVariant } from "./actions";
@@ -46,44 +47,7 @@ export default async function AdminProductsPage() {
     <div className="min-h-screen bg-sage-100">
       <header className="border-b border-sage-200 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <Link
-              href="/"
-              className="text-sm text-sage-500 transition-colors hover:text-sage-900"
-            >
-              ← 返回首页
-            </Link>
-            <span className="text-sage-400">/</span>
-            <span className="text-sm font-semibold text-sage-900">商品管理后台</span>
-            <span className="text-sage-400">/</span>
-            <Link
-              href="/admin/orders"
-              className="text-sm text-sage-500 transition-colors hover:text-sage-900"
-            >
-              订单管理
-            </Link>
-            <span className="text-sage-400">/</span>
-            <Link
-              href="/admin/stores"
-              className="text-sm text-sage-500 transition-colors hover:text-sage-900"
-            >
-              门店管理
-            </Link>
-            <span className="text-sage-400">/</span>
-            <Link
-              href="/admin/categories"
-              className="text-sm text-sage-500 transition-colors hover:text-sage-900"
-            >
-              分类管理
-            </Link>
-            <span className="text-sage-400">/</span>
-            <Link
-              href="/admin/products/import"
-              className="text-sm text-sage-500 transition-colors hover:text-sage-900"
-            >
-              批量导入
-            </Link>
-          </div>
+          <AdminNav />
           <div className="flex shrink-0 items-center gap-3">
             <span className="hidden text-sm text-sage-500 sm:block">{user.email}</span>
             <form action={signOut}>
@@ -99,7 +63,7 @@ export default async function AdminProductsPage() {
       </header>
 
       <main className="mx-auto max-w-5xl space-y-8 px-6 py-8">
-        <ProductForm categories={categories} />
+        <AddProductPanel categories={categories} />
 
         <div>
           <div className="mb-4 flex items-center justify-between">

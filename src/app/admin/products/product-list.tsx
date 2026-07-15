@@ -425,7 +425,7 @@ export default function ProductList({
     return (
       <div
         key={product.id}
-        className={`overflow-hidden rounded-xl border border-sage-200 bg-white shadow-sm${!product.is_active ? " opacity-60" : ""}`}
+        className={`overflow-hidden rounded-2xl border border-sage-200 bg-sage-25 shadow-[0_4px_16px_rgba(91,107,87,0.06)]${!product.is_active ? " opacity-60" : ""}`}
       >
         {/* 主信息行 */}
         <div className="flex items-start gap-3 p-3">
@@ -592,7 +592,7 @@ export default function ProductList({
           {items.map(renderCard)}
         </div>
         {/* 桌面端表格 */}
-        <div className="hidden overflow-hidden rounded-xl border border-sage-200 bg-white shadow-sm sm:block">
+        <div className="hidden overflow-hidden rounded-2xl border border-sage-200 bg-sage-25 shadow-[0_4px_16px_rgba(91,107,87,0.06)] sm:block">
           <div className="overflow-x-auto">
             <table className="w-full">{TABLE_HEADER}
               <tbody className="divide-y divide-sage-100">{items.map(renderRow)}</tbody>
@@ -723,7 +723,7 @@ export default function ProductList({
               return (
                 <div
                   key={group.catId ?? "__null__"}
-                  className="overflow-hidden rounded-xl border border-sage-200 bg-white shadow-sm"
+                  className="overflow-hidden rounded-2xl border border-sage-200 bg-sage-25 shadow-[0_4px_16px_rgba(91,107,87,0.06)]"
                 >
                   <button
                     type="button"

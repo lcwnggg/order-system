@@ -34,6 +34,13 @@ const STATUS_COLOR: Record<string, string> = {
   cancelled: "bg-sage-100 text-sage-500",
 };
 
+const STATUS_DOT: Record<string, string> = {
+  pending: "bg-amber-500",
+  preparing: "bg-blue-500",
+  done: "bg-green-500",
+  cancelled: "bg-sage-400",
+};
+
 function displayStore(order: Order): string {
   return order.storeName ?? order.storeEmail ?? `门店 ${order.store_id.slice(0, 8)}…`;
 }
@@ -374,67 +381,37 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
             return (
               <div
                 key={order.id}
-                className="overflow-hidden rounded-xl border border-sage-200 bg-white shadow-sm"
+                className="overflow-hidden rounded-2xl border border-sage-200 bg-sage-25 shadow-[0_4px_16px_rgba(91,107,87,0.06)] transition duration-200 hover:shadow-[0_10px_24px_rgba(91,107,87,0.11)]"
               >
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sage-100 bg-sage-100 px-5 py-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-sage-900">
-                      {displayStore(order)}
-                    </span>
-                    <span className="text-xs text-sage-500">
-                      {formatDateTime(order.created_at)}
-                    </span>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[order.status]}`}
-                    >
-                      {STATUS_LABEL[order.status]}
-                    </span>
+                {/* 头部：门店 + 状态 + 元信息 + 金额 */}
+                <div className="flex items-start gap-3 px-5 py-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sage-100 text-sm font-semibold text-sage-700">
+                    {displayStore(order).charAt(0)}
                   </div>
-
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-bold text-sage-900">
-                      €{total.toFixed(2)}
-                    </span>
-                    {order.status === "pending" && (
-                      <button
-                        type="button"
-                        disabled={isThisPending}
-                        onClick={() => handleUpdateStatus(order.id, "preparing")}
-                        className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-semibold text-sage-900">{displayStore(order)}</span>
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[order.status]}`}
                       >
-                        {isThisPending ? "处理中…" : "开始备货"}
-                      </button>
-                    )}
-                    {order.status === "preparing" && (
-                      <button
-                        type="button"
-                        disabled={isThisPending}
-                        onClick={() => handleUpdateStatus(order.id, "done")}
-                        className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
-                      >
-                        {isThisPending ? "处理中…" : "标记完成"}
-                      </button>
-                    )}
-                    {(order.status === "done" || order.status === "cancelled") && (
-                      <button
-                        type="button"
-                        disabled={deletingId === order.id}
-                        onClick={() => handleDelete(order.id)}
-                        className="rounded-lg border border-sage-200 px-3 py-1.5 text-xs font-medium text-sage-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                      >
-                        {deletingId === order.id ? "删除中…" : "删除"}
-                      </button>
-                    )}
+                        <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[order.status]}`} />
+                        {STATUS_LABEL[order.status]}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 truncate text-xs text-sage-500">
+                      {formatDateTime(order.created_at)} · {order.items.length} 件商品 · #{order.id.slice(0, 8)}
+                    </p>
                   </div>
+                  <span className="shrink-0 text-base font-bold text-sage-900">€{total.toFixed(2)}</span>
                 </div>
 
                 {order.note && (
-                  <div className="border-b border-sage-100 bg-amber-50/50 px-5 py-2 text-xs text-amber-800">
+                  <div className="border-t border-sage-100 bg-amber-50/50 px-5 py-2 text-xs text-amber-800">
                     备注：{order.note}
                   </div>
                 )}
 
-                <div className="divide-y divide-sage-100 px-5">
+                <div className="divide-y divide-sage-100 border-t border-sage-100 px-5">
                   {order.items.map((item) => (
                     <div
                       key={item.id}
@@ -454,6 +431,42 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                       </span>
                     </div>
                   ))}
+                </div>
+
+                {/* 操作栏 */}
+                <div className="flex items-center justify-end gap-2 border-t border-sage-100 bg-sage-50 px-5 py-3">
+                  {order.status === "pending" && (
+                    <button
+                      type="button"
+                      disabled={isThisPending}
+                      onClick={() => handleUpdateStatus(order.id, "preparing")}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                      {isThisPending ? "处理中…" : "开始备货"}
+                    </button>
+                  )}
+                  {order.status === "preparing" && (
+                    <button
+                      type="button"
+                      disabled={isThisPending}
+                      onClick={() => handleUpdateStatus(order.id, "done")}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                      {isThisPending ? "处理中…" : "标记完成"}
+                    </button>
+                  )}
+                  {(order.status === "done" || order.status === "cancelled") && (
+                    <button
+                      type="button"
+                      disabled={deletingId === order.id}
+                      onClick={() => handleDelete(order.id)}
+                      className="rounded-lg border border-sage-200 px-3.5 py-1.5 text-xs font-medium text-sage-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                    >
+                      {deletingId === order.id ? "删除中…" : "删除"}
+                    </button>
+                  )}
                 </div>
               </div>
             );

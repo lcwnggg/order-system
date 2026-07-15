@@ -325,7 +325,7 @@ export default function CategoriesClient({
               return (
                 <div
                   key={parent.id}
-                  className="overflow-hidden rounded-xl border border-sage-200 bg-white shadow-sm"
+                  className="overflow-hidden rounded-2xl border border-sage-200 bg-sage-25 shadow-[0_4px_16px_rgba(91,107,87,0.06)]"
                 >
                   {/* 大类行 */}
                   <div className="flex items-center gap-3 border-b border-sage-100 bg-sage-100 px-5 py-3">

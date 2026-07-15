@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/actions/auth";
+import AdminNav from "@/app/admin/admin-nav";
 import ImportClient from "./import-client";
 
 export default async function BulkImportPage() {
@@ -36,17 +36,7 @@ export default async function BulkImportPage() {
     <div className="min-h-screen bg-sage-100">
       <header className="border-b border-sage-200 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <Link href="/" className="text-sm text-sage-500 transition-colors hover:text-sage-900">
-              ← 首页
-            </Link>
-            <span className="text-sage-400">/</span>
-            <Link href="/admin/products" className="text-sm text-sage-500 transition-colors hover:text-sage-900">
-              商品管理
-            </Link>
-            <span className="text-sage-400">/</span>
-            <span className="text-sm font-semibold text-sage-900">批量导入</span>
-          </div>
+          <AdminNav />
           <div className="flex shrink-0 items-center gap-3">
             <span className="hidden text-sm text-sage-500 sm:block">{user.email}</span>
             <form action={signOut}>

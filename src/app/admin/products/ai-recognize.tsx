@@ -87,9 +87,9 @@ export default function AiRecognizePanel({
   const busy = phase === "uploading" || phase === "recognizing";
 
   return (
-    <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4">
+    <div className="rounded-xl border border-sage-300 bg-sage-50 p-4">
       <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
+        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sage-200 text-sage-700">
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -111,8 +111,8 @@ export default function AiRecognizePanel({
             <label
               className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
                 busy
-                  ? "cursor-not-allowed bg-indigo-300 text-white"
-                  : "bg-indigo-600 text-white hover:bg-indigo-700"
+                  ? "cursor-not-allowed bg-sage-400 text-white"
+                  : "bg-sage-700 text-white hover:bg-sage-800"
               }`}
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

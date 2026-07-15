@@ -36,7 +36,7 @@ export default function StoresClient({ stores }: { stores: StoreUser[] }) {
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-sage-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-sage-200 bg-sage-25 shadow-[0_4px_16px_rgba(91,107,87,0.06)]">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-sage-100 bg-sage-100 text-left">
