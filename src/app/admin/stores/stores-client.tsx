@@ -29,29 +29,29 @@ export default function StoresClient({ stores }: { stores: StoreUser[] }) {
 
   if (stores.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-sage-300 bg-white py-16 text-center">
-        <p className="text-sm text-sage-500">暂无 store 角色用户</p>
+      <div className="rounded-xl border border-dashed border-paper-300 bg-white py-16 text-center">
+        <p className="text-sm text-paper-500">暂无 store 角色用户</p>
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-sage-200 bg-sage-25 shadow-[0_4px_16px_rgba(91,107,87,0.06)]">
+    <div className="overflow-hidden rounded-2xl border border-paper-200 bg-paper-25">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-sage-100 bg-sage-100 text-left">
-            <th className="px-5 py-3 font-medium text-sage-500">邮箱</th>
-            <th className="px-5 py-3 font-medium text-sage-500">店名</th>
-            <th className="px-5 py-3 font-medium text-sage-500">操作</th>
+          <tr className="border-b border-paper-100 bg-paper-100 text-left">
+            <th className="px-5 py-3 font-medium text-paper-500">邮箱</th>
+            <th className="px-5 py-3 font-medium text-paper-500">店名</th>
+            <th className="px-5 py-3 font-medium text-paper-500">操作</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-sage-100">
+        <tbody className="divide-y divide-paper-100">
           {stores.map((store) => {
             const isSaving = savingId === store.id;
             const result = results[store.id];
             return (
-              <tr key={store.id} className="hover:bg-sage-100">
-                <td className="px-5 py-3 text-sage-600">{store.email}</td>
+              <tr key={store.id} className="hover:bg-paper-100">
+                <td className="px-5 py-3 text-paper-600">{store.email}</td>
                 <td className="px-5 py-3">
                   <input
                     type="text"
@@ -61,7 +61,7 @@ export default function StoresClient({ stores }: { stores: StoreUser[] }) {
                     }
                     onKeyDown={(e) => e.key === "Enter" && handleSave(store.id)}
                     placeholder="输入店名…"
-                    className="w-full max-w-xs rounded-lg border border-sage-200 px-3 py-1.5 text-sm text-sage-900 placeholder-sage-500 outline-none focus:border-sage-400 focus:ring-2 focus:ring-sage-200"
+                    className="w-full max-w-xs rounded-lg border border-paper-200 px-3 py-1.5 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-400 focus:ring-2 focus:ring-paper-200"
                   />
                 </td>
                 <td className="px-5 py-3">
@@ -70,7 +70,7 @@ export default function StoresClient({ stores }: { stores: StoreUser[] }) {
                       type="button"
                       disabled={isSaving}
                       onClick={() => handleSave(store.id)}
-                      className="rounded-lg bg-sage-700 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-sage-800 disabled:opacity-50"
+                      className="rounded-lg bg-paper-700 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-paper-800 disabled:opacity-50"
                     >
                       {isSaving ? "保存中…" : "保存"}
                     </button>

@@ -300,7 +300,7 @@ export default function ShopClient({
 
   // ── 占位图 ──
   const imgPlaceholder = (size: "lg" | "sm") => (
-    <div className={`flex h-full items-center justify-center text-sage-400`}>
+    <div className={`flex h-full items-center justify-center text-paper-400`}>
       <svg className={size === "lg" ? "h-12 w-12" : "h-7 w-7"} fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
           d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -326,7 +326,7 @@ export default function ShopClient({
                   type="button"
                   onClick={() => selectParent(id)}
                   className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                    active ? "bg-sage-700 text-white" : "border border-sage-200 bg-white text-sage-600 hover:bg-sage-100"
+                    active ? "bg-paper-700 text-white" : "border border-paper-200 bg-white text-paper-600 hover:bg-paper-100"
                   }`}
                 >
                   {label}
@@ -341,7 +341,7 @@ export default function ShopClient({
               <button
                 type="button"
                 onClick={() => setSelectedChildId(null)}
-                className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${selectedChildId === null ? "bg-sage-800 text-white" : "bg-sage-100 text-sage-600 hover:bg-sage-200"}`}
+                className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${selectedChildId === null ? "bg-paper-800 text-white" : "bg-paper-100 text-paper-600 hover:bg-paper-200"}`}
               >
                 全部小类
               </button>
@@ -350,7 +350,7 @@ export default function ShopClient({
                   key={child.id}
                   type="button"
                   onClick={() => setSelectedChildId(child.id)}
-                  className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${selectedChildId === child.id ? "bg-sage-800 text-white" : "bg-sage-100 text-sage-600 hover:bg-sage-200"}`}
+                  className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-medium transition-colors ${selectedChildId === child.id ? "bg-paper-800 text-white" : "bg-paper-100 text-paper-600 hover:bg-paper-200"}`}
                 >
                   {child.name}
                 </button>
@@ -361,7 +361,7 @@ export default function ShopClient({
           {/* 搜索框 + 视图切换 */}
           <div className="mb-4 flex items-center gap-2">
             <div className="relative flex-1">
-              <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-sage-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-paper-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
               <input
@@ -369,20 +369,20 @@ export default function ShopClient({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="搜索商品名称或品牌…"
-                className="w-full rounded-xl border border-sage-200 bg-white py-2.5 pl-10 pr-10 text-sm text-sage-900 placeholder-sage-500 outline-none focus:border-sage-400 focus:ring-2 focus:ring-sage-200"
+                className="w-full rounded-xl border border-paper-200 bg-white py-2.5 pl-10 pr-10 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-400 focus:ring-2 focus:ring-paper-200"
               />
               {searchQuery && (
-                <button type="button" onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-sage-500 hover:text-sage-600">✕</button>
+                <button type="button" onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-paper-500 hover:text-paper-600">✕</button>
               )}
             </div>
 
             {/* 视图切换 */}
-            <div className="flex items-center rounded-xl border border-sage-200 bg-white p-1 gap-0.5">
+            <div className="flex items-center rounded-xl border border-paper-200 bg-white p-1 gap-0.5">
               <button
                 type="button"
                 title="大图模式"
                 onClick={() => switchViewMode("grid")}
-                className={`rounded-lg p-1.5 transition-colors ${viewMode === "grid" ? "bg-sage-700 text-white" : "text-sage-500 hover:text-sage-700"}`}
+                className={`rounded-lg p-1.5 transition-colors ${viewMode === "grid" ? "bg-paper-700 text-white" : "text-paper-500 hover:text-paper-700"}`}
               >
                 {/* 2×2 grid icon */}
                 <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16">
@@ -396,7 +396,7 @@ export default function ShopClient({
                 type="button"
                 title="紧凑模式"
                 onClick={() => switchViewMode("compact")}
-                className={`rounded-lg p-1.5 transition-colors ${viewMode === "compact" ? "bg-sage-700 text-white" : "text-sage-500 hover:text-sage-700"}`}
+                className={`rounded-lg p-1.5 transition-colors ${viewMode === "compact" ? "bg-paper-700 text-white" : "text-paper-500 hover:text-paper-700"}`}
               >
                 {/* 3×3 grid icon */}
                 <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16">
@@ -415,9 +415,9 @@ export default function ShopClient({
           </div>
 
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm font-medium text-sage-700">
+            <p className="font-mono text-xs tracking-[0.12em] text-paper-600">
               {filteredProducts.length === 0 ? "暂无商品" : `共 ${filteredProducts.length} 件商品`}
-              {searchQuery && <span className="ml-1 font-normal text-sage-500">· 搜索「{searchQuery}」</span>}
+              {searchQuery && <span className="ml-1 text-paper-400">· 搜索「{searchQuery}」</span>}
             </p>
             <div className="flex items-center gap-2">
               <button
@@ -425,8 +425,8 @@ export default function ShopClient({
                 onClick={() => setInStockOnly((v) => !v)}
                 className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                   inStockOnly
-                    ? "border-sage-300 bg-sage-100 text-sage-700"
-                    : "border-sage-200 bg-sage-25 text-sage-500 hover:border-sage-300"
+                    ? "border-ember-500 bg-ember-50 text-ember-700"
+                    : "border-paper-200 bg-paper-25 text-paper-500 hover:border-paper-300"
                 }`}
               >
                 <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -438,14 +438,14 @@ export default function ShopClient({
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-                  className="appearance-none rounded-full border border-sage-200 bg-sage-25 py-1.5 pl-3 pr-8 text-xs font-medium text-sage-600 outline-none transition-colors hover:border-sage-300 focus:border-sage-400"
+                  className="appearance-none rounded-full border border-paper-200 bg-paper-25 py-1.5 pl-3 pr-8 text-xs font-medium text-paper-600 outline-none transition-colors hover:border-paper-300 focus:border-paper-400"
                 >
                   <option value="default">默认排序</option>
                   <option value="price-asc">价格从低到高</option>
                   <option value="price-desc">价格从高到低</option>
                   <option value="name">名称 A→Z</option>
                 </select>
-                <svg className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-sage-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-paper-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
               </div>
@@ -453,8 +453,8 @@ export default function ShopClient({
           </div>
 
           {filteredProducts.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-sage-300 bg-white py-20 text-center">
-              <p className="text-sm text-sage-500">{searchQuery ? "未找到匹配的商品" : "暂无商品"}</p>
+            <div className="rounded-xl border border-dashed border-paper-300 bg-white py-20 text-center">
+              <p className="text-sm text-paper-500">{searchQuery ? "未找到匹配的商品" : "暂无商品"}</p>
             </div>
           ) : viewMode === "grid" ? (
             /* ── 大图模式 ── */
@@ -469,57 +469,43 @@ export default function ShopClient({
                 const qty = inputQty[product.id] ?? 0;
                 const isNew = Date.now() - new Date(product.created_at).getTime() < 14 * 864e5;
                 const catName = product.category_id ? catNameById[product.category_id] : null;
-                const [priceInt, priceDec] = Number(product.price).toFixed(2).split(".");
 
                 return (
-                  <div key={product.id} className="group flex flex-col overflow-hidden rounded-2xl border border-sage-200 bg-sage-25 shadow-[0_4px_16px_rgba(91,107,87,0.06)] transition duration-200 hover:-translate-y-0.5 hover:border-sage-300 hover:shadow-[0_14px_30px_rgba(91,107,87,0.14)]">
-                    {/* 浮动图片区 */}
-                    <div className="relative bg-sage-50 p-3">
-                      {/* 左上：新品 / 分类 */}
-                      <div className="absolute left-4 top-4 z-10 flex flex-wrap gap-1.5">
-                        {isNew && (
-                          <span className="rounded-full bg-sage-700 px-2.5 py-1 text-[10px] font-semibold text-white shadow-sm">新品</span>
-                        )}
-                        {catName && (
-                          <span className="rounded-full bg-white/85 px-2.5 py-1 text-[10px] font-medium text-sage-600 backdrop-blur-sm">{catName}</span>
-                        )}
-                      </div>
-                      {/* 右上：库存徽章 */}
-                      <div className="absolute right-4 top-4 z-10">
-                        {outOfStock ? (
-                          <span className="rounded-full bg-red-50 px-2.5 py-1 text-[10px] font-semibold text-red-600">售罄</span>
-                        ) : effectiveStock < 10 ? (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-semibold text-amber-700">
-                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />仅 {effectiveStock} 件
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2.5 py-1 text-[10px] font-semibold text-green-700">
-                            <span className="h-1.5 w-1.5 rounded-full bg-green-500" />{effectiveStock} 件
-                          </span>
-                        )}
-                      </div>
-                      <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-white">
-                        {product.image_url ? (
-                          <Image
-                            src={product.image_url}
-                            alt={product.name}
-                            fill
-                            sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
-                            className={`object-cover transition-transform duration-300 group-hover:scale-105 ${outOfStock ? "opacity-60 grayscale" : ""}`}
-                          />
-                        ) : imgPlaceholder("lg")}
-                      </div>
+                  <div key={product.id} className="group flex flex-col overflow-hidden rounded-xl border border-paper-200 bg-paper-25 transition-colors duration-200 hover:border-paper-400">
+                    {/* 顶部信息条：品牌／分类 + 库存（mono 系统声，编辑风） */}
+                    <div className="flex items-center justify-between gap-2 border-b border-paper-100 px-3.5 py-2.5">
+                      <span className="truncate font-mono text-[10px] uppercase tracking-[0.14em] text-paper-500">
+                        {product.brand ?? catName ?? "—"}
+                        {isNew && <span className="ml-2 text-ember-600">新品</span>}
+                      </span>
+                      {outOfStock ? (
+                        <span className="shrink-0 font-mono text-[10px] tracking-[0.08em] text-ember-600">售罄</span>
+                      ) : (
+                        <span className="inline-flex shrink-0 items-center gap-1.5 font-mono text-[10px] tracking-[0.08em] text-paper-600">
+                          <span className={`h-1.5 w-1.5 rounded-full ${effectiveStock < 10 ? "bg-ember-500" : "bg-paper-300"}`} />
+                          库存 {effectiveStock}
+                        </span>
+                      )}
+                    </div>
+                    {/* 图片：白底 + 细线分隔，无阴影无徽章 */}
+                    <div className="relative aspect-square w-full overflow-hidden border-b border-paper-100 bg-white">
+                      {product.image_url ? (
+                        <Image
+                          src={product.image_url}
+                          alt={product.name}
+                          fill
+                          sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                          className={`object-cover transition-transform duration-300 group-hover:scale-[1.03] ${outOfStock ? "opacity-60 grayscale" : ""}`}
+                        />
+                      ) : imgPlaceholder("lg")}
                     </div>
 
-                    <div className="flex flex-1 flex-col px-4 pb-4 pt-1">
-                      {product.brand && <p className="text-[10px] font-medium uppercase tracking-wider text-sage-500">{product.brand}</p>}
-                      <p className="mt-1 line-clamp-2 text-sm font-semibold leading-snug text-sage-900">{product.name}</p>
-                      {/* 价格 */}
-                      <div className="mt-2 flex items-baseline gap-0.5">
-                        <span className="text-sm font-semibold text-sage-600">€</span>
-                        <span className="text-xl font-bold tracking-tight text-sage-900">{priceInt}</span>
-                        <span className="text-sm font-semibold text-sage-900">.{priceDec}</span>
-                      </div>
+                    <div className="flex flex-1 flex-col px-4 pb-4 pt-3">
+                      <p className="line-clamp-2 text-[15px] font-medium leading-snug text-paper-900">{product.name}</p>
+                      {/* 价格：单一字重，靠字号说话 */}
+                      <p className="mt-2 text-2xl font-normal tracking-tight text-paper-900">
+                        €{Number(product.price).toFixed(2)}
+                      </p>
 
                       {/* 颜色选择器 */}
                       {isVariant && pvs.length > 0 && (
@@ -530,7 +516,7 @@ export default function ShopClient({
                               type="button"
                               onClick={() => setSelectedVariantId((prev) => ({ ...prev, [product.id]: v.id }))}
                               className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
-                                chosenVariantId === v.id ? "bg-sage-700 text-white" : "border border-sage-200 text-sage-600 hover:border-sage-400"
+                                chosenVariantId === v.id ? "bg-paper-800 text-white" : "border border-paper-200 text-paper-600 hover:border-paper-400"
                               } ${v.stock === 0 ? "opacity-40 line-through" : ""}`}
                             >
                               {v.color}
@@ -539,33 +525,30 @@ export default function ShopClient({
                         </div>
                       )}
 
-                      {/* 数量控制 + 加入购物车 */}
-                      <div className="mt-3 border-t border-sage-100 pt-3">
+                      {/* 数量控制 + 加入购物车（ghost 胶囊，唯一实心按钮留给提交订单） */}
+                      <div className="mt-3 border-t border-paper-100 pt-3">
                         {outOfStock ? (
                           <button type="button" disabled
-                            className="w-full cursor-not-allowed rounded-full bg-sage-100 py-2.5 text-xs font-medium text-sage-400">
+                            className="w-full cursor-not-allowed rounded-full border border-paper-200 py-2.5 text-xs font-medium text-paper-400">
                             暂时缺货
                           </button>
                         ) : (
                           <div className="flex items-center gap-2">
-                            <div className="flex items-center rounded-full border border-sage-200">
+                            <div className="flex items-center rounded-full border border-paper-200">
                               <button type="button" disabled={qty <= 0}
                                 onClick={() => setInputQty((p) => ({ ...p, [product.id]: Math.max(0, qty - 1) }))}
-                                className="flex h-10 w-9 items-center justify-center rounded-l-full text-sage-500 transition hover:text-sage-900 disabled:opacity-30 sm:h-9">−</button>
+                                className="flex h-10 w-9 items-center justify-center rounded-l-full text-paper-500 transition hover:text-paper-900 disabled:opacity-30 sm:h-9">−</button>
                               <input type="number" min={0} max={effectiveStock} value={qty}
                                 onChange={(e) => setInputQty((p) => ({ ...p, [product.id]: Math.min(effectiveStock, Math.max(0, parseInt(e.target.value) || 0)) }))}
-                                className="w-8 bg-transparent text-center text-sm text-sage-900 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
+                                className="w-8 bg-transparent text-center font-mono text-sm text-paper-900 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
                               <button type="button" disabled={qty >= effectiveStock}
                                 onClick={() => setInputQty((p) => ({ ...p, [product.id]: Math.min(effectiveStock, qty + 1) }))}
-                                className="flex h-10 w-9 items-center justify-center rounded-r-full text-sage-500 transition hover:text-sage-900 disabled:opacity-30 sm:h-9">+</button>
+                                className="flex h-10 w-9 items-center justify-center rounded-r-full text-paper-500 transition hover:text-paper-900 disabled:opacity-30 sm:h-9">+</button>
                             </div>
                             <button type="button" disabled={qty <= 0}
                               onClick={() => addToCart(product, isVariant ? chosenVariant : undefined)}
-                              className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-sage-700 py-2.5 text-xs font-medium text-white transition hover:bg-sage-800 disabled:cursor-not-allowed disabled:opacity-40">
-                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                              </svg>
-                              加入
+                              className="flex-1 rounded-full border border-paper-800 py-2.5 text-xs font-medium text-paper-800 transition-colors hover:bg-paper-800 hover:text-white disabled:cursor-not-allowed disabled:border-paper-200 disabled:text-paper-400 disabled:hover:bg-transparent">
+                              加入购物车
                             </button>
                           </div>
                         )}
@@ -588,9 +571,9 @@ export default function ShopClient({
                 const qty = inputQty[product.id] ?? 0;
 
                 return (
-                  <div key={product.id} className="group flex flex-col overflow-hidden rounded-xl border border-sage-200 bg-sage-25 shadow-[0_3px_12px_rgba(91,107,87,0.06)] transition duration-200 hover:-translate-y-0.5 hover:border-sage-300 hover:shadow-[0_10px_22px_rgba(91,107,87,0.13)]">
+                  <div key={product.id} className="group flex flex-col overflow-hidden rounded-xl border border-paper-200 bg-paper-25 transition duration-200 hover:border-paper-300">
                     {/* 图片（正方形，紧凑） */}
-                    <div className="relative aspect-square w-full overflow-hidden bg-sage-100">
+                    <div className="relative aspect-square w-full overflow-hidden bg-paper-100">
                       {product.image_url ? (
                         <Image
                           src={product.image_url}
@@ -601,20 +584,20 @@ export default function ShopClient({
                         />
                       ) : imgPlaceholder("sm")}
                       {outOfStock && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-sage-900/55">
-                          <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-sage-700">缺货</span>
+                        <div className="absolute inset-0 flex items-center justify-center bg-paper-900/55">
+                          <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-paper-700">缺货</span>
                         </div>
                       )}
                     </div>
 
                     <div className="flex flex-1 flex-col p-2">
                       {/* 名称（单行截断） */}
-                      <p className="truncate text-xs font-semibold leading-snug text-sage-900">{product.name}</p>
+                      <p className="truncate text-xs font-semibold leading-snug text-paper-900">{product.name}</p>
 
                       {/* 价格 + 库存 */}
                       <div className="mt-0.5 flex items-baseline justify-between gap-1">
-                        <span className="text-sm font-bold text-sage-900">€{Number(product.price).toFixed(2)}</span>
-                        <span className={`shrink-0 text-xs ${outOfStock ? "text-red-400" : effectiveStock < 10 ? "text-amber-400" : "text-sage-500"}`}>
+                        <span className="text-base font-normal tracking-tight text-paper-900">€{Number(product.price).toFixed(2)}</span>
+                        <span className={`shrink-0 font-mono text-[10px] tracking-[0.08em] ${outOfStock || effectiveStock < 10 ? "text-ember-600" : "text-paper-500"}`}>
                           {effectiveStock}件
                         </span>
                       </div>
@@ -628,7 +611,7 @@ export default function ShopClient({
                               type="button"
                               onClick={() => setSelectedVariantId((prev) => ({ ...prev, [product.id]: v.id }))}
                               className={`rounded px-1.5 py-0.5 text-xs font-medium transition-colors ${
-                                chosenVariantId === v.id ? "bg-sage-700 text-white" : "border border-sage-200 text-sage-600 hover:border-sage-400"
+                                chosenVariantId === v.id ? "bg-paper-700 text-white" : "border border-paper-200 text-paper-600 hover:border-paper-400"
                               } ${v.stock === 0 ? "opacity-40 line-through" : ""}`}
                             >
                               {v.color}
@@ -639,20 +622,20 @@ export default function ShopClient({
 
                       {/* 数量控制 + 加入 */}
                       <div className="mt-1.5 flex items-center gap-1">
-                        <div className="flex items-center rounded border border-sage-200">
+                        <div className="flex items-center rounded border border-paper-200">
                           <button type="button" disabled={outOfStock || qty <= 0}
                             onClick={() => setInputQty((p) => ({ ...p, [product.id]: Math.max(0, qty - 1) }))}
-                            className="flex h-7 w-7 items-center justify-center text-xs text-sage-500 transition hover:text-sage-900 disabled:opacity-30">−</button>
+                            className="flex h-7 w-7 items-center justify-center text-xs text-paper-500 transition hover:text-paper-900 disabled:opacity-30">−</button>
                           <input type="number" min={0} max={effectiveStock} value={qty} disabled={outOfStock}
                             onChange={(e) => setInputQty((p) => ({ ...p, [product.id]: Math.min(effectiveStock, Math.max(0, parseInt(e.target.value) || 0)) }))}
-                            className="w-7 bg-transparent text-center text-xs text-sage-900 outline-none disabled:opacity-40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
+                            className="w-7 bg-transparent text-center text-xs text-paper-900 outline-none disabled:opacity-40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
                           <button type="button" disabled={outOfStock || qty >= effectiveStock}
                             onClick={() => setInputQty((p) => ({ ...p, [product.id]: Math.min(effectiveStock, qty + 1) }))}
-                            className="flex h-7 w-7 items-center justify-center text-xs text-sage-500 transition hover:text-sage-900 disabled:opacity-30">+</button>
+                            className="flex h-7 w-7 items-center justify-center text-xs text-paper-500 transition hover:text-paper-900 disabled:opacity-30">+</button>
                         </div>
                         <button type="button" disabled={outOfStock || qty <= 0}
                           onClick={() => addToCart(product, isVariant ? chosenVariant : undefined)}
-                          className="flex-1 rounded bg-sage-700 py-1 text-xs font-medium text-white transition hover:bg-sage-800 disabled:cursor-not-allowed disabled:opacity-40">
+                          className="flex-1 rounded-full border border-paper-800 py-1 text-xs font-medium text-paper-800 transition-colors hover:bg-paper-800 hover:text-white disabled:cursor-not-allowed disabled:border-paper-200 disabled:text-paper-400 disabled:hover:bg-transparent">
                           {outOfStock ? "缺货" : "加入"}
                         </button>
                       </div>
@@ -666,19 +649,19 @@ export default function ShopClient({
 
         {/* ── 购物车侧边栏 ── */}
         <div className="w-full lg:w-80 lg:shrink-0">
-          <div className="sticky top-4 rounded-xl border border-sage-200 bg-white shadow-sm">
-            <div className="border-b border-sage-100 px-5 py-4">
-              <h2 className="font-semibold text-sage-900">
+          <div className="sticky top-4 rounded-xl border border-paper-200 bg-white">
+            <div className="border-b border-paper-100 px-5 py-4">
+              <h2 className="font-semibold text-paper-900">
                 购物车
                 {cartCount > 0 && (
-                  <span className="ml-2 rounded-full bg-sage-700 px-2 py-0.5 text-xs font-medium text-white">{cartCount}</span>
+                  <span className="ml-2 rounded-full bg-paper-700 px-2 py-0.5 text-xs font-medium text-white">{cartCount}</span>
                 )}
               </h2>
             </div>
 
             <div className="p-5">
               {cartEntries.length === 0 ? (
-                <p className="py-8 text-center text-sm text-sage-500">购物车为空</p>
+                <p className="py-8 text-center text-sm text-paper-500">购物车为空</p>
               ) : (
                 <ul className="space-y-3">
                   {cartEntries.map(([key, { product, variant, quantity }]) => (
@@ -687,23 +670,23 @@ export default function ShopClient({
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={product.image_url} alt={product.name} className="h-10 w-10 rounded-lg object-cover" />
                       ) : (
-                        <div className="h-10 w-10 rounded-lg bg-sage-100" />
+                        <div className="h-10 w-10 rounded-lg bg-paper-100" />
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-sage-900">
+                        <p className="truncate text-sm font-medium text-paper-900">
                           {product.name}
-                          {variant && <span className="ml-1 text-sage-500">· {variant.color}</span>}
+                          {variant && <span className="ml-1 text-paper-500">· {variant.color}</span>}
                         </p>
-                        <p className="text-xs text-sage-500">€{Number(product.price).toFixed(2)} × {quantity}</p>
+                        <p className="text-xs text-paper-500">€{Number(product.price).toFixed(2)} × {quantity}</p>
                       </div>
                       <div className="flex items-center gap-1">
                         <button type="button" onClick={() => changeCartQty(key, -1)}
-                          className="flex h-6 w-6 items-center justify-center rounded border border-sage-200 text-xs text-sage-500 hover:bg-sage-100">−</button>
-                        <span className="w-6 text-center text-xs font-medium text-sage-900">{quantity}</span>
+                          className="flex h-6 w-6 items-center justify-center rounded border border-paper-200 text-xs text-paper-500 hover:bg-paper-100">−</button>
+                        <span className="w-6 text-center text-xs font-medium text-paper-900">{quantity}</span>
                         <button type="button" onClick={() => changeCartQty(key, 1)}
                           disabled={quantity >= (variant ? variant.stock : product.stock)}
-                          className="flex h-6 w-6 items-center justify-center rounded border border-sage-200 text-xs text-sage-500 hover:bg-sage-100 disabled:opacity-30">+</button>
-                        <button type="button" onClick={() => removeFromCart(key)} className="ml-1 text-xs text-sage-400 hover:text-red-400">✕</button>
+                          className="flex h-6 w-6 items-center justify-center rounded border border-paper-200 text-xs text-paper-500 hover:bg-paper-100 disabled:opacity-30">+</button>
+                        <button type="button" onClick={() => removeFromCart(key)} className="ml-1 text-xs text-paper-400 hover:text-red-400">✕</button>
                       </div>
                     </li>
                   ))}
@@ -711,17 +694,17 @@ export default function ShopClient({
               )}
 
               {cartEntries.length > 0 && (
-                <div className="mt-4 border-t border-sage-100 pt-4">
+                <div className="mt-4 border-t border-paper-100 pt-4">
                   <div className="flex justify-between text-sm">
-                    <span className="text-sage-500">合计</span>
-                    <span className="font-bold text-sage-900">€{total.toFixed(2)}</span>
+                    <span className="text-paper-500">合计</span>
+                    <span className="font-bold text-paper-900">€{total.toFixed(2)}</span>
                   </div>
                   <textarea
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
                     placeholder="订单备注（选填，如「急」「周五送」）"
                     rows={2}
-                    className="mt-3 w-full resize-none rounded-lg border border-sage-200 px-3 py-2 text-sm text-sage-900 placeholder-sage-500 outline-none focus:border-sage-400 focus:ring-2 focus:ring-sage-200"
+                    className="mt-3 w-full resize-none rounded-lg border border-paper-200 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-400 focus:ring-2 focus:ring-paper-200"
                   />
                 </div>
               )}
@@ -737,12 +720,12 @@ export default function ShopClient({
 
               {lastOrderItems.length > 0 && (
                 <button type="button" onClick={handleRepeatOrder}
-                  className="mt-3 w-full rounded-xl border-2 border-sage-300 py-3.5 text-base font-semibold text-sage-700 transition hover:bg-sage-100 sm:border sm:py-2 sm:text-sm sm:font-medium">
+                  className="mt-3 w-full rounded-xl border-2 border-paper-300 py-3.5 text-base font-semibold text-paper-700 transition hover:bg-paper-100 sm:border sm:py-2 sm:text-sm sm:font-medium">
                   再来一单
                 </button>
               )}
               <button type="button" onClick={handleSubmit} disabled={cartEntries.length === 0 || isPending}
-                className="mt-2 w-full rounded-lg bg-sage-700 py-3.5 text-base font-medium text-white transition hover:bg-sage-800 disabled:cursor-not-allowed disabled:opacity-40 sm:py-2.5 sm:text-sm">
+                className="mt-2 w-full rounded-lg bg-paper-700 py-3.5 text-base font-medium text-white transition hover:bg-paper-800 disabled:cursor-not-allowed disabled:opacity-40 sm:py-2.5 sm:text-sm">
                 {isPending ? "提交中…" : "提交订单"}
               </button>
             </div>
@@ -755,24 +738,24 @@ export default function ShopClient({
         <button
           type="button"
           onClick={() => setMobileCartOpen(true)}
-          className="fixed inset-x-0 bottom-0 z-40 flex w-full items-center justify-between border-t border-sage-200 bg-white px-5 py-3.5 shadow-[0_-4px_16px_rgba(0,0,0,.10)] lg:hidden"
+          className="fixed inset-x-0 bottom-0 z-40 flex w-full items-center justify-between border-t border-paper-200 bg-white px-5 py-3.5 lg:hidden"
         >
           <div className="flex items-center gap-3">
             <div className="relative">
-              <svg className="h-6 w-6 text-sage-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-6 w-6 text-paper-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
               </svg>
-              <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-sage-700 text-[10px] font-bold text-white">
+              <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-paper-700 text-[10px] font-bold text-white">
                 {cartCount > 9 ? "9+" : cartCount}
               </span>
             </div>
             <div className="text-left">
-              <p className="text-sm font-semibold text-sage-900">已选 {cartCount} 件</p>
-              <p className="text-xs text-sage-500">合计 €{total.toFixed(2)}</p>
+              <p className="text-sm font-semibold text-paper-900">已选 {cartCount} 件</p>
+              <p className="text-xs text-paper-500">合计 €{total.toFixed(2)}</p>
             </div>
           </div>
-          <span className="rounded-xl bg-sage-700 px-5 py-2.5 text-sm font-semibold text-white">查看购物车</span>
+          <span className="rounded-xl bg-paper-700 px-5 py-2.5 text-sm font-semibold text-white">查看购物车</span>
         </button>
       )}
 
@@ -782,15 +765,15 @@ export default function ShopClient({
           <div className="absolute inset-0 bg-black/40" onClick={() => setMobileCartOpen(false)} />
           <div className="absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-2xl bg-white">
             {/* 面板头部 */}
-            <div className="flex shrink-0 items-center justify-between border-b border-sage-100 px-5 py-4">
-              <h2 className="font-semibold text-sage-900">
+            <div className="flex shrink-0 items-center justify-between border-b border-paper-100 px-5 py-4">
+              <h2 className="font-semibold text-paper-900">
                 购物车
                 {cartCount > 0 && (
-                  <span className="ml-2 rounded-full bg-sage-700 px-2 py-0.5 text-xs font-medium text-white">{cartCount}</span>
+                  <span className="ml-2 rounded-full bg-paper-700 px-2 py-0.5 text-xs font-medium text-white">{cartCount}</span>
                 )}
               </h2>
               <button type="button" onClick={() => setMobileCartOpen(false)}
-                className="rounded-lg p-1 text-sage-500 hover:text-sage-600">
+                className="rounded-lg p-1 text-paper-500 hover:text-paper-600">
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -800,39 +783,39 @@ export default function ShopClient({
             {/* 商品列表 */}
             <div className="flex-1 overflow-y-auto px-5 py-2">
               {cartEntries.length === 0 ? (
-                <p className="py-12 text-center text-sm text-sage-500">购物车为空</p>
+                <p className="py-12 text-center text-sm text-paper-500">购物车为空</p>
               ) : (
-                <ul className="divide-y divide-sage-100">
+                <ul className="divide-y divide-paper-100">
                   {cartEntries.map(([key, { product, variant, quantity }]) => (
                     <li key={key} className="flex items-start gap-3 py-3">
                       {product.image_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img src={product.image_url} alt={product.name} className="h-14 w-14 shrink-0 rounded-lg object-cover" />
                       ) : (
-                        <div className="h-14 w-14 shrink-0 rounded-lg bg-sage-100" />
+                        <div className="h-14 w-14 shrink-0 rounded-lg bg-paper-100" />
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium leading-snug text-sage-900">
+                        <p className="text-sm font-medium leading-snug text-paper-900">
                           {product.name}
-                          {variant && <span className="ml-1 text-sage-500">· {variant.color}</span>}
+                          {variant && <span className="ml-1 text-paper-500">· {variant.color}</span>}
                         </p>
-                        <p className="mt-0.5 text-xs text-sage-500">€{Number(product.price).toFixed(2)} / 件</p>
-                        <p className="mt-1 text-sm font-bold text-sage-900">€{(product.price * quantity).toFixed(2)}</p>
+                        <p className="mt-0.5 text-xs text-paper-500">€{Number(product.price).toFixed(2)} / 件</p>
+                        <p className="mt-1 text-sm font-bold text-paper-900">€{(product.price * quantity).toFixed(2)}</p>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-2">
                         <button type="button" onClick={() => removeFromCart(key)}
-                          className="text-sage-400 hover:text-red-400">
+                          className="text-paper-400 hover:text-red-400">
                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                           </svg>
                         </button>
-                        <div className="flex items-center rounded-lg border border-sage-200">
+                        <div className="flex items-center rounded-lg border border-paper-200">
                           <button type="button" onClick={() => changeCartQty(key, -1)}
-                            className="flex h-9 w-9 items-center justify-center text-sage-500 hover:text-sage-900">−</button>
-                          <span className="w-8 text-center text-sm font-medium text-sage-900">{quantity}</span>
+                            className="flex h-9 w-9 items-center justify-center text-paper-500 hover:text-paper-900">−</button>
+                          <span className="w-8 text-center text-sm font-medium text-paper-900">{quantity}</span>
                           <button type="button" onClick={() => changeCartQty(key, 1)}
                             disabled={quantity >= (variant ? variant.stock : product.stock)}
-                            className="flex h-9 w-9 items-center justify-center text-sage-500 hover:text-sage-900 disabled:opacity-30">+</button>
+                            className="flex h-9 w-9 items-center justify-center text-paper-500 hover:text-paper-900 disabled:opacity-30">+</button>
                         </div>
                       </div>
                     </li>
@@ -842,10 +825,10 @@ export default function ShopClient({
             </div>
 
             {/* 面板底部操作区 */}
-            <div className="shrink-0 border-t border-sage-100 px-5 pb-8 pt-4">
+            <div className="shrink-0 border-t border-paper-100 px-5 pb-8 pt-4">
               <div className="mb-3 flex items-baseline justify-between">
-                <span className="text-sm text-sage-500">共 {cartCount} 件</span>
-                <span className="text-xl font-bold text-sage-900">€{total.toFixed(2)}</span>
+                <span className="text-sm text-paper-500">共 {cartCount} 件</span>
+                <span className="text-xl font-bold text-paper-900">€{total.toFixed(2)}</span>
               </div>
               {cartEntries.length > 0 && (
                 <textarea
@@ -853,7 +836,7 @@ export default function ShopClient({
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="订单备注（选填，如「急」「周五送」）"
                   rows={2}
-                  className="mb-3 w-full resize-none rounded-lg border border-sage-200 px-3 py-2 text-sm text-sage-900 placeholder-sage-500 outline-none focus:border-sage-400 focus:ring-2 focus:ring-sage-200"
+                  className="mb-3 w-full resize-none rounded-lg border border-paper-200 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-400 focus:ring-2 focus:ring-paper-200"
                 />
               )}
               {result && "error" in result && (
@@ -866,12 +849,12 @@ export default function ShopClient({
               )}
               {lastOrderItems.length > 0 && (
                 <button type="button" onClick={handleRepeatOrder}
-                  className="mb-2 w-full rounded-xl border-2 border-sage-300 py-3 text-base font-semibold text-sage-700 transition hover:bg-sage-100">
+                  className="mb-2 w-full rounded-xl border-2 border-paper-300 py-3 text-base font-semibold text-paper-700 transition hover:bg-paper-100">
                   再来一单
                 </button>
               )}
               <button type="button" onClick={handleSubmit} disabled={cartEntries.length === 0 || isPending}
-                className="w-full rounded-xl bg-sage-700 py-3.5 text-base font-semibold text-white transition hover:bg-sage-800 disabled:cursor-not-allowed disabled:opacity-40">
+                className="w-full rounded-xl bg-paper-700 py-3.5 text-base font-semibold text-white transition hover:bg-paper-800 disabled:cursor-not-allowed disabled:opacity-40">
                 {isPending ? "提交中…" : "提交订单"}
               </button>
             </div>

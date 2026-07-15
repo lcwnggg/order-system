@@ -44,16 +44,16 @@ export default async function AdminProductsPage() {
   const productVariants = (productVariantsData ?? []) as ProductVariant[];
 
   return (
-    <div className="min-h-screen bg-sage-100">
-      <header className="border-b border-sage-200 bg-white px-6 py-4">
+    <div className="min-h-screen bg-paper-100">
+      <header className="border-b border-paper-200 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2">
           <AdminNav />
           <div className="flex shrink-0 items-center gap-3">
-            <span className="hidden text-sm text-sage-500 sm:block">{user.email}</span>
+            <span className="hidden text-sm text-paper-500 sm:block">{user.email}</span>
             <form action={signOut}>
               <button
                 type="submit"
-                className="rounded-lg border border-sage-200 px-3 py-1.5 text-sm text-sage-700 transition-colors hover:bg-sage-100"
+                className="rounded-lg border border-paper-200 px-3 py-1.5 text-sm text-paper-700 transition-colors hover:bg-paper-100"
               >
                 退出登录
               </button>
@@ -67,17 +67,17 @@ export default async function AdminProductsPage() {
 
         <div>
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-sage-900">
+            <h2 className="text-base font-semibold text-paper-900">
               已添加商品
               {products && products.length > 0 && (
-                <span className="ml-2 text-sm font-normal text-sage-500">
+                <span className="ml-2 text-sm font-normal text-paper-500">
                   共 {products.length} 件
                 </span>
               )}
             </h2>
             <Link
               href="/admin/products/import"
-              className="rounded-lg border border-sage-200 bg-white px-3 py-1.5 text-sm font-medium text-sage-700 transition-colors hover:bg-sage-100"
+              className="rounded-lg border border-paper-200 bg-white px-3 py-1.5 text-sm font-medium text-paper-700 transition-colors hover:bg-paper-100"
             >
               批量导入 →
             </Link>

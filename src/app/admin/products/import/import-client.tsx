@@ -295,14 +295,14 @@ export default function ImportClient({
   // ── 导入完成后的结果页 ──
   if (importResult && !("error" in importResult)) {
     return (
-      <div className="rounded-xl border border-sage-200 bg-white p-8 text-center shadow-sm">
+      <div className="rounded-xl border border-paper-200 bg-white p-8 text-center">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-50">
           <svg className="h-7 w-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h2 className="text-lg font-semibold text-sage-900">导入完成</h2>
-        <p className="mt-2 text-sm text-sage-600">
+        <h2 className="text-lg font-semibold text-paper-900">导入完成</h2>
+        <p className="mt-2 text-sm text-paper-600">
           成功导入 <span className="font-semibold text-green-600">{importResult.imported}</span> 条，
           跳过重复 <span className="font-semibold text-amber-600">{importResult.skipped}</span> 条，
           失败 <span className="font-semibold text-red-600">{importResult.failed}</span> 条
@@ -318,13 +318,13 @@ export default function ImportClient({
           <button
             type="button"
             onClick={resetAll}
-            className="rounded-lg border border-sage-200 px-4 py-2 text-sm font-medium text-sage-700 transition-colors hover:bg-sage-100"
+            className="rounded-lg border border-paper-200 px-4 py-2 text-sm font-medium text-paper-700 transition-colors hover:bg-paper-100"
           >
             继续导入
           </button>
           <Link
             href="/admin/products"
-            className="rounded-lg bg-sage-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-sage-800"
+            className="rounded-lg bg-paper-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-paper-800"
           >
             返回商品列表
           </Link>
@@ -336,10 +336,10 @@ export default function ImportClient({
   return (
     <div className="space-y-6">
       {/* 说明 + 模板下载 */}
-      <div className="flex items-center justify-between rounded-xl border border-sage-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between rounded-xl border border-paper-200 bg-white p-5">
         <div>
-          <p className="text-sm font-medium text-sage-900">1. 下载模板，按格式填写商品数据</p>
-          <p className="mt-1 text-xs text-sage-500">
+          <p className="text-sm font-medium text-paper-900">1. 下载模板，按格式填写商品数据</p>
+          <p className="mt-1 text-xs text-paper-500">
             列固定为 nombre、marca、categoria、subcategoria、color、precio、stock、codigo_barras。当前版本批量导入只创建无变体的普通商品：
             color 列会保留在预览表中供参考，但不会写入、也不会自动创建颜色变体；如需分颜色库存，请导入后到商品编辑页手动添加。
             codigo_barras（条码）为可选，填写则会写入商品；留空即可。
@@ -348,15 +348,15 @@ export default function ImportClient({
         <button
           type="button"
           onClick={downloadTemplate}
-          className="shrink-0 rounded-lg border border-sage-200 bg-white px-4 py-2 text-sm font-medium text-sage-700 transition-colors hover:bg-sage-100"
+          className="shrink-0 rounded-lg border border-paper-200 bg-white px-4 py-2 text-sm font-medium text-paper-700 transition-colors hover:bg-paper-100"
         >
           下载 CSV 模板
         </button>
       </div>
 
       {/* 上传区域 */}
-      <div className="rounded-xl border border-sage-200 bg-white p-5 shadow-sm">
-        <p className="mb-3 text-sm font-medium text-sage-900">2. 上传文件（.csv / .xlsx）</p>
+      <div className="rounded-xl border border-paper-200 bg-white p-5">
+        <p className="mb-3 text-sm font-medium text-paper-900">2. 上传文件（.csv / .xlsx）</p>
         <input
           ref={fileInputRef}
           type="file"
@@ -365,9 +365,9 @@ export default function ImportClient({
             const file = e.target.files?.[0];
             if (file) handleFile(file);
           }}
-          className="block w-full text-sm text-sage-600 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-sage-700 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-sage-800"
+          className="block w-full text-sm text-paper-600 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-paper-700 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-paper-800"
         />
-        {fileName && <p className="mt-2 text-xs text-sage-500">已选择文件：{fileName}</p>}
+        {fileName && <p className="mt-2 text-xs text-paper-500">已选择文件：{fileName}</p>}
         {fileError && (
           <p className="mt-3 rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600">{fileError}</p>
         )}
@@ -377,7 +377,7 @@ export default function ImportClient({
       {rows && rows.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-sage-900">
+            <p className="text-sm font-medium text-paper-900">
               3. 核对数据（共 {rows.length} 行）
               {" · "}
               <span className={rows.every((r) => !rowHasError(validationMap.get(r.key)!)) ? "text-green-600" : "text-red-600"}>
@@ -387,7 +387,7 @@ export default function ImportClient({
             <button
               type="button"
               onClick={resetAll}
-              className="text-xs font-medium text-sage-500 hover:text-sage-900"
+              className="text-xs font-medium text-paper-500 hover:text-paper-900"
             >
               重新选择文件
             </button>
@@ -421,28 +421,28 @@ export default function ImportClient({
             </div>
           )}
 
-          <div className="overflow-x-auto rounded-xl border border-sage-200 bg-white shadow-sm">
+          <div className="overflow-x-auto rounded-xl border border-paper-200 bg-white">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-sage-100 bg-sage-100/80 text-left">
-                  <th className="px-3 py-2 text-xs font-medium text-sage-500">nombre</th>
-                  <th className="px-3 py-2 text-xs font-medium text-sage-500">marca</th>
-                  <th className="px-3 py-2 text-xs font-medium text-sage-500">categoria</th>
-                  <th className="px-3 py-2 text-xs font-medium text-sage-500">subcategoria</th>
-                  <th className="px-3 py-2 text-xs font-medium text-sage-500">color（仅参考，不导入）</th>
-                  <th className="px-3 py-2 text-xs font-medium text-sage-500">precio</th>
-                  <th className="px-3 py-2 text-xs font-medium text-sage-500">stock</th>
-                  <th className="px-3 py-2 text-xs font-medium text-sage-500">codigo_barras</th>
-                  <th className="px-3 py-2 text-xs font-medium text-sage-500">状态</th>
+                <tr className="border-b border-paper-100 bg-paper-100/80 text-left">
+                  <th className="px-3 py-2 text-xs font-medium text-paper-500">nombre</th>
+                  <th className="px-3 py-2 text-xs font-medium text-paper-500">marca</th>
+                  <th className="px-3 py-2 text-xs font-medium text-paper-500">categoria</th>
+                  <th className="px-3 py-2 text-xs font-medium text-paper-500">subcategoria</th>
+                  <th className="px-3 py-2 text-xs font-medium text-paper-500">color（仅参考，不导入）</th>
+                  <th className="px-3 py-2 text-xs font-medium text-paper-500">precio</th>
+                  <th className="px-3 py-2 text-xs font-medium text-paper-500">stock</th>
+                  <th className="px-3 py-2 text-xs font-medium text-paper-500">codigo_barras</th>
+                  <th className="px-3 py-2 text-xs font-medium text-paper-500">状态</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-sage-100">
+              <tbody className="divide-y divide-paper-100">
                 {rows.map((row) => {
                   const rv = validationMap.get(row.key)!;
                   const hasErr = rowHasError(rv);
                   const inputCls = (err?: string) =>
-                    `w-full rounded border px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-sage-300 ${
-                      err ? "border-red-300 bg-red-50 text-red-900" : "border-sage-200 text-sage-900"
+                    `w-full rounded border px-2 py-1 text-xs outline-none focus:ring-1 focus:ring-paper-300 ${
+                      err ? "border-red-300 bg-red-50 text-red-900" : "border-paper-200 text-paper-900"
                     }`;
                   return (
                     <tr key={row.key} className={hasErr ? "bg-red-50/40" : undefined}>
@@ -577,7 +577,7 @@ export default function ImportClient({
               type="button"
               disabled={!canImport}
               onClick={handleConfirmImport}
-              className="rounded-lg bg-sage-700 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-sage-800 disabled:cursor-not-allowed disabled:opacity-40"
+              className="rounded-lg bg-paper-700 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-paper-800 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {isImporting ? "导入中…" : "确认导入"}
             </button>

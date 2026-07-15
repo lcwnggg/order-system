@@ -52,16 +52,16 @@ export default async function StockAlertPage() {
     .sort((a, b) => a.totalStock - b.totalStock || a.name.localeCompare(b.name));
 
   return (
-    <div className="min-h-screen bg-sage-100">
-      <header className="border-b border-sage-200 bg-white px-6 py-4">
+    <div className="min-h-screen bg-paper-100">
+      <header className="border-b border-paper-200 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-2">
           <AdminNav />
           <div className="flex shrink-0 items-center gap-3">
-            <span className="hidden text-sm text-sage-500 sm:block">{user.email}</span>
+            <span className="hidden text-sm text-paper-500 sm:block">{user.email}</span>
             <form action={signOut}>
               <button
                 type="submit"
-                className="rounded-lg border border-sage-200 px-3 py-1.5 text-sm text-sage-700 transition-colors hover:bg-sage-100"
+                className="rounded-lg border border-paper-200 px-3 py-1.5 text-sm text-paper-700 transition-colors hover:bg-paper-100"
               >
                 退出登录
               </button>
@@ -72,30 +72,30 @@ export default async function StockAlertPage() {
 
       <main className="mx-auto max-w-3xl px-6 py-8">
         <div className="mb-6">
-          <h1 className="text-xl font-semibold text-sage-900">库存告急商品</h1>
-          <p className="mt-1 text-sm text-sage-500">
+          <h1 className="text-xl font-semibold text-paper-900">库存告急商品</h1>
+          <p className="mt-1 text-sm text-paper-500">
             以下商品库存 ≤ 5 件，共 {list.length} 件，请及时补货。
           </p>
         </div>
 
         {list.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-sage-300 bg-white py-20 text-center">
-            <p className="text-sm text-sage-500">暂无库存告急商品</p>
+          <div className="rounded-xl border border-dashed border-paper-300 bg-white py-20 text-center">
+            <p className="text-sm text-paper-500">暂无库存告急商品</p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-sage-200 bg-sage-25 shadow-[0_4px_16px_rgba(91,107,87,0.06)]">
+          <div className="overflow-hidden rounded-2xl border border-paper-200 bg-paper-25">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-sage-100 bg-sage-100 text-left">
-                  <th className="px-5 py-3 font-medium text-sage-500">商品名称</th>
-                  <th className="px-5 py-3 font-medium text-sage-500">状态</th>
-                  <th className="px-5 py-3 text-right font-medium text-sage-500">当前库存</th>
-                  <th className="px-5 py-3 font-medium text-sage-500"></th>
+                <tr className="border-b border-paper-100 bg-paper-100 text-left">
+                  <th className="px-5 py-3 font-medium text-paper-500">商品名称</th>
+                  <th className="px-5 py-3 font-medium text-paper-500">状态</th>
+                  <th className="px-5 py-3 text-right font-medium text-paper-500">当前库存</th>
+                  <th className="px-5 py-3 font-medium text-paper-500"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-sage-100">
+              <tbody className="divide-y divide-paper-100">
                 {list.map((product) => (
-                  <tr key={product.id} className="hover:bg-sage-100">
+                  <tr key={product.id} className="hover:bg-paper-100">
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-3">
                         {product.image_url ? (
@@ -106,9 +106,9 @@ export default async function StockAlertPage() {
                             className="h-10 w-10 rounded-lg object-cover"
                           />
                         ) : (
-                          <div className="h-10 w-10 rounded-lg bg-sage-100" />
+                          <div className="h-10 w-10 rounded-lg bg-paper-100" />
                         )}
-                        <span className="font-medium text-sage-900">{product.name}</span>
+                        <span className="font-medium text-paper-900">{product.name}</span>
                       </div>
                     </td>
                     <td className="px-5 py-3">
@@ -116,7 +116,7 @@ export default async function StockAlertPage() {
                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                           product.is_active
                             ? "bg-green-50 text-green-700"
-                            : "bg-sage-100 text-sage-500"
+                            : "bg-paper-100 text-paper-500"
                         }`}
                       >
                         {product.is_active ? "上架" : "下架"}
@@ -126,7 +126,7 @@ export default async function StockAlertPage() {
                       {product.has_variants ? (
                         <div className="flex flex-wrap items-center justify-end gap-1">
                           {product.variants.length === 0 ? (
-                            <span className="text-xs text-sage-500">暂无变体</span>
+                            <span className="text-xs text-paper-500">暂无变体</span>
                           ) : (
                             product.variants.map((v) => (
                               <span
@@ -139,7 +139,7 @@ export default async function StockAlertPage() {
                                     : "bg-green-50 text-green-600"
                                 }`}
                               >
-                                <span className="text-sage-500">{v.color}</span>
+                                <span className="text-paper-500">{v.color}</span>
                                 {v.stock === 0 ? "售罄" : v.stock}
                               </span>
                             ))
@@ -154,14 +154,14 @@ export default async function StockAlertPage() {
                           >
                             {product.stock}
                           </span>
-                          <span className="ml-1 text-xs text-sage-500">件</span>
+                          <span className="ml-1 text-xs text-paper-500">件</span>
                         </>
                       )}
                     </td>
                     <td className="px-5 py-3 text-right">
                       <Link
                         href="/admin/products"
-                        className="text-xs font-medium text-sage-500 hover:text-sage-900 hover:underline"
+                        className="text-xs font-medium text-paper-500 hover:text-paper-900 hover:underline"
                       >
                         去补货 →
                       </Link>

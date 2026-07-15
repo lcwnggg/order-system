@@ -33,7 +33,7 @@ export default function AdminNav() {
     <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       <Link
         href="/"
-        className="mr-1 flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-sm text-sage-500 transition-colors hover:bg-sage-100 hover:text-sage-900"
+        className="mr-1 flex shrink-0 items-center gap-1 rounded-lg px-2.5 py-1.5 text-sm text-paper-500 transition-colors hover:bg-paper-100 hover:text-paper-900"
       >
         <Icon d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
         <span className="hidden sm:inline">首页</span>
@@ -46,7 +46,7 @@ export default function AdminNav() {
             href={tab.href}
             aria-current={active ? "page" : undefined}
             className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-              active ? "bg-sage-700 text-white" : "text-sage-600 hover:bg-sage-100"
+              active ? "bg-paper-700 text-white" : "text-paper-600 hover:bg-paper-100"
             }`}
           >
             {tab.icon}

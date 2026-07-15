@@ -182,8 +182,8 @@ export default function ProductForm({ categories = [] }: { categories?: Category
   const uploading = phase === "compressing" || phase === "uploading";
 
   return (
-    <div className="rounded-2xl border border-sage-200 bg-sage-25 p-6 shadow-[0_4px_16px_rgba(91,107,87,0.06)]">
-      <h2 className="mb-5 text-base font-semibold text-sage-900">添加商品</h2>
+    <div className="rounded-2xl border border-paper-200 bg-paper-25 p-6">
+      <h2 className="mb-5 text-base font-semibold text-paper-900">添加商品</h2>
 
       <form ref={formRef} action={action} className="space-y-4">
         {imageUrl && <input type="hidden" name="image_url" value={imageUrl} />}
@@ -197,7 +197,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
         {/* 名称 + 品牌 + 价格 */}
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-sage-700">
+            <label className="mb-1.5 block text-sm font-medium text-paper-700">
               商品名称 <span className="text-red-500">*</span>
             </label>
             <input
@@ -205,21 +205,21 @@ export default function ProductForm({ categories = [] }: { categories?: Category
               type="text"
               required
               placeholder="请输入商品名称"
-              className="w-full rounded-lg border border-sage-300 px-3 py-2 text-sm text-sage-900 placeholder-sage-500 outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-300"
+              className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-sage-700">品牌</label>
+            <label className="mb-1.5 block text-sm font-medium text-paper-700">品牌</label>
             <input
               name="brand"
               type="text"
               placeholder="如 Xiaomi、Temco（可选）"
-              className="w-full rounded-lg border border-sage-300 px-3 py-2 text-sm text-sage-900 placeholder-sage-500 outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-300"
+              className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
             />
           </div>
         </div>
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-sage-700">
+          <label className="mb-1.5 block text-sm font-medium text-paper-700">
             价格（€）<span className="text-red-500">*</span>
           </label>
           <input
@@ -229,7 +229,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
             min="0"
             step="0.01"
             placeholder="0.00"
-            className="w-full rounded-lg border border-sage-300 px-3 py-2 text-sm text-sage-900 placeholder-sage-500 outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-300"
+            className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
           />
         </div>
 
@@ -238,24 +238,24 @@ export default function ProductForm({ categories = [] }: { categories?: Category
 
         {/* 描述 */}
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-sage-700">商品描述</label>
+          <label className="mb-1.5 block text-sm font-medium text-paper-700">商品描述</label>
           <textarea
             name="description"
             rows={3}
             placeholder="请输入商品描述（可选）"
-            className="w-full resize-none rounded-lg border border-sage-300 px-3 py-2 text-sm text-sage-900 placeholder-sage-500 outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-300"
+            className="w-full resize-none rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
           />
         </div>
 
         {/* 分类 */}
         {parentCategories.length > 0 && (
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-sage-700">商品分类</label>
+            <label className="mb-1.5 block text-sm font-medium text-paper-700">商品分类</label>
             <div className="grid gap-3 sm:grid-cols-2">
               <select
                 value={selectedParentCatId}
                 onChange={(e) => { setSelectedParentCatId(e.target.value); setSelectedChildCatId(""); }}
-                className="w-full rounded-lg border border-sage-300 px-3 py-2 text-sm text-sage-900 outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-300"
+                className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
               >
                 <option value="">不选大类</option>
                 {parentCategories.map((p) => (
@@ -266,7 +266,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
                 <select
                   value={selectedChildCatId}
                   onChange={(e) => setSelectedChildCatId(e.target.value)}
-                  className="w-full rounded-lg border border-sage-300 px-3 py-2 text-sm text-sage-900 outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-300"
+                  className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
                 >
                   <option value="">不选小类</option>
                   {childrenOf(selectedParentCatId).map((c) => (
@@ -290,7 +290,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
                 setVariants([{ color: "", stock: "0" }]);
               }}
               className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
-                hasVariants ? "bg-sage-700" : "bg-sage-300"
+                hasVariants ? "bg-paper-700" : "bg-paper-300"
               }`}
             >
               <span
@@ -299,12 +299,12 @@ export default function ProductForm({ categories = [] }: { categories?: Category
                 }`}
               />
             </button>
-            <span className="text-sm font-medium text-sage-700">这个商品分颜色/规格吗？</span>
+            <span className="text-sm font-medium text-paper-700">这个商品分颜色/规格吗？</span>
           </div>
 
           {!hasVariants ? (
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-sage-700">
+              <label className="mb-1.5 block text-sm font-medium text-paper-700">
                 库存数量 <span className="text-red-500">*</span>
               </label>
               <input
@@ -314,14 +314,14 @@ export default function ProductForm({ categories = [] }: { categories?: Category
                 min="0"
                 step="1"
                 placeholder="0"
-                className="w-full rounded-lg border border-sage-300 px-3 py-2 text-sm text-sage-900 placeholder-sage-500 outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-300"
+                className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
               />
             </div>
           ) : (
             <div>
               <input type="hidden" name="stock" value="0" />
-              <div className="rounded-lg border border-sage-200 bg-sage-100 p-3">
-                <p className="mb-2 text-xs font-medium text-sage-500">颜色变体（各颜色独立库存，价格统一）</p>
+              <div className="rounded-lg border border-paper-200 bg-paper-100 p-3">
+                <p className="mb-2 text-xs font-medium text-paper-500">颜色变体（各颜色独立库存，价格统一）</p>
                 <div className="space-y-2">
                   {variants.map((v, idx) => (
                     <div key={idx} className="flex items-center gap-2">
@@ -330,7 +330,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
                         placeholder={`颜色名称，如"黑色"`}
                         value={v.color}
                         onChange={(e) => updateVariantRow(idx, "color", e.target.value)}
-                        className="flex-1 rounded-lg border border-sage-300 px-3 py-2 text-sm text-sage-900 outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-300"
+                        className="flex-1 rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
                       />
                       <input
                         type="number"
@@ -339,13 +339,13 @@ export default function ProductForm({ categories = [] }: { categories?: Category
                         placeholder="库存"
                         value={v.stock}
                         onChange={(e) => updateVariantRow(idx, "stock", e.target.value)}
-                        className="w-20 rounded-lg border border-sage-300 px-3 py-2 text-sm text-sage-900 outline-none focus:border-sage-500 focus:ring-2 focus:ring-sage-300"
+                        className="w-20 rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
                       />
                       {variants.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeVariantRow(idx)}
-                          className="flex-shrink-0 rounded-lg p-1.5 text-sage-500 hover:bg-sage-200 hover:text-red-500"
+                          className="flex-shrink-0 rounded-lg p-1.5 text-paper-500 hover:bg-paper-200 hover:text-red-500"
                           aria-label="删除此颜色"
                         >
                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -359,7 +359,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
                 <button
                   type="button"
                   onClick={addVariantRow}
-                  className="mt-2 text-xs font-medium text-sage-500 hover:text-sage-900"
+                  className="mt-2 text-xs font-medium text-paper-500 hover:text-paper-900"
                 >
                   + 添加颜色
                 </button>
@@ -370,26 +370,26 @@ export default function ProductForm({ categories = [] }: { categories?: Category
 
         {/* 图片上传 */}
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-sage-700">商品图片</label>
+          <label className="mb-1.5 block text-sm font-medium text-paper-700">商品图片</label>
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
             onChange={handleFileChange}
-            className="w-full rounded-lg border border-sage-300 px-3 py-2 text-sm text-sage-600 outline-none file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-sage-100 file:px-2.5 file:py-1 file:text-xs file:font-medium file:text-sage-700 hover:file:bg-sage-200"
+            className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-600 outline-none file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-paper-100 file:px-2.5 file:py-1 file:text-xs file:font-medium file:text-paper-700 hover:file:bg-paper-200"
           />
-          {phase === "compressing" && <p className="mt-1.5 text-xs text-sage-500">正在压缩图片…</p>}
-          {phase === "uploading" && <p className="mt-1.5 text-xs text-sage-500">正在上传至存储…</p>}
+          {phase === "compressing" && <p className="mt-1.5 text-xs text-paper-500">正在压缩图片…</p>}
+          {phase === "uploading" && <p className="mt-1.5 text-xs text-paper-500">正在上传至存储…</p>}
           {phase === "error" && <p className="mt-1.5 text-xs text-red-500">{uploadError}</p>}
         </div>
 
         {preview && (
-          <div className="flex items-center gap-3 rounded-lg border border-sage-100 bg-sage-100 p-3">
+          <div className="flex items-center gap-3 rounded-lg border border-paper-100 bg-paper-100 p-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={preview} alt="预览" className="h-16 w-16 rounded-lg object-cover" />
             <div className="flex-1 text-xs">
               {phase === "done" && <p className="font-medium text-green-600">图片上传成功</p>}
-              {uploading && <p className="text-sage-500">处理中…</p>}
+              {uploading && <p className="text-paper-500">处理中…</p>}
             </div>
             {phase === "done" && (
               <button
@@ -414,7 +414,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
           <button
             type="submit"
             disabled={pending || uploading}
-            className="rounded-lg bg-sage-700 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-sage-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg bg-paper-700 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-paper-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {uploading ? "图片上传中…" : pending ? "提交中…" : "添加商品"}
           </button>

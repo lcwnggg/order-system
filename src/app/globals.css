@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f4f6f1;
-  --foreground: #2f3a2c;
+  --background: #f6f5f1;
+  --foreground: #1f1d18;
 }
 
 @theme inline {
@@ -11,18 +11,28 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  /* Paleta salvia apagada (E3) */
-  --color-sage-25: #fdfdfb;
-  --color-sage-50: #f4f6f1;
-  --color-sage-100: #eef1ec;
-  --color-sage-200: #e2e6dd;
-  --color-sage-300: #cfd6c6;
-  --color-sage-400: #b9c4ab;
-  --color-sage-500: #9aa891;
-  --color-sage-600: #5b6b57;
-  --color-sage-700: #4a5a46;
-  --color-sage-800: #3a4738;
-  --color-sage-900: #2f3a2c;
+  /* 纸面编辑风（papel editorial）：暖纸 + 墨色中性阶梯
+     平面语言 —— 无阴影，层次靠 1px 细线（hairline）与色阶 */
+  --color-paper-25: #fdfdfb;   /* 卡片表面 */
+  --color-paper-50: #f6f5f1;   /* 页面画布 */
+  --color-paper-100: #f0eee7;  /* 柔和填充 / 分隔底 */
+  --color-paper-200: #ddd9cf;  /* 细线边框 */
+  --color-paper-300: #c9c4b6;  /* hover 边框 */
+  --color-paper-400: #a8a29a;  /* 占位 / 禁用 */
+  --color-paper-500: #8a857a;  /* 弱化文本（mono 标签） */
+  --color-paper-600: #57534a;  /* 次级文本 */
+  --color-paper-700: #2b2823;  /* 墨色填充（主按钮） */
+  --color-paper-800: #1f1d18;  /* 墨色 hover / 强文本 */
+  --color-paper-900: #171511;  /* 主文本（tinta） */
+
+  /* óxido／ember：唯一彩色信号，只用于小元素（库存点、告警、激活态） */
+  --color-ember-50: #faeee6;
+  --color-ember-100: #f5ddcd;
+  --color-ember-200: #ecc4ab;
+  --color-ember-500: #cc5a2e;
+  --color-ember-600: #b04c24;
+  --color-ember-700: #8f3d1d;
+  --color-ember-800: #6e2f16;
 }
 
 body {

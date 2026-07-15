@@ -28,17 +28,17 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  pending: "bg-amber-50 text-amber-700",
+  pending: "bg-ember-50 text-ember-700",
   preparing: "bg-blue-50 text-blue-700",
   done: "bg-green-50 text-green-700",
-  cancelled: "bg-sage-100 text-sage-500",
+  cancelled: "bg-paper-100 text-paper-500",
 };
 
 const STATUS_DOT: Record<string, string> = {
-  pending: "bg-amber-500",
+  pending: "bg-ember-500",
   preparing: "bg-blue-500",
   done: "bg-green-500",
-  cancelled: "bg-sage-400",
+  cancelled: "bg-paper-400",
 };
 
 function displayStore(order: Order): string {
@@ -250,12 +250,12 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
   return (
     <div className="space-y-6">
       {/* ── 待备货汇总 ── */}
-      <div className="rounded-xl border border-amber-200 bg-amber-50 overflow-hidden">
+      <div className="rounded-xl border border-ember-200 bg-ember-50 overflow-hidden">
         {/* 汇总标题 + 视图切换 */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 pb-3">
-          <h2 className="text-sm font-semibold text-amber-800">
+          <h2 className="text-sm font-semibold text-ember-800">
             待备货汇总
-            <span className="ml-2 font-normal text-amber-600">
+            <span className="ml-2 font-normal text-ember-600">
               （{pendingOrders.length} 个待处理订单）
             </span>
           </h2>
@@ -264,19 +264,19 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
               <button
                 type="button"
                 onClick={handlePrint}
-                className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-50"
+                className="rounded-lg border border-ember-200 bg-white px-3 py-1.5 text-xs font-medium text-ember-700 transition-colors hover:bg-ember-50"
               >
                 打印备货单
               </button>
             )}
-            <div className="flex gap-1 rounded-lg border border-amber-200 bg-white p-0.5">
+            <div className="flex gap-1 rounded-lg border border-ember-200 bg-white p-0.5">
               <button
                 type="button"
                 onClick={() => setSummaryView("product")}
                 className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
                   summaryView === "product"
-                    ? "bg-amber-600 text-white"
-                    : "text-amber-700 hover:bg-amber-50"
+                    ? "bg-ember-600 text-white"
+                    : "text-ember-700 hover:bg-ember-50"
                 }`}
               >
                 按商品汇总
@@ -286,8 +286,8 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                 onClick={() => setSummaryView("store")}
                 className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
                   summaryView === "store"
-                    ? "bg-amber-600 text-white"
-                    : "text-amber-700 hover:bg-amber-50"
+                    ? "bg-ember-600 text-white"
+                    : "text-ember-700 hover:bg-ember-50"
                 }`}
               >
                 按门店分组
@@ -298,17 +298,17 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
 
         <div className="px-5 pb-4">
           {pendingOrders.length === 0 ? (
-            <p className="text-sm text-amber-600">暂无待处理订单</p>
+            <p className="text-sm text-ember-600">暂无待处理订单</p>
           ) : summaryView === "product" ? (
             /* 按商品汇总 */
             <div className="flex flex-wrap gap-2">
               {productSummary.map(([name, qty]) => (
                 <span
                   key={name}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-sage-800 shadow-sm ring-1 ring-amber-200"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-paper-800 ring-1 ring-ember-200"
                 >
                   <span>{name}</span>
-                  <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-bold text-amber-700">
+                  <span className="rounded-full bg-ember-100 px-1.5 py-0.5 text-xs font-bold text-ember-700">
                     ×{qty}
                   </span>
                 </span>
@@ -320,19 +320,19 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
               {storeGroups.map((group) => (
                 <div
                   key={group.storeLabel}
-                  className="rounded-lg bg-white p-3 shadow-sm ring-1 ring-amber-200"
+                  className="rounded-lg bg-white p-3 ring-1 ring-ember-200"
                 >
-                  <p className="mb-2 text-xs font-semibold text-sage-800">
+                  <p className="mb-2 text-xs font-semibold text-paper-800">
                     {group.storeLabel}
-                    <span className="ml-1.5 font-normal text-sage-500">
+                    <span className="ml-1.5 font-normal text-paper-500">
                       {group.orderCount} 笔订单
                     </span>
                   </p>
                   <ul className="space-y-1">
                     {group.products.map(([name, qty]) => (
                       <li key={name} className="flex items-center justify-between text-xs">
-                        <span className="text-sage-600">{name}</span>
-                        <span className="font-bold text-amber-700">×{qty}</span>
+                        <span className="text-paper-600">{name}</span>
+                        <span className="font-bold text-ember-700">×{qty}</span>
                       </li>
                     ))}
                   </ul>
@@ -344,7 +344,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
       </div>
 
       {/* ── 筛选 tabs ── */}
-      <div className="flex w-fit gap-1 rounded-xl border border-sage-200 bg-white p-1 shadow-sm">
+      <div className="flex w-fit gap-1 rounded-xl border border-paper-200 bg-white p-1">
         {filterTabs.map(({ value, label }) => {
           const count =
             value === "all" ? orders.length : orders.filter((o) => o.status === value).length;
@@ -354,11 +354,11 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
               type="button"
               onClick={() => setFilter(value)}
               className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
-                filter === value ? "bg-sage-700 text-white" : "text-sage-500 hover:text-sage-900"
+                filter === value ? "bg-paper-700 text-white" : "text-paper-500 hover:text-paper-900"
               }`}
             >
               {label}
-              <span className={`ml-1.5 text-xs ${filter === value ? "text-sage-400" : "text-sage-500"}`}>
+              <span className={`ml-1.5 text-xs ${filter === value ? "text-paper-400" : "text-paper-500"}`}>
                 {count}
               </span>
             </button>
@@ -368,8 +368,8 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
 
       {/* ── 订单列表 ── */}
       {filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-sage-300 bg-white py-16 text-center">
-          <p className="text-sm text-sage-500">
+        <div className="rounded-xl border border-dashed border-paper-300 bg-white py-16 text-center">
+          <p className="text-sm text-paper-500">
             {filter === "all" ? "暂无订单" : `暂无${STATUS_LABEL[filter]}订单`}
           </p>
         </div>
@@ -381,16 +381,16 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
             return (
               <div
                 key={order.id}
-                className="overflow-hidden rounded-2xl border border-sage-200 bg-sage-25 shadow-[0_4px_16px_rgba(91,107,87,0.06)] transition duration-200 hover:shadow-[0_10px_24px_rgba(91,107,87,0.11)]"
+                className="overflow-hidden rounded-2xl border border-paper-200 bg-paper-25 transition duration-200"
               >
                 {/* 头部：门店 + 状态 + 元信息 + 金额 */}
                 <div className="flex items-start gap-3 px-5 py-4">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sage-100 text-sm font-semibold text-sage-700">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-paper-100 text-sm font-semibold text-paper-700">
                     {displayStore(order).charAt(0)}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold text-sage-900">{displayStore(order)}</span>
+                      <span className="text-sm font-semibold text-paper-900">{displayStore(order)}</span>
                       <span
                         className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[order.status]}`}
                       >
@@ -398,35 +398,35 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                         {STATUS_LABEL[order.status]}
                       </span>
                     </div>
-                    <p className="mt-0.5 truncate text-xs text-sage-500">
+                    <p className="mt-0.5 truncate text-xs text-paper-500">
                       {formatDateTime(order.created_at)} · {order.items.length} 件商品 · #{order.id.slice(0, 8)}
                     </p>
                   </div>
-                  <span className="shrink-0 text-base font-bold text-sage-900">€{total.toFixed(2)}</span>
+                  <span className="shrink-0 text-base font-bold text-paper-900">€{total.toFixed(2)}</span>
                 </div>
 
                 {order.note && (
-                  <div className="border-t border-sage-100 bg-amber-50/50 px-5 py-2 text-xs text-amber-800">
+                  <div className="border-t border-paper-100 bg-ember-50/60 px-5 py-2 text-xs text-ember-800">
                     备注：{order.note}
                   </div>
                 )}
 
-                <div className="divide-y divide-sage-100 border-t border-sage-100 px-5">
+                <div className="divide-y divide-paper-100 border-t border-paper-100 px-5">
                   {order.items.map((item) => (
                     <div
                       key={item.id}
                       className="flex items-center justify-between py-3 text-sm"
                     >
-                      <span className="text-sage-700">
+                      <span className="text-paper-700">
                         {item.product.name}
                         {item.variantColor && (
-                          <span className="ml-1 text-sage-500">· {item.variantColor}</span>
+                          <span className="ml-1 text-paper-500">· {item.variantColor}</span>
                         )}
                       </span>
-                      <span className="text-sage-500">
+                      <span className="text-paper-500">
                         €{Number(item.unitPrice).toFixed(2)} × {item.quantity}
                       </span>
-                      <span className="w-20 text-right font-medium text-sage-900">
+                      <span className="w-20 text-right font-medium text-paper-900">
                         €{(item.unitPrice * item.quantity).toFixed(2)}
                       </span>
                     </div>
@@ -434,7 +434,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                 </div>
 
                 {/* 操作栏 */}
-                <div className="flex items-center justify-end gap-2 border-t border-sage-100 bg-sage-50 px-5 py-3">
+                <div className="flex items-center justify-end gap-2 border-t border-paper-100 bg-paper-50 px-5 py-3">
                   {order.status === "pending" && (
                     <button
                       type="button"
@@ -462,7 +462,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                       type="button"
                       disabled={deletingId === order.id}
                       onClick={() => handleDelete(order.id)}
-                      className="rounded-lg border border-sage-200 px-3.5 py-1.5 text-xs font-medium text-sage-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                      className="rounded-lg border border-paper-200 px-3.5 py-1.5 text-xs font-medium text-paper-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                     >
                       {deletingId === order.id ? "删除中…" : "删除"}
                     </button>
