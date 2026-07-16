@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/actions/auth";
 import { isLowStock } from "@/lib/stock";
+import StoreHero from "./store-hero";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -240,34 +241,8 @@ export default async function Home() {
         </main>
       )}
 
-      {/* ── Store 首页：编辑风 hero ── */}
-      {isStore && (
-        <main className="mx-auto flex min-h-[70vh] max-w-3xl flex-col items-center justify-center px-6 py-24 text-center">
-          <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.24em] text-paper-500">
-            门店订货 — B2B 目录
-          </p>
-          <h1 className="animate-fade-up mt-6 text-6xl font-normal leading-[1.05] tracking-tight text-paper-900 sm:text-7xl">
-            {profile?.store_name ? `你好，${profile.store_name}。` : "你好。"}
-          </h1>
-          <p className="animate-fade-up mt-6 max-w-md text-base leading-relaxed text-paper-600 [animation-delay:150ms]">
-            浏览商品，加入购物车，一键提交。
-          </p>
-          <div className="animate-fade-up mt-10 flex flex-col items-center gap-3 [animation-delay:280ms] sm:flex-row">
-            <Link
-              href="/shop"
-              className="rounded-full bg-paper-800 px-9 py-4 text-base font-medium text-white transition-colors duration-300 hover:bg-paper-700"
-            >
-              进入商城下单 →
-            </Link>
-            <Link
-              href="/shop/orders"
-              className="rounded-full border border-paper-800 px-7 py-4 text-base font-medium text-paper-800 transition-colors duration-300 hover:bg-paper-800 hover:text-white"
-            >
-              我的订单
-            </Link>
-          </div>
-        </main>
-      )}
+      {/* ── Store 首页：编辑风 hero（鼠标光斑纹理交互） ── */}
+      {isStore && <StoreHero storeName={profile?.store_name ?? null} />}
 
       {/* ── 未登录：编辑风 hero ── */}
       {!user && (

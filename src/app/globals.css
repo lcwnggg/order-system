@@ -64,6 +64,97 @@
 .stagger-children > *:nth-child(8) { animation-delay: 480ms; }
 .stagger-children > *:nth-child(n+9) { animation-delay: 520ms; }
 
+/* ── 首页 hero：鼠标光斑揭示的点阵纹理（纯代码生成，编辑风） ── */
+/* --on（光斑总开关 0–1）与 --lit（单个按钮点亮 0–1）由 JS 设置。
+   注册为 typed 属性：唯有 registered 自定义属性才能被 transition 平滑插值，
+   否则 opacity/color 里的 var() 在过渡时会“卡住”。inherits:true 让 ::after 继承按钮的 --lit。 */
+@property --on {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+@property --lit {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0;
+}
+
+.hero-texture,
+.hero-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+/* 底层：极淡的中性点阵，铺满整个 hero */
+.hero-texture {
+  color: var(--color-paper-400);
+  background-image: radial-gradient(currentColor 1px, transparent 1.6px);
+  background-size: 24px 24px;
+  opacity: 0.12;
+}
+/* 揭示层：锈红点阵 + 柔光，只在鼠标位置一圈显现。
+   --on / --mx / --my 由 JS 的 rAF 循环平滑写入（不用 CSS transition，
+   因为 Chrome 对“过渡自定义属性”在本场景会卡住，见 store-hero.tsx） */
+.hero-glow {
+  background:
+    radial-gradient(
+      circle 200px at var(--mx, 50%) var(--my, 50%),
+      rgba(204, 90, 46, 0.12),
+      transparent 70%
+    ),
+    radial-gradient(var(--color-ember-500) 1.2px, transparent 1.8px);
+  background-size: 100% 100%, 24px 24px;
+  opacity: var(--on);
+  -webkit-mask-image: radial-gradient(
+    circle 220px at var(--mx, 50%) var(--my, 50%),
+    #000 0%,
+    rgba(0, 0, 0, 0.55) 38%,
+    transparent 72%
+  );
+  mask-image: radial-gradient(
+    circle 220px at var(--mx, 50%) var(--my, 50%),
+    #000 0%,
+    rgba(0, 0, 0, 0.55) 38%,
+    transparent 72%
+  );
+}
+
+/* 主按钮（墨色填充）：光斑扫到时用 ::after 叠一圈锈红细环 + 微光，
+   opacity 跟随 --lit（避开 calc 进颜色通道的兼容坑）。
+   过渡放在 --lit 上，离开时柔和淡出 */
+.hero-btn-solid {
+  position: relative;
+}
+.hero-btn-solid::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    0 0 0 1px rgb(204 90 46 / 0.85),
+    0 0 26px rgb(204 90 46 / 0.45);
+  opacity: var(--lit);
+  pointer-events: none;
+}
+/* 次按钮（描边）：光斑扫到时边框/文字/底色渐变到锈红 */
+.hero-btn-ghost {
+  border-color: color-mix(
+    in oklab,
+    var(--color-paper-800),
+    var(--color-ember-500) calc(var(--lit) * 100%)
+  );
+  color: color-mix(
+    in oklab,
+    var(--color-paper-800),
+    var(--color-ember-600) calc(var(--lit) * 100%)
+  );
+  background-color: color-mix(
+    in oklab,
+    transparent,
+    var(--color-ember-50) calc(var(--lit) * 100%)
+  );
+}
+
 /* 尊重系统减弱动效偏好 */
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-up,
