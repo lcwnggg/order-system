@@ -61,6 +61,8 @@ export default function ProductForm({ categories = [] }: { categories?: Category
   useEffect(() => {
     if (state && "success" in state) {
       formRef.current?.reset();
+      // 提交成功后清空表单：响应 action state 变化，属于正当的副作用重置
+      /* eslint-disable react-hooks/set-state-in-effect */
       setImageUrl(null);
       setPreview(null);
       setPhase("idle");
@@ -70,6 +72,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
       setHasVariants(false);
       setVariants([{ color: "", stock: "0" }]);
       setBarcode("");
+      /* eslint-enable react-hooks/set-state-in-effect */
     }
   }, [state]);
 

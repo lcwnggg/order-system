@@ -47,10 +47,6 @@ export default function ProductList({
     [categories]
   );
 
-  function childrenOf(parentId: string) {
-    return categories.filter((c) => c.parent_id === parentId);
-  }
-
   function categoryLabel(categoryId: string | null) {
     if (!categoryId) return "未分类";
     const cat = categories.find((c) => c.id === categoryId);
