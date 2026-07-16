@@ -10,7 +10,7 @@ import { isValidBarcodeFormat } from "@/lib/barcode";
 // - 桌面端不唤起摄像头，只提示"请用手机打开"。
 // ─────────────────────────────────────────────────────────────
 
-function isMobileDevice() {
+export function isMobileDevice() {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent;
   if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)) return true;
@@ -35,7 +35,7 @@ function mapCameraError(err: unknown): string {
 }
 
 // 全屏扫码遮罩：挂载即开始扫码，识别到条码回调 onDetected。
-function ScannerOverlay({
+export function ScannerOverlay({
   onDetected,
   onClose,
 }: {

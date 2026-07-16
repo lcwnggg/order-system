@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useTransition, useState, useMemo, useEffect } from "react";
 import { submitOrder } from "./actions";
+import ScanButton from "@/app/scan-button";
 
 export type Product = {
   id: string;
@@ -15,6 +16,7 @@ export type Product = {
   has_variants: boolean;
   brand: string | null;
   created_at: string;
+  barcode: string | null;
 };
 
 export type ProductVariant = {
@@ -69,6 +71,8 @@ export default function ShopClient({
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"default" | "price-asc" | "price-desc" | "name">("default");
   const [inStockOnly, setInStockOnly] = useState(false);
+  // 扫码下单反馈（成功加购 / 未找到 / 缺货）
+  const [scanFeedback, setScanFeedback] = useState<{ ok: boolean; text: string } | null>(null);
 
   // ── 视图模式（localStorage 持久化） ──
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -233,6 +237,45 @@ export default function ShopClient({
     setInputQty((prev) => ({ ...prev, [product.id]: 0 }));
   }
 
+  // 扫码下单：按条码找商品，直接加 1 到购物车
+  function handleScanOrder(code: string) {
+    const c = code.trim();
+    if (!c) return;
+    const product = products.find((p) => (p.barcode ?? "").trim() === c);
+    if (!product) {
+      setScanFeedback({ ok: false, text: `未找到条码 ${c} 对应的商品` });
+      return;
+    }
+    // 变体商品：取第一个有货的颜色
+    const pvs = variantsByProduct[product.id] ?? [];
+    const variant = product.has_variants ? pvs.find((v) => v.stock > 0) : undefined;
+    const effectiveStock = product.has_variants ? (variant?.stock ?? 0) : product.stock;
+    if (effectiveStock <= 0) {
+      setScanFeedback({ ok: false, text: `${product.name} 暂时缺货` });
+      return;
+    }
+    const key = cartKey(product.id, variant?.id);
+    setCart((prev) => {
+      const existing = prev[key]?.quantity ?? 0;
+      return {
+        ...prev,
+        [key]: {
+          product,
+          variant: variant ? { id: variant.id, color: variant.color, stock: variant.stock } : undefined,
+          quantity: Math.min(existing + 1, effectiveStock),
+        },
+      };
+    });
+    setScanFeedback({ ok: true, text: `已加入购物车：${product.name}${variant ? ` · ${variant.color}` : ""}` });
+  }
+
+  // 反馈 3.5s 后自动消失
+  useEffect(() => {
+    if (!scanFeedback) return;
+    const t = setTimeout(() => setScanFeedback(null), 3500);
+    return () => clearTimeout(t);
+  }, [scanFeedback]);
+
   function changeCartQty(key: string, delta: number) {
     setCart((prev) => {
       const item = prev[key];
@@ -376,6 +419,13 @@ export default function ShopClient({
               )}
             </div>
 
+            {/* 扫码下单 */}
+            <ScanButton
+              onScan={handleScanOrder}
+              label="扫码下单"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-paper-800 bg-paper-800 px-3.5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-paper-700"
+            />
+
             {/* 视图切换 */}
             <div className="flex items-center rounded-xl border border-paper-200 bg-white p-1 gap-0.5">
               <button
@@ -413,6 +463,21 @@ export default function ShopClient({
               </button>
             </div>
           </div>
+
+          {/* 扫码下单反馈条 */}
+          {scanFeedback && (
+            <div
+              className={`animate-fade-up mb-4 flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm ${
+                scanFeedback.ok
+                  ? "border-paper-200 bg-paper-25 text-paper-800"
+                  : "border-ember-200 bg-ember-50 text-ember-700"
+              }`}
+            >
+              <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${scanFeedback.ok ? "bg-paper-700" : "bg-ember-500"}`} />
+              <span className="min-w-0 flex-1">{scanFeedback.text}</span>
+              <button type="button" onClick={() => setScanFeedback(null)} className="shrink-0 text-paper-400 hover:text-paper-600">✕</button>
+            </div>
+          )}
 
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <p className="font-mono text-xs tracking-[0.12em] text-paper-600">

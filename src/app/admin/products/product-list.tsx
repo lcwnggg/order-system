@@ -11,6 +11,7 @@ import {
 import type { Category } from "@/app/admin/categories/categories-client";
 import ProductEditModal from "./product-edit-modal";
 import { getTotalStock, isLowStock as isLowStockOf } from "@/lib/stock";
+import ScanButton from "@/app/scan-button";
 
 export type Product = {
   id: string;
@@ -170,6 +171,21 @@ export default function ProductList({
   // ── 打开/关闭编辑弹窗 ──
   function openEdit(product: Product) {
     setEditingProduct(product);
+  }
+
+  // ── 扫码查找并编辑：按条码定位商品，命中即开编辑弹窗；未命中则填入搜索框提示 ──
+  const [scanMiss, setScanMiss] = useState<string | null>(null);
+  function handleScanFind(code: string) {
+    const c = code.trim();
+    if (!c) return;
+    const hit = products.find((p) => (p.barcode ?? "").trim() === c);
+    if (hit) {
+      setScanMiss(null);
+      setEditingProduct(hit);
+    } else {
+      setAdminSearch(c);
+      setScanMiss(c);
+    }
   }
 
   function closeEdit() {
@@ -634,6 +650,13 @@ export default function ProductList({
           )}
         </div>
 
+        {/* 扫码查找并编辑 */}
+        <ScanButton
+          onScan={handleScanFind}
+          label="扫码查找"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-paper-300 bg-white px-3 py-1.5 text-sm font-medium text-paper-700 transition-colors hover:border-paper-400 hover:bg-paper-100"
+        />
+
         {/* 分类筛选 */}
         <select
           value={filterCategory}
@@ -689,6 +712,15 @@ export default function ProductList({
           {filteredProducts.length} / {products.length} 件
         </span>
       </div>
+
+      {/* 扫码未命中提示 */}
+      {scanMiss && (
+        <div className="mb-3 flex items-center gap-2 rounded-lg border border-ember-200 bg-ember-50 px-3 py-2 text-sm text-ember-700">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-ember-500" />
+          <span className="min-w-0 flex-1">未找到条码 {scanMiss} 对应的商品（已填入搜索框）</span>
+          <button type="button" onClick={() => setScanMiss(null)} className="shrink-0 text-paper-400 hover:text-paper-600">✕</button>
+        </div>
+      )}
 
       {/* ── 标签页 ── */}
       <div className="mb-3 flex gap-0.5 border-b border-paper-200">
