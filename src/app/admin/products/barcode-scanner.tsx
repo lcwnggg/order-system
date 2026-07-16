@@ -10,7 +10,7 @@ import { isValidBarcodeFormat } from "@/lib/barcode";
 // - 桌面端不唤起摄像头，只提示"请用手机打开"。
 // ─────────────────────────────────────────────────────────────
 
-function isMobileDevice() {
+export function isMobileDevice() {
   if (typeof navigator === "undefined") return false;
   const ua = navigator.userAgent;
   if (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua)) return true;
@@ -35,7 +35,7 @@ function mapCameraError(err: unknown): string {
 }
 
 // 全屏扫码遮罩：挂载即开始扫码，识别到条码回调 onDetected。
-function ScannerOverlay({
+export function ScannerOverlay({
   onDetected,
   onClose,
 }: {
@@ -113,7 +113,7 @@ function ScannerOverlay({
 
         {!error && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <div className="h-36 w-72 max-w-[80vw] rounded-xl border-2 border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.45)]" />
+            <div className="h-36 w-72 max-w-[80vw] rounded-xl border-2 border-white/90" />
           </div>
         )}
 
@@ -126,11 +126,11 @@ function ScannerOverlay({
         {error && (
           <div className="absolute inset-0 flex items-center justify-center p-6">
             <div className="max-w-sm rounded-xl bg-white p-5 text-center shadow-xl">
-              <p className="text-sm text-zinc-700">{error}</p>
+              <p className="text-sm text-paper-700">{error}</p>
               <button
                 type="button"
                 onClick={onClose}
-                className="mt-4 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+                className="mt-4 rounded-lg bg-paper-700 px-4 py-2 text-sm font-medium text-white hover:bg-paper-800"
               >
                 知道了
               </button>
@@ -182,7 +182,7 @@ export default function BarcodeField({
 
   return (
     <div>
-      <label htmlFor={inputId} className="mb-1.5 block text-sm font-medium text-zinc-700">
+      <label htmlFor={inputId} className="mb-1.5 block text-sm font-medium text-paper-700">
         Código de barras
       </label>
       <div className="flex items-stretch gap-2">
@@ -195,16 +195,16 @@ export default function BarcodeField({
           value={value}
           onChange={(e) => { onChange(e.target.value); setDesktopHint(false); }}
           placeholder="opcional"
-          className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:ring-2 ${
+          className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:ring-2 ${
             invalid
               ? "border-red-300 bg-red-50 focus:border-red-400 focus:ring-red-100"
-              : "border-zinc-300 focus:border-zinc-500 focus:ring-zinc-200"
+              : "border-paper-300 focus:border-paper-500 focus:ring-paper-300"
           }`}
         />
         <button
           type="button"
           onClick={handleScanClick}
-          className="flex shrink-0 items-center gap-1.5 rounded-lg border border-zinc-300 bg-white px-3.5 py-2 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 active:bg-zinc-100"
+          className="flex shrink-0 items-center gap-1.5 rounded-lg border border-paper-300 bg-white px-3.5 py-2 text-sm font-medium text-paper-700 transition-colors hover:bg-paper-100 active:bg-paper-100"
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -220,7 +220,7 @@ export default function BarcodeField({
         </p>
       )}
       {desktopHint && (
-        <p className="mt-1.5 text-xs text-zinc-500">
+        <p className="mt-1.5 text-xs text-paper-500">
           请在手机上打开此页面使用扫码，桌面端请手动输入。
         </p>
       )}

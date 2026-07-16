@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f6f5f1;
+  --foreground: #1f1d18;
 }
 
 @theme inline {
@@ -10,17 +10,71 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* 纸面编辑风（papel editorial）：暖纸 + 墨色中性阶梯
+     平面语言 —— 无阴影，层次靠 1px 细线（hairline）与色阶 */
+  --color-paper-25: #fdfdfb;   /* 卡片表面 */
+  --color-paper-50: #f6f5f1;   /* 页面画布 */
+  --color-paper-100: #f0eee7;  /* 柔和填充 / 分隔底 */
+  --color-paper-200: #ddd9cf;  /* 细线边框 */
+  --color-paper-300: #c9c4b6;  /* hover 边框 */
+  --color-paper-400: #a8a29a;  /* 占位 / 禁用 */
+  --color-paper-500: #8a857a;  /* 弱化文本（mono 标签） */
+  --color-paper-600: #57534a;  /* 次级文本 */
+  --color-paper-700: #2b2823;  /* 墨色填充（主按钮） */
+  --color-paper-800: #1f1d18;  /* 墨色 hover / 强文本 */
+  --color-paper-900: #171511;  /* 主文本（tinta） */
+
+  /* óxido／ember：唯一彩色信号，只用于小元素（库存点、告警、激活态） */
+  --color-ember-50: #faeee6;
+  --color-ember-100: #f5ddcd;
+  --color-ember-200: #ecc4ab;
+  --color-ember-500: #cc5a2e;
+  --color-ember-600: #b04c24;
+  --color-ember-700: #8f3d1d;
+  --color-ember-800: #6e2f16;
+
+  /* 动效：慢起决停的编辑风曲线（参考 Vivid+Co 的 focus-pull 曲线） */
+  --ease-editorial: cubic-bezier(0.52, 0.01, 0, 1);
+  --animate-fade-up: fade-up 0.8s var(--ease-editorial) both;
+  --animate-fade-in: fade-in 1s var(--ease-editorial) both;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* keyframes 放在顶层，保证始终被输出（stagger-children 也依赖它） */
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* 子元素入场交错：加在网格/列表容器上，前 8 个依次浮现，其余一起收尾 */
+.stagger-children > * {
+  animation: fade-up 0.7s var(--ease-editorial) both;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 60ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 120ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 180ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 360ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 420ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 480ms; }
+.stagger-children > *:nth-child(n+9) { animation-delay: 520ms; }
+
+/* 尊重系统减弱动效偏好 */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-fade-in,
+  .stagger-children > * {
+    animation: none;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
 }

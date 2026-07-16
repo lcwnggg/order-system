@@ -4,16 +4,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-type Mode = "login" | "register";
-
 function translateAuthError(message: string): string {
   const map: Record<string, string> = {
     "Invalid login credentials": "邮箱或密码不正确",
-    "User already registered": "该邮箱已注册，请直接登录",
-    "Password should be at least 6 characters":
-      "密码至少需要 6 个字符",
     "Unable to validate email address: invalid format": "邮箱格式不正确",
-    "Signup requires a valid password": "请输入有效密码",
     "Email not confirmed": "请先查收邮件并点击确认链接",
   };
 
@@ -24,105 +18,50 @@ export function LoginForm() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setMessage(null);
 
-    if (mode === "login") {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (signInError) {
-        setError(translateAuthError(signInError.message));
-        setLoading(false);
-        return;
-      }
-
-      router.push("/");
-      router.refresh();
-      return;
-    }
-
-    const { data, error: signUpError } = await supabase.auth.signUp({
+    const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (signUpError) {
-      setError(translateAuthError(signUpError.message));
+    if (signInError) {
+      setError(translateAuthError(signInError.message));
       setLoading(false);
       return;
     }
 
-    if (data.session) {
-      router.push("/");
-      router.refresh();
-      return;
-    }
-
-    setMessage("注册成功！请查收确认邮件，点击链接后即可登录。");
-    setLoading(false);
+    router.push("/");
+    router.refresh();
   }
 
   return (
-    <div className="w-full max-w-sm">
-      <div className="mb-8 text-center">
-        <h1 className="text-2xl font-semibold text-zinc-900">我的小店</h1>
-        <p className="mt-2 text-sm text-zinc-500">
-          {mode === "login" ? "登录你的账号" : "创建新账号"}
-        </p>
-      </div>
-
-      <div className="mb-6 flex rounded-lg bg-zinc-100 p-1">
-        <button
-          type="button"
-          onClick={() => {
-            setMode("login");
-            setError(null);
-            setMessage(null);
-          }}
-          className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
-            mode === "login"
-              ? "bg-white text-zinc-900 shadow-sm"
-              : "text-zinc-500 hover:text-zinc-700"
-          }`}
-        >
-          登录
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setMode("register");
-            setError(null);
-            setMessage(null);
-          }}
-          className={`flex-1 rounded-md py-2 text-sm font-medium transition-colors ${
-            mode === "register"
-              ? "bg-white text-zinc-900 shadow-sm"
-              : "text-zinc-500 hover:text-zinc-700"
-          }`}
-        >
-          注册
-        </button>
+    <div className="animate-fade-up w-full max-w-sm rounded-2xl border border-paper-200 bg-paper-25 p-7 sm:p-8">
+      <div className="mb-7 text-center">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-paper-700">
+          <svg className="h-7 w-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+              d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+        </div>
+        <h1 className="text-2xl font-semibold text-paper-900">我的小店</h1>
+        <p className="mt-1.5 text-sm text-paper-500">登录你的账号</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label
             htmlFor="email"
-            className="mb-1.5 block text-sm font-medium text-zinc-700"
+            className="mb-1.5 block text-sm font-medium text-paper-700"
           >
             邮箱
           </label>
@@ -134,14 +73,14 @@ export function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
-            className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
+            className="w-full rounded-lg border border-paper-200 bg-white px-3 py-2.5 text-sm text-paper-900 placeholder:text-paper-500 outline-none focus:border-paper-400 focus:ring-2 focus:ring-paper-200"
           />
         </div>
 
         <div>
           <label
             htmlFor="password"
-            className="mb-1.5 block text-sm font-medium text-zinc-700"
+            className="mb-1.5 block text-sm font-medium text-paper-700"
           >
             密码
           </label>
@@ -151,19 +90,17 @@ export function LoginForm() {
               type={showPassword ? "text" : "password"}
               required
               minLength={6}
-              autoComplete={
-                mode === "login" ? "current-password" : "new-password"
-              }
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="至少 6 位"
-              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2.5 pr-10 text-sm text-zinc-900 placeholder:text-zinc-400 outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
+              className="w-full rounded-lg border border-paper-200 bg-white px-3 py-2.5 pr-10 text-sm text-paper-900 placeholder:text-paper-500 outline-none focus:border-paper-400 focus:ring-2 focus:ring-paper-200"
             />
             <button
               type="button"
               tabIndex={-1}
               onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-paper-500 hover:text-paper-600"
               aria-label={showPassword ? "隐藏密码" : "显示密码"}
             >
               {showPassword ? (
@@ -189,22 +126,12 @@ export function LoginForm() {
           </p>
         )}
 
-        {message && (
-          <p className="rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">
-            {message}
-          </p>
-        )}
-
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-zinc-900 py-2.5 text-sm font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-lg bg-paper-700 py-2.5 text-sm font-medium text-white transition-colors hover:bg-paper-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading
-            ? "请稍候…"
-            : mode === "login"
-              ? "登录"
-              : "注册"}
+          {loading ? "请稍候…" : "登录"}
         </button>
       </form>
     </div>

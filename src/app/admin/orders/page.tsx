@@ -1,7 +1,7 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/actions/auth";
+import AdminNav from "@/app/admin/admin-nav";
 import OrdersClient, { type Order, type OrderItem } from "./orders-client";
 
 export default async function AdminOrdersPage() {
@@ -107,39 +107,16 @@ export default async function AdminOrdersPage() {
   }));
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      <header className="border-b border-zinc-200 bg-white px-6 py-4">
+    <div className="min-h-screen bg-paper-100">
+      <header className="border-b border-paper-200 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <Link
-              href="/"
-              className="text-sm text-zinc-500 transition-colors hover:text-zinc-900"
-            >
-              ← 返回首页
-            </Link>
-            <span className="text-zinc-300">/</span>
-            <Link
-              href="/admin/products"
-              className="text-sm text-zinc-500 transition-colors hover:text-zinc-900"
-            >
-              商品管理
-            </Link>
-            <span className="text-zinc-300">/</span>
-            <Link
-              href="/admin/stores"
-              className="text-sm text-zinc-500 transition-colors hover:text-zinc-900"
-            >
-              门店管理
-            </Link>
-            <span className="text-zinc-300">/</span>
-            <span className="text-sm font-semibold text-zinc-900">订单管理</span>
-          </div>
+          <AdminNav />
           <div className="flex shrink-0 items-center gap-3">
-            <span className="hidden text-sm text-zinc-500 sm:block">{user.email}</span>
+            <span className="hidden text-sm text-paper-500 sm:block">{user.email}</span>
             <form action={signOut}>
               <button
                 type="submit"
-                className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                className="rounded-lg border border-paper-200 px-3 py-1.5 text-sm text-paper-700 transition-colors hover:bg-paper-100"
               >
                 退出登录
               </button>
@@ -150,8 +127,9 @@ export default async function AdminOrdersPage() {
 
       <main className="mx-auto max-w-5xl px-6 py-8">
         <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-zinc-900">订单管理</h1>
-          <span className="text-sm text-zinc-400">共 {orders.length} 笔订单</span>
+          <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.22em] text-paper-500">仓库 — 订单</p>
+          <h1 className="animate-fade-up mt-2 text-3xl font-normal tracking-tight text-paper-900">订单管理</h1>
+          <span className="text-sm text-paper-500">共 {orders.length} 笔订单</span>
         </div>
         <OrdersClient orders={orders} categories={categories} />
       </main>

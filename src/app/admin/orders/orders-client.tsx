@@ -28,10 +28,17 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 const STATUS_COLOR: Record<string, string> = {
-  pending: "bg-amber-50 text-amber-700",
+  pending: "bg-ember-50 text-ember-700",
   preparing: "bg-blue-50 text-blue-700",
   done: "bg-green-50 text-green-700",
-  cancelled: "bg-zinc-100 text-zinc-500",
+  cancelled: "bg-paper-100 text-paper-500",
+};
+
+const STATUS_DOT: Record<string, string> = {
+  pending: "bg-ember-500",
+  preparing: "bg-blue-500",
+  done: "bg-green-500",
+  cancelled: "bg-paper-400",
 };
 
 function displayStore(order: Order): string {
@@ -243,12 +250,12 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
   return (
     <div className="space-y-6">
       {/* ── 待备货汇总 ── */}
-      <div className="rounded-xl border border-amber-200 bg-amber-50 overflow-hidden">
+      <div className="rounded-xl border border-ember-200 bg-ember-50 overflow-hidden">
         {/* 汇总标题 + 视图切换 */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 pb-3">
-          <h2 className="text-sm font-semibold text-amber-800">
+          <h2 className="text-sm font-semibold text-ember-800">
             待备货汇总
-            <span className="ml-2 font-normal text-amber-600">
+            <span className="ml-2 font-normal text-ember-600">
               （{pendingOrders.length} 个待处理订单）
             </span>
           </h2>
@@ -257,19 +264,19 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
               <button
                 type="button"
                 onClick={handlePrint}
-                className="rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-50"
+                className="rounded-lg border border-ember-200 bg-white px-3 py-1.5 text-xs font-medium text-ember-700 transition-colors hover:bg-ember-50"
               >
                 打印备货单
               </button>
             )}
-            <div className="flex gap-1 rounded-lg border border-amber-200 bg-white p-0.5">
+            <div className="flex gap-1 rounded-lg border border-ember-200 bg-white p-0.5">
               <button
                 type="button"
                 onClick={() => setSummaryView("product")}
                 className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
                   summaryView === "product"
-                    ? "bg-amber-600 text-white"
-                    : "text-amber-700 hover:bg-amber-50"
+                    ? "bg-ember-600 text-white"
+                    : "text-ember-700 hover:bg-ember-50"
                 }`}
               >
                 按商品汇总
@@ -279,8 +286,8 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                 onClick={() => setSummaryView("store")}
                 className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
                   summaryView === "store"
-                    ? "bg-amber-600 text-white"
-                    : "text-amber-700 hover:bg-amber-50"
+                    ? "bg-ember-600 text-white"
+                    : "text-ember-700 hover:bg-ember-50"
                 }`}
               >
                 按门店分组
@@ -291,17 +298,17 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
 
         <div className="px-5 pb-4">
           {pendingOrders.length === 0 ? (
-            <p className="text-sm text-amber-600">暂无待处理订单</p>
+            <p className="text-sm text-ember-600">暂无待处理订单</p>
           ) : summaryView === "product" ? (
             /* 按商品汇总 */
             <div className="flex flex-wrap gap-2">
               {productSummary.map(([name, qty]) => (
                 <span
                   key={name}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-zinc-800 shadow-sm ring-1 ring-amber-200"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-sm font-medium text-paper-800 ring-1 ring-ember-200"
                 >
                   <span>{name}</span>
-                  <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-xs font-bold text-amber-700">
+                  <span className="rounded-full bg-ember-100 px-1.5 py-0.5 text-xs font-bold text-ember-700">
                     ×{qty}
                   </span>
                 </span>
@@ -313,19 +320,19 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
               {storeGroups.map((group) => (
                 <div
                   key={group.storeLabel}
-                  className="rounded-lg bg-white p-3 shadow-sm ring-1 ring-amber-200"
+                  className="rounded-lg bg-white p-3 ring-1 ring-ember-200"
                 >
-                  <p className="mb-2 text-xs font-semibold text-zinc-800">
+                  <p className="mb-2 text-xs font-semibold text-paper-800">
                     {group.storeLabel}
-                    <span className="ml-1.5 font-normal text-zinc-400">
+                    <span className="ml-1.5 font-normal text-paper-500">
                       {group.orderCount} 笔订单
                     </span>
                   </p>
                   <ul className="space-y-1">
                     {group.products.map(([name, qty]) => (
                       <li key={name} className="flex items-center justify-between text-xs">
-                        <span className="text-zinc-600">{name}</span>
-                        <span className="font-bold text-amber-700">×{qty}</span>
+                        <span className="text-paper-600">{name}</span>
+                        <span className="font-bold text-ember-700">×{qty}</span>
                       </li>
                     ))}
                   </ul>
@@ -337,7 +344,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
       </div>
 
       {/* ── 筛选 tabs ── */}
-      <div className="flex w-fit gap-1 rounded-xl border border-zinc-200 bg-white p-1 shadow-sm">
+      <div className="flex w-fit gap-1 rounded-xl border border-paper-200 bg-white p-1">
         {filterTabs.map(({ value, label }) => {
           const count =
             value === "all" ? orders.length : orders.filter((o) => o.status === value).length;
@@ -347,11 +354,11 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
               type="button"
               onClick={() => setFilter(value)}
               className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
-                filter === value ? "bg-zinc-900 text-white" : "text-zinc-500 hover:text-zinc-900"
+                filter === value ? "bg-paper-700 text-white" : "text-paper-500 hover:text-paper-900"
               }`}
             >
               {label}
-              <span className={`ml-1.5 text-xs ${filter === value ? "text-zinc-300" : "text-zinc-400"}`}>
+              <span className={`ml-1.5 text-xs ${filter === value ? "text-paper-400" : "text-paper-500"}`}>
                 {count}
               </span>
             </button>
@@ -361,8 +368,8 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
 
       {/* ── 订单列表 ── */}
       {filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-zinc-300 bg-white py-16 text-center">
-          <p className="text-sm text-zinc-400">
+        <div className="rounded-xl border border-dashed border-paper-300 bg-white py-16 text-center">
+          <p className="text-sm text-paper-500">
             {filter === "all" ? "暂无订单" : `暂无${STATUS_LABEL[filter]}订单`}
           </p>
         </div>
@@ -374,86 +381,92 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
             return (
               <div
                 key={order.id}
-                className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm"
+                className="overflow-hidden rounded-2xl border border-paper-200 bg-paper-25 transition duration-200"
               >
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-100 bg-zinc-50 px-5 py-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-semibold text-zinc-900">
-                      {displayStore(order)}
-                    </span>
-                    <span className="text-xs text-zinc-400">
-                      {formatDateTime(order.created_at)}
-                    </span>
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[order.status]}`}
-                    >
-                      {STATUS_LABEL[order.status]}
-                    </span>
+                {/* 头部：门店 + 状态 + 元信息 + 金额 */}
+                <div className="flex items-start gap-3 px-5 py-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-paper-100 text-sm font-semibold text-paper-700">
+                    {displayStore(order).charAt(0)}
                   </div>
-
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-bold text-zinc-900">
-                      €{total.toFixed(2)}
-                    </span>
-                    {order.status === "pending" && (
-                      <button
-                        type="button"
-                        disabled={isThisPending}
-                        onClick={() => handleUpdateStatus(order.id, "preparing")}
-                        className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-semibold text-paper-900">{displayStore(order)}</span>
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[order.status]}`}
                       >
-                        {isThisPending ? "处理中…" : "开始备货"}
-                      </button>
-                    )}
-                    {order.status === "preparing" && (
-                      <button
-                        type="button"
-                        disabled={isThisPending}
-                        onClick={() => handleUpdateStatus(order.id, "done")}
-                        className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
-                      >
-                        {isThisPending ? "处理中…" : "标记完成"}
-                      </button>
-                    )}
-                    {(order.status === "done" || order.status === "cancelled") && (
-                      <button
-                        type="button"
-                        disabled={deletingId === order.id}
-                        onClick={() => handleDelete(order.id)}
-                        className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
-                      >
-                        {deletingId === order.id ? "删除中…" : "删除"}
-                      </button>
-                    )}
+                        <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[order.status]}`} />
+                        {STATUS_LABEL[order.status]}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 truncate text-xs text-paper-500">
+                      {formatDateTime(order.created_at)} · {order.items.length} 件商品 · #{order.id.slice(0, 8)}
+                    </p>
                   </div>
+                  <span className="shrink-0 text-base font-bold text-paper-900">€{total.toFixed(2)}</span>
                 </div>
 
                 {order.note && (
-                  <div className="border-b border-zinc-100 bg-amber-50/50 px-5 py-2 text-xs text-amber-800">
+                  <div className="border-t border-paper-100 bg-ember-50/60 px-5 py-2 text-xs text-ember-800">
                     备注：{order.note}
                   </div>
                 )}
 
-                <div className="divide-y divide-zinc-50 px-5">
+                <div className="divide-y divide-paper-100 border-t border-paper-100 px-5">
                   {order.items.map((item) => (
                     <div
                       key={item.id}
                       className="flex items-center justify-between py-3 text-sm"
                     >
-                      <span className="text-zinc-700">
+                      <span className="text-paper-700">
                         {item.product.name}
                         {item.variantColor && (
-                          <span className="ml-1 text-zinc-400">· {item.variantColor}</span>
+                          <span className="ml-1 text-paper-500">· {item.variantColor}</span>
                         )}
                       </span>
-                      <span className="text-zinc-400">
+                      <span className="text-paper-500">
                         €{Number(item.unitPrice).toFixed(2)} × {item.quantity}
                       </span>
-                      <span className="w-20 text-right font-medium text-zinc-900">
+                      <span className="w-20 text-right font-medium text-paper-900">
                         €{(item.unitPrice * item.quantity).toFixed(2)}
                       </span>
                     </div>
                   ))}
+                </div>
+
+                {/* 操作栏 */}
+                <div className="flex items-center justify-end gap-2 border-t border-paper-100 bg-paper-50 px-5 py-3">
+                  {order.status === "pending" && (
+                    <button
+                      type="button"
+                      disabled={isThisPending}
+                      onClick={() => handleUpdateStatus(order.id, "preparing")}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                      {isThisPending ? "处理中…" : "开始备货"}
+                    </button>
+                  )}
+                  {order.status === "preparing" && (
+                    <button
+                      type="button"
+                      disabled={isThisPending}
+                      onClick={() => handleUpdateStatus(order.id, "done")}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
+                    >
+                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+                      {isThisPending ? "处理中…" : "标记完成"}
+                    </button>
+                  )}
+                  {(order.status === "done" || order.status === "cancelled") && (
+                    <button
+                      type="button"
+                      disabled={deletingId === order.id}
+                      onClick={() => handleDelete(order.id)}
+                      className="rounded-lg border border-paper-200 px-3.5 py-1.5 text-xs font-medium text-paper-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                    >
+                      {deletingId === order.id ? "删除中…" : "删除"}
+                    </button>
+                  )}
                 </div>
               </div>
             );

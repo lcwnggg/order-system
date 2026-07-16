@@ -11,6 +11,7 @@ import {
 import type { Category } from "@/app/admin/categories/categories-client";
 import ProductEditModal from "./product-edit-modal";
 import { getTotalStock, isLowStock as isLowStockOf } from "@/lib/stock";
+import ScanButton from "@/app/scan-button";
 
 export type Product = {
   id: string;
@@ -172,6 +173,21 @@ export default function ProductList({
     setEditingProduct(product);
   }
 
+  // ── 扫码查找并编辑：按条码定位商品，命中即开编辑弹窗；未命中则填入搜索框提示 ──
+  const [scanMiss, setScanMiss] = useState<string | null>(null);
+  function handleScanFind(code: string) {
+    const c = code.trim();
+    if (!c) return;
+    const hit = products.find((p) => (p.barcode ?? "").trim() === c);
+    if (hit) {
+      setScanMiss(null);
+      setEditingProduct(hit);
+    } else {
+      setAdminSearch(c);
+      setScanMiss(c);
+    }
+  }
+
   function closeEdit() {
     setEditingProduct(null);
   }
@@ -247,7 +263,7 @@ export default function ProductList({
         key={product.id}
         onClick={() => openEdit(product)}
         title="点击编辑商品"
-        className={`group cursor-pointer hover:bg-zinc-50/80 ${!product.is_active ? "opacity-50" : ""}`}
+        className={`group cursor-pointer hover:bg-paper-100/80 ${!product.is_active ? "opacity-50" : ""}`}
       >
         {/* 图片 */}
         <td className="px-3 py-1.5">
@@ -261,7 +277,7 @@ export default function ProductList({
               className="h-10 w-10 rounded-md object-cover"
             />
           ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-zinc-100 text-zinc-300">
+            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-paper-100 text-paper-400">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                   d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -272,14 +288,14 @@ export default function ProductList({
 
         {/* 名称 / 品牌 / 分类 */}
         <td className="px-3 py-1.5 max-w-[260px]">
-          <p className="truncate text-sm font-medium leading-snug text-zinc-900">{product.name}</p>
+          <p className="truncate text-sm font-medium leading-snug text-paper-900">{product.name}</p>
           <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
             {product.brand && (
-              <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs font-medium text-zinc-600">
+              <span className="rounded bg-paper-100 px-1.5 py-0.5 text-xs font-medium text-paper-600">
                 {product.brand}
               </span>
             )}
-            <span className={`text-xs ${product.category_id ? "text-zinc-400" : "text-zinc-300"}`}>
+            <span className={`text-xs ${product.category_id ? "text-paper-500" : "text-paper-400"}`}>
               {categoryLabel(product.category_id)}
             </span>
             {product.has_variants && pvs.length > 0 && (
@@ -289,13 +305,13 @@ export default function ProductList({
         </td>
 
         {/* 价格 */}
-        <td className="px-3 py-1.5 whitespace-nowrap text-sm text-zinc-700">
+        <td className="px-3 py-1.5 whitespace-nowrap text-sm text-paper-700">
           €{Number(product.price).toFixed(2)}
         </td>
 
         {/* 条码 */}
-        <td className="px-3 py-1.5 whitespace-nowrap font-mono text-xs text-zinc-500">
-          {product.barcode ? product.barcode : <span className="text-zinc-300">—</span>}
+        <td className="px-3 py-1.5 whitespace-nowrap font-mono text-xs text-paper-500">
+          {product.barcode ? product.barcode : <span className="text-paper-400">—</span>}
         </td>
 
         {/* 库存 */}
@@ -303,11 +319,11 @@ export default function ProductList({
           {product.has_variants ? (
             <div className="space-y-1">
               {pvs.length === 0 ? (
-                <span className="text-xs text-zinc-400">暂无变体</span>
+                <span className="text-xs text-paper-500">暂无变体</span>
               ) : (
                 pvs.map((variant) => (
                   <div key={variant.id} className="flex items-center gap-1 flex-nowrap">
-                    <span className="w-14 shrink-0 truncate text-xs text-zinc-600">{variant.color}</span>
+                    <span className="w-14 shrink-0 truncate text-xs text-paper-600">{variant.color}</span>
                     <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-xs font-medium leading-none ${
                       variant.stock === 0 ? "bg-red-50 text-red-600"
                         : variant.stock <= 5 ? "bg-amber-50 text-amber-600"
@@ -319,7 +335,7 @@ export default function ProductList({
                       type="button"
                       disabled={adjustingVariantId === variant.id}
                       onClick={() => handleAdjustVariant(variant.id, 1)}
-                      className="shrink-0 rounded px-1.5 py-0.5 text-xs font-medium bg-zinc-100 text-zinc-600 hover:bg-zinc-200 disabled:opacity-40 transition-colors"
+                      className="shrink-0 rounded px-1.5 py-0.5 text-xs font-medium bg-paper-100 text-paper-600 hover:bg-paper-200 disabled:opacity-40 transition-colors"
                     >
                       +1
                     </button>
@@ -329,13 +345,13 @@ export default function ProductList({
                       value={adjustQty[variant.id] ?? ""}
                       onChange={(e) => setAdjustQty((prev) => ({ ...prev, [variant.id]: e.target.value }))}
                       placeholder="N"
-                      className="w-9 shrink-0 rounded border border-zinc-200 px-1 py-0.5 text-xs text-zinc-900 outline-none focus:border-zinc-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                      className="w-9 shrink-0 rounded border border-paper-200 px-1 py-0.5 text-xs text-paper-900 outline-none focus:border-paper-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                     />
                     <button
                       type="button"
                       disabled={adjustingVariantId === variant.id || !adjustQty[variant.id]}
                       onClick={() => handleAdjustVariant(variant.id, null)}
-                      className="shrink-0 rounded px-1.5 py-0.5 text-xs font-medium bg-zinc-100 text-zinc-600 hover:bg-zinc-200 disabled:opacity-40 transition-colors"
+                      className="shrink-0 rounded px-1.5 py-0.5 text-xs font-medium bg-paper-100 text-paper-600 hover:bg-paper-200 disabled:opacity-40 transition-colors"
                     >
                       {adjustingVariantId === variant.id ? "…" : "加"}
                     </button>
@@ -356,7 +372,7 @@ export default function ProductList({
                 type="button"
                 disabled={adjustingId === product.id}
                 onClick={() => handleAdjust(product.id, 1)}
-                className="shrink-0 rounded px-1.5 py-0.5 text-xs font-medium bg-zinc-100 text-zinc-600 hover:bg-zinc-200 disabled:opacity-40 transition-colors"
+                className="shrink-0 rounded px-1.5 py-0.5 text-xs font-medium bg-paper-100 text-paper-600 hover:bg-paper-200 disabled:opacity-40 transition-colors"
               >
                 +1
               </button>
@@ -366,13 +382,13 @@ export default function ProductList({
                 value={adjustQty[product.id] ?? ""}
                 onChange={(e) => setAdjustQty((prev) => ({ ...prev, [product.id]: e.target.value }))}
                 placeholder="N"
-                className="w-9 shrink-0 rounded border border-zinc-200 px-1 py-0.5 text-xs text-zinc-900 outline-none focus:border-zinc-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                className="w-9 shrink-0 rounded border border-paper-200 px-1 py-0.5 text-xs text-paper-900 outline-none focus:border-paper-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
               />
               <button
                 type="button"
                 disabled={adjustingId === product.id || !adjustQty[product.id]}
                 onClick={() => handleAdjust(product.id, null)}
-                className="shrink-0 rounded px-1.5 py-0.5 text-xs font-medium bg-zinc-100 text-zinc-600 hover:bg-zinc-200 disabled:opacity-40 transition-colors"
+                className="shrink-0 rounded px-1.5 py-0.5 text-xs font-medium bg-paper-100 text-paper-600 hover:bg-paper-200 disabled:opacity-40 transition-colors"
               >
                 {adjustingId === product.id ? "…" : "加"}
               </button>
@@ -392,7 +408,7 @@ export default function ProductList({
             className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
               product.is_active
                 ? "bg-green-50 text-green-700 hover:bg-green-100"
-                : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+                : "bg-paper-100 text-paper-500 hover:bg-paper-200"
             }`}
           >
             {isToggling ? "…" : product.is_active ? "上架 ↓" : "下架 ↑"}
@@ -425,7 +441,7 @@ export default function ProductList({
     return (
       <div
         key={product.id}
-        className={`overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm${!product.is_active ? " opacity-60" : ""}`}
+        className={`overflow-hidden rounded-2xl border border-paper-200 bg-paper-25${!product.is_active ? " opacity-60" : ""}`}
       >
         {/* 主信息行 */}
         <div className="flex items-start gap-3 p-3">
@@ -434,7 +450,7 @@ export default function ProductList({
             <img src={product.image_url} alt={product.name} width={56} height={56}
               className="h-14 w-14 shrink-0 rounded-lg object-cover" />
           ) : (
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-300">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-paper-100 text-paper-400">
               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                   d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -442,21 +458,21 @@ export default function ProductList({
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="line-clamp-2 text-sm font-semibold leading-snug text-zinc-900">{product.name}</p>
+            <p className="line-clamp-2 text-sm font-semibold leading-snug text-paper-900">{product.name}</p>
             <div className="mt-0.5 flex flex-wrap items-center gap-1">
               {product.brand && (
-                <span className="rounded bg-zinc-100 px-1.5 py-0.5 text-xs font-medium text-zinc-600">{product.brand}</span>
+                <span className="rounded bg-paper-100 px-1.5 py-0.5 text-xs font-medium text-paper-600">{product.brand}</span>
               )}
-              <span className={`text-xs ${product.category_id ? "text-zinc-400" : "text-zinc-300"}`}>
+              <span className={`text-xs ${product.category_id ? "text-paper-500" : "text-paper-400"}`}>
                 {categoryLabel(product.category_id)}
               </span>
               {product.has_variants && pvs.length > 0 && (
                 <span className="text-xs text-blue-500">{pvs.length}色</span>
               )}
             </div>
-            <p className="mt-1 text-sm font-bold text-zinc-900">€{Number(product.price).toFixed(2)}</p>
+            <p className="mt-1 text-sm font-bold text-paper-900">€{Number(product.price).toFixed(2)}</p>
             {product.barcode && (
-              <p className="mt-0.5 flex items-center gap-1 font-mono text-[11px] text-zinc-400">
+              <p className="mt-0.5 flex items-center gap-1 font-mono text-[11px] text-paper-500">
                 <svg className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M4 5a1 1 0 011-1h1m12 0h1a1 1 0 011 1v1m0 12v1a1 1 0 01-1 1h-1M6 20H5a1 1 0 01-1-1v-1M4 12h16M8 8v8m4-8v8m4-8v8" />
@@ -472,7 +488,7 @@ export default function ProductList({
             className={`shrink-0 inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium transition-colors disabled:opacity-50 ${
               product.is_active
                 ? "bg-green-50 text-green-700 hover:bg-green-100"
-                : "bg-zinc-100 text-zinc-500 hover:bg-zinc-200"
+                : "bg-paper-100 text-paper-500 hover:bg-paper-200"
             }`}
           >
             {isToggling ? "…" : product.is_active ? "上架" : "下架"}
@@ -480,15 +496,15 @@ export default function ProductList({
         </div>
 
         {/* 库存快捷调整 */}
-        <div className="border-t border-zinc-50 bg-zinc-50/50 px-3 py-2">
+        <div className="border-t border-paper-100 bg-paper-100/50 px-3 py-2">
           {product.has_variants ? (
             <div className="space-y-1.5">
               {pvs.length === 0 ? (
-                <span className="text-xs text-zinc-400">暂无变体</span>
+                <span className="text-xs text-paper-500">暂无变体</span>
               ) : (
                 pvs.map((variant) => (
                   <div key={variant.id} className="flex items-center gap-1.5">
-                    <span className="w-16 shrink-0 truncate text-xs text-zinc-600">{variant.color}</span>
+                    <span className="w-16 shrink-0 truncate text-xs text-paper-600">{variant.color}</span>
                     <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-xs font-medium leading-none ${
                       variant.stock === 0 ? "bg-red-50 text-red-600"
                         : variant.stock <= 5 ? "bg-amber-50 text-amber-600"
@@ -498,17 +514,17 @@ export default function ProductList({
                     </span>
                     <button type="button" disabled={adjustingVariantId === variant.id}
                       onClick={() => handleAdjustVariant(variant.id, 1)}
-                      className="rounded px-2 py-1 text-xs font-medium bg-zinc-100 text-zinc-600 hover:bg-zinc-200 disabled:opacity-40 transition-colors">
+                      className="rounded px-2 py-1 text-xs font-medium bg-paper-100 text-paper-600 hover:bg-paper-200 disabled:opacity-40 transition-colors">
                       +1
                     </button>
                     <input type="number" min="1" value={adjustQty[variant.id] ?? ""}
                       onChange={(e) => setAdjustQty((prev) => ({ ...prev, [variant.id]: e.target.value }))}
                       placeholder="N"
-                      className="w-10 rounded border border-zinc-200 px-1.5 py-1 text-xs text-zinc-900 outline-none focus:border-zinc-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
+                      className="w-10 rounded border border-paper-200 px-1.5 py-1 text-xs text-paper-900 outline-none focus:border-paper-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
                     <button type="button"
                       disabled={adjustingVariantId === variant.id || !adjustQty[variant.id]}
                       onClick={() => handleAdjustVariant(variant.id, null)}
-                      className="rounded px-2 py-1 text-xs font-medium bg-zinc-100 text-zinc-600 hover:bg-zinc-200 disabled:opacity-40 transition-colors">
+                      className="rounded px-2 py-1 text-xs font-medium bg-paper-100 text-paper-600 hover:bg-paper-200 disabled:opacity-40 transition-colors">
                       {adjustingVariantId === variant.id ? "…" : "加"}
                     </button>
                   </div>
@@ -517,7 +533,7 @@ export default function ProductList({
             </div>
           ) : (
             <div className="flex items-center gap-1.5">
-              <span className="shrink-0 text-xs text-zinc-500">库存</span>
+              <span className="shrink-0 text-xs text-paper-500">库存</span>
               <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-xs font-medium leading-none ${
                 product.stock === 0 ? "bg-red-50 text-red-600"
                   : product.stock <= 5 ? "bg-amber-50 text-amber-600"
@@ -527,17 +543,17 @@ export default function ProductList({
               </span>
               <button type="button" disabled={adjustingId === product.id}
                 onClick={() => handleAdjust(product.id, 1)}
-                className="rounded px-2 py-1 text-xs font-medium bg-zinc-100 text-zinc-600 hover:bg-zinc-200 disabled:opacity-40 transition-colors">
+                className="rounded px-2 py-1 text-xs font-medium bg-paper-100 text-paper-600 hover:bg-paper-200 disabled:opacity-40 transition-colors">
                 +1
               </button>
               <input type="number" min="1" value={adjustQty[product.id] ?? ""}
                 onChange={(e) => setAdjustQty((prev) => ({ ...prev, [product.id]: e.target.value }))}
                 placeholder="N"
-                className="w-12 rounded border border-zinc-200 px-1.5 py-1 text-xs text-zinc-900 outline-none focus:border-zinc-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
+                className="w-12 rounded border border-paper-200 px-1.5 py-1 text-xs text-paper-900 outline-none focus:border-paper-400 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" />
               <button type="button"
                 disabled={adjustingId === product.id || !adjustQty[product.id]}
                 onClick={() => handleAdjust(product.id, null)}
-                className="rounded px-2 py-1 text-xs font-medium bg-zinc-100 text-zinc-600 hover:bg-zinc-200 disabled:opacity-40 transition-colors">
+                className="rounded px-2 py-1 text-xs font-medium bg-paper-100 text-paper-600 hover:bg-paper-200 disabled:opacity-40 transition-colors">
                 {adjustingId === product.id ? "…" : "加"}
               </button>
               {adjustErrors[product.id] && (
@@ -548,9 +564,9 @@ export default function ProductList({
         </div>
 
         {/* 操作按钮行 */}
-        <div className="flex divide-x divide-zinc-100 border-t border-zinc-100">
+        <div className="flex divide-x divide-paper-100 border-t border-paper-100">
           <button type="button" onClick={() => openEdit(product)}
-            className="flex-1 py-2.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50">
+            className="flex-1 py-2.5 text-sm font-medium text-paper-700 transition-colors hover:bg-paper-100">
             编辑
           </button>
           <button type="button" disabled={isDeleting} onClick={() => handleDelete(product)}
@@ -565,13 +581,13 @@ export default function ProductList({
   // ── 共用表格 ──
   const TABLE_HEADER = (
     <thead>
-      <tr className="border-b border-zinc-100 bg-zinc-50/80 text-left">
-        <th className="px-3 py-2 text-xs font-medium text-zinc-400 w-12">图</th>
-        <th className="px-3 py-2 text-xs font-medium text-zinc-400">商品 / 品牌 / 分类</th>
-        <th className="px-3 py-2 text-xs font-medium text-zinc-400 whitespace-nowrap">价格</th>
-        <th className="px-3 py-2 text-xs font-medium text-zinc-400 whitespace-nowrap">条码</th>
-        <th className="px-3 py-2 text-xs font-medium text-zinc-400">库存</th>
-        <th className="px-3 py-2 text-xs font-medium text-zinc-400">状态</th>
+      <tr className="border-b border-paper-100 bg-paper-100/80 text-left">
+        <th className="px-3 py-2 text-xs font-medium text-paper-500 w-12">图</th>
+        <th className="px-3 py-2 text-xs font-medium text-paper-500">商品 / 品牌 / 分类</th>
+        <th className="px-3 py-2 text-xs font-medium text-paper-500 whitespace-nowrap">价格</th>
+        <th className="px-3 py-2 text-xs font-medium text-paper-500 whitespace-nowrap">条码</th>
+        <th className="px-3 py-2 text-xs font-medium text-paper-500">库存</th>
+        <th className="px-3 py-2 text-xs font-medium text-paper-500">状态</th>
         <th className="px-3 py-2 w-20"></th>
       </tr>
     </thead>
@@ -580,8 +596,8 @@ export default function ProductList({
   function renderTable(items: Product[], emptyMsg = "无匹配商品") {
     if (items.length === 0) {
       return (
-        <div className="rounded-xl border border-dashed border-zinc-200 bg-white py-10 text-center">
-          <p className="text-sm text-zinc-400">{emptyMsg}</p>
+        <div className="rounded-xl border border-dashed border-paper-200 bg-white py-10 text-center">
+          <p className="text-sm text-paper-500">{emptyMsg}</p>
         </div>
       );
     }
@@ -592,10 +608,10 @@ export default function ProductList({
           {items.map(renderCard)}
         </div>
         {/* 桌面端表格 */}
-        <div className="hidden overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm sm:block">
+        <div className="hidden overflow-hidden rounded-2xl border border-paper-200 bg-paper-25 sm:block">
           <div className="overflow-x-auto">
             <table className="w-full">{TABLE_HEADER}
-              <tbody className="divide-y divide-zinc-100">{items.map(renderRow)}</tbody>
+              <tbody className="divide-y divide-paper-100">{items.map(renderRow)}</tbody>
             </table>
           </div>
         </div>
@@ -619,7 +635,7 @@ export default function ProductList({
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {/* 搜索框 */}
         <div className="relative min-w-[180px] flex-1">
-          <svg className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-paper-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
           <input
@@ -627,18 +643,25 @@ export default function ProductList({
             value={adminSearch}
             onChange={(e) => setAdminSearch(e.target.value)}
             placeholder="名称 / 品牌…"
-            className="w-full rounded-lg border border-zinc-200 bg-white py-1.5 pl-8 pr-7 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
+            className="w-full rounded-lg border border-paper-200 bg-white py-1.5 pl-8 pr-7 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-400 focus:ring-2 focus:ring-paper-200"
           />
           {adminSearch && (
-            <button type="button" onClick={() => setAdminSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 text-xs">✕</button>
+            <button type="button" onClick={() => setAdminSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-paper-500 hover:text-paper-600 text-xs">✕</button>
           )}
         </div>
+
+        {/* 扫码查找并编辑 */}
+        <ScanButton
+          onScan={handleScanFind}
+          label="扫码查找"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-paper-300 bg-white px-3 py-1.5 text-sm font-medium text-paper-700 transition-colors hover:border-paper-400 hover:bg-paper-100"
+        />
 
         {/* 分类筛选 */}
         <select
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value)}
-          className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-sm text-zinc-700 outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
+          className="rounded-lg border border-paper-200 bg-white px-2.5 py-1.5 text-sm text-paper-700 outline-none focus:border-paper-400 focus:ring-2 focus:ring-paper-200"
         >
           <option value="">全部分类</option>
           {parentCategories.map((c) => (
@@ -651,7 +674,7 @@ export default function ProductList({
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value as StatusFilter)}
-          className="rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-sm text-zinc-700 outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
+          className="rounded-lg border border-paper-200 bg-white px-2.5 py-1.5 text-sm text-paper-700 outline-none focus:border-paper-400 focus:ring-2 focus:ring-paper-200"
         >
           <option value="all">全部状态</option>
           <option value="active">上架中</option>
@@ -660,17 +683,17 @@ export default function ProductList({
         </select>
 
         {/* 按库存合计筛选：少于 N 件 */}
-        <div className="flex items-center gap-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5">
-          <span className="whitespace-nowrap text-sm text-zinc-500">库存少于</span>
+        <div className="flex items-center gap-1 rounded-lg border border-paper-200 bg-white px-2.5 py-1.5">
+          <span className="whitespace-nowrap text-sm text-paper-500">库存少于</span>
           <input
             type="number"
             min="1"
             value={stockLessThan}
             onChange={(e) => setStockLessThan(e.target.value)}
             placeholder="N"
-            className="w-12 bg-transparent text-sm text-zinc-900 placeholder-zinc-400 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+            className="w-12 bg-transparent text-sm text-paper-900 placeholder-paper-500 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
-          <span className="whitespace-nowrap text-sm text-zinc-500">件</span>
+          <span className="whitespace-nowrap text-sm text-paper-500">件</span>
         </div>
 
         {/* 重置 */}
@@ -678,20 +701,29 @@ export default function ProductList({
           <button
             type="button"
             onClick={() => { setAdminSearch(""); setFilterCategory(""); setFilterStatus("all"); setStockLessThan(""); }}
-            className="rounded-lg border border-zinc-200 px-2.5 py-1.5 text-xs text-zinc-500 hover:bg-zinc-50"
+            className="rounded-lg border border-paper-200 px-2.5 py-1.5 text-xs text-paper-500 hover:bg-paper-100"
           >
             重置
           </button>
         )}
 
         {/* 计数 */}
-        <span className="ml-auto shrink-0 text-xs text-zinc-400">
+        <span className="ml-auto shrink-0 text-xs text-paper-500">
           {filteredProducts.length} / {products.length} 件
         </span>
       </div>
 
+      {/* 扫码未命中提示 */}
+      {scanMiss && (
+        <div className="mb-3 flex items-center gap-2 rounded-lg border border-ember-200 bg-ember-50 px-3 py-2 text-sm text-ember-700">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-ember-500" />
+          <span className="min-w-0 flex-1">未找到条码 {scanMiss} 对应的商品（已填入搜索框）</span>
+          <button type="button" onClick={() => setScanMiss(null)} className="shrink-0 text-paper-400 hover:text-paper-600">✕</button>
+        </div>
+      )}
+
       {/* ── 标签页 ── */}
-      <div className="mb-3 flex gap-0.5 border-b border-zinc-200">
+      <div className="mb-3 flex gap-0.5 border-b border-paper-200">
         {(["recent", "by-category"] as Tab[]).map((tab) => (
           <button
             key={tab}
@@ -699,8 +731,8 @@ export default function ProductList({
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 text-sm font-medium transition-colors ${
               activeTab === tab
-                ? "border-b-2 border-zinc-900 text-zinc-900"
-                : "text-zinc-500 hover:text-zinc-700"
+                ? "border-b-2 border-paper-800 text-paper-900"
+                : "text-paper-500 hover:text-paper-700"
             }`}
           >
             {tab === "recent" ? "最近添加" : "按分类浏览"}
@@ -713,8 +745,8 @@ export default function ProductList({
 
       {activeTab === "by-category" && (
         groupedProducts.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-zinc-200 bg-white py-10 text-center">
-            <p className="text-sm text-zinc-400">{hasActiveFilters ? "无匹配商品" : "暂无商品"}</p>
+          <div className="rounded-xl border border-dashed border-paper-200 bg-white py-10 text-center">
+            <p className="text-sm text-paper-500">{hasActiveFilters ? "无匹配商品" : "暂无商品"}</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -723,21 +755,21 @@ export default function ProductList({
               return (
                 <div
                   key={group.catId ?? "__null__"}
-                  className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm"
+                  className="overflow-hidden rounded-2xl border border-paper-200 bg-paper-25"
                 >
                   <button
                     type="button"
                     onClick={() => toggleGroup(group.catId)}
-                    className="flex w-full items-center justify-between px-4 py-2.5 hover:bg-zinc-50 transition-colors"
+                    className="flex w-full items-center justify-between px-4 py-2.5 hover:bg-paper-100 transition-colors"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-zinc-800">{group.catName}</span>
-                      <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-500">
+                      <span className="text-sm font-semibold text-paper-800">{group.catName}</span>
+                      <span className="rounded-full bg-paper-100 px-2 py-0.5 text-xs font-medium text-paper-500">
                         {group.items.length} 件
                       </span>
                     </div>
                     <svg
-                      className={`h-4 w-4 text-zinc-400 transition-transform ${collapsed ? "-rotate-90" : ""}`}
+                      className={`h-4 w-4 text-paper-500 transition-transform ${collapsed ? "-rotate-90" : ""}`}
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -748,13 +780,13 @@ export default function ProductList({
                   {!collapsed && (
                     <>
                       {/* 手机端卡片 */}
-                      <div className="block space-y-3 border-t border-zinc-100 p-3 sm:hidden">
+                      <div className="block space-y-3 border-t border-paper-100 p-3 sm:hidden">
                         {group.items.map(renderCard)}
                       </div>
                       {/* 桌面端表格 */}
-                      <div className="hidden border-t border-zinc-100 overflow-x-auto sm:block">
+                      <div className="hidden border-t border-paper-100 overflow-x-auto sm:block">
                         <table className="w-full">
-                          <tbody className="divide-y divide-zinc-100">
+                          <tbody className="divide-y divide-paper-100">
                             {group.items.map(renderRow)}
                           </tbody>
                         </table>

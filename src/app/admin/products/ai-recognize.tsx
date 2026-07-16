@@ -87,9 +87,9 @@ export default function AiRecognizePanel({
   const busy = phase === "uploading" || phase === "recognizing";
 
   return (
-    <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4">
+    <div className="rounded-xl border border-paper-300 bg-paper-50 p-4">
       <div className="flex items-start gap-3">
-        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-600">
+        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-paper-200 text-paper-700">
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
@@ -97,11 +97,11 @@ export default function AiRecognizePanel({
           </svg>
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-zinc-900">AI 自动识别（可选）</p>
-          <p className="mt-1 text-xs leading-relaxed text-zinc-600">
+          <p className="text-sm font-semibold text-paper-900">AI 自动识别（可选）</p>
+          <p className="mt-1 text-xs leading-relaxed text-paper-600">
             拍 1–2 张商品照片，AI 会自动帮你填好下面的名称、品牌、分类和描述。
             <br />
-            <span className="text-zinc-500">
+            <span className="text-paper-500">
               📸 小贴士：光线充足、白色背景、正面拍清品牌和名称最准；可再拍一张背面帮助识别更多信息。
               第一张照片会自动用作商品图，无需再传一次。
             </span>
@@ -111,8 +111,8 @@ export default function AiRecognizePanel({
             <label
               className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
                 busy
-                  ? "cursor-not-allowed bg-indigo-300 text-white"
-                  : "bg-indigo-600 text-white hover:bg-indigo-700"
+                  ? "cursor-not-allowed bg-paper-400 text-white"
+                  : "bg-paper-700 text-white hover:bg-paper-800"
               }`}
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -132,8 +132,8 @@ export default function AiRecognizePanel({
               />
             </label>
 
-            {phase === "uploading" && <span className="text-xs text-zinc-500">正在上传照片…</span>}
-            {phase === "recognizing" && <span className="text-xs text-zinc-500">AI 正在识别…</span>}
+            {phase === "uploading" && <span className="text-xs text-paper-500">正在上传照片…</span>}
+            {phase === "recognizing" && <span className="text-xs text-paper-500">AI 正在识别…</span>}
             {phase === "done" && (
               <span className="text-xs font-medium text-green-600">已识别，已自动填入下方字段，请核对</span>
             )}

@@ -235,11 +235,11 @@ export default function CategoriesClient({
   }
 
   const inputCls =
-    "w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm text-zinc-900 placeholder-zinc-400 outline-none focus:border-zinc-500 focus:ring-2 focus:ring-zinc-200";
+    "w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300";
   const btnPrimaryCls =
-    "rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700 disabled:opacity-50";
+    "rounded-lg bg-paper-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-paper-800 disabled:opacity-50";
   const btnOutlineCls =
-    "rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-100 disabled:opacity-40";
+    "rounded-lg border border-paper-200 px-3 py-1.5 text-xs font-medium text-paper-600 transition-colors hover:bg-paper-100 disabled:opacity-40";
 
   return (
     <>
@@ -247,8 +247,8 @@ export default function CategoriesClient({
         {/* ── 新增表单区 ── */}
         <div className="grid gap-4 sm:grid-cols-2">
           {/* 新增大类 */}
-          <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <h3 className="mb-3 text-sm font-semibold text-zinc-900">添加大类</h3>
+          <div className="rounded-xl border border-paper-200 bg-white p-5">
+            <h3 className="mb-3 text-sm font-semibold text-paper-900">添加大类</h3>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -273,8 +273,8 @@ export default function CategoriesClient({
           </div>
 
           {/* 新增小类 */}
-          <div className="rounded-xl border border-zinc-200 bg-white p-5 shadow-sm">
-            <h3 className="mb-3 text-sm font-semibold text-zinc-900">在大类下添加小类</h3>
+          <div className="rounded-xl border border-paper-200 bg-white p-5">
+            <h3 className="mb-3 text-sm font-semibold text-paper-900">在大类下添加小类</h3>
             <div className="space-y-2">
               <select
                 value={newChildParentId}
@@ -315,8 +315,8 @@ export default function CategoriesClient({
 
         {/* ── 分类列表 ── */}
         {categoryTree.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-zinc-300 bg-white py-14 text-center">
-            <p className="text-sm text-zinc-400">暂无分类，请通过上方表单添加</p>
+          <div className="rounded-xl border border-dashed border-paper-300 bg-white py-14 text-center">
+            <p className="text-sm text-paper-500">暂无分类，请通过上方表单添加</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -325,11 +325,11 @@ export default function CategoriesClient({
               return (
                 <div
                   key={parent.id}
-                  className="overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm"
+                  className="overflow-hidden rounded-2xl border border-paper-200 bg-paper-25"
                 >
                   {/* 大类行 */}
-                  <div className="flex items-center gap-3 border-b border-zinc-100 bg-zinc-50 px-5 py-3">
-                    <span className="text-xs text-zinc-400">大类</span>
+                  <div className="flex items-center gap-3 border-b border-paper-100 bg-paper-100 px-5 py-3">
+                    <span className="text-xs text-paper-500">大类</span>
                     {editingId === parent.id ? (
                       <div className="flex flex-1 items-center gap-2">
                         <input
@@ -340,28 +340,28 @@ export default function CategoriesClient({
                             if (e.key === "Enter") handleRename(parent.id);
                             if (e.key === "Escape") setEditingId(null);
                           }}
-                          className="flex-1 rounded-lg border border-zinc-300 px-2 py-1 text-sm outline-none focus:border-zinc-500"
+                          className="flex-1 rounded-lg border border-paper-300 px-2 py-1 text-sm outline-none focus:border-paper-500"
                         />
                         <button
                           type="button"
                           disabled={renamingId === parent.id}
                           onClick={() => handleRename(parent.id)}
-                          className="text-xs font-medium text-zinc-900 hover:underline disabled:opacity-50"
+                          className="text-xs font-medium text-paper-900 hover:underline disabled:opacity-50"
                         >
                           {renamingId === parent.id ? "保存中…" : "保存"}
                         </button>
                         <button
                           type="button"
                           onClick={() => setEditingId(null)}
-                          className="text-xs text-zinc-400 hover:text-zinc-600"
+                          className="text-xs text-paper-500 hover:text-paper-600"
                         >
                           取消
                         </button>
                       </div>
                     ) : (
-                      <span className="flex-1 text-sm font-semibold text-zinc-900">
+                      <span className="flex-1 text-sm font-semibold text-paper-900">
                         {parent.name}
-                        <span className="ml-2 font-normal text-zinc-400">
+                        <span className="ml-2 font-normal text-paper-500">
                           {parent.children.length} 个小类
                           {parentProductCount > 0 && (
                             <span className="ml-1">· {parentProductCount} 件商品</span>
@@ -413,9 +413,9 @@ export default function CategoriesClient({
 
                   {/* 直属商品展开区（挂在大类上的商品） */}
                   {expandedParentId === parent.id && (
-                    <div className="border-t border-zinc-50 bg-zinc-50/60 px-8 py-3">
+                    <div className="border-t border-paper-100 bg-paper-100/60 px-8 py-3">
                       {productsInCategory(parent.id).length === 0 ? (
-                        <p className="py-2 text-xs text-zinc-400">暂无直接归属商品</p>
+                        <p className="py-2 text-xs text-paper-500">暂无直接归属商品</p>
                       ) : (
                         <ul className="mb-3 space-y-1">
                           {productsInCategory(parent.id).map((p) => (
@@ -423,17 +423,17 @@ export default function CategoriesClient({
                               <button
                                 type="button"
                                 onClick={() => setEditingProduct(p)}
-                                className="min-w-0 flex-1 truncate text-left text-xs text-zinc-700 hover:text-zinc-900 hover:underline"
+                                className="min-w-0 flex-1 truncate text-left text-xs text-paper-700 hover:text-paper-900 hover:underline"
                               >
                                 {p.name}
                               </button>
-                              <span className="shrink-0 text-xs text-zinc-500">€{Number(p.price).toFixed(2)}</span>
+                              <span className="shrink-0 text-xs text-paper-500">€{Number(p.price).toFixed(2)}</span>
                               {renderStockBadge(p)}
                               <button
                                 type="button"
                                 disabled={removingProductId === p.id}
                                 onClick={() => handleRemoveProduct(p.id, p.name)}
-                                className="shrink-0 rounded px-2 py-0.5 text-xs text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-40"
+                                className="shrink-0 rounded px-2 py-0.5 text-xs text-paper-500 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-40"
                               >
                                 {removingProductId === p.id ? "…" : "移出分类"}
                               </button>
@@ -444,7 +444,7 @@ export default function CategoriesClient({
                       <button
                         type="button"
                         onClick={() => openAddModal(parent.id, parent.name)}
-                        className="rounded-lg border border-dashed border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:border-zinc-400 hover:bg-white hover:text-zinc-700"
+                        className="rounded-lg border border-dashed border-paper-300 px-3 py-1.5 text-xs font-medium text-paper-500 transition-colors hover:border-paper-400 hover:bg-white hover:text-paper-700"
                       >
                         + 添加商品到此大类
                       </button>
@@ -453,7 +453,7 @@ export default function CategoriesClient({
 
                   {/* 小类行 */}
                   {parent.children.length > 0 && (
-                    <ul className="divide-y divide-zinc-50">
+                    <ul className="divide-y divide-paper-100">
                       {parent.children.map((child) => {
                         const childProducts = productsInCategory(child.id);
                         const isExpanded = expandedChildId === child.id;
@@ -461,7 +461,7 @@ export default function CategoriesClient({
                           <li key={child.id}>
                             {/* 小类标题行 */}
                             <div className="flex items-center gap-3 px-5 py-2.5">
-                              <span className="text-zinc-300">└</span>
+                              <span className="text-paper-400">└</span>
                               {editingId === child.id ? (
                                 <div className="flex flex-1 items-center gap-2">
                                   <input
@@ -472,28 +472,28 @@ export default function CategoriesClient({
                                       if (e.key === "Enter") handleRename(child.id);
                                       if (e.key === "Escape") setEditingId(null);
                                     }}
-                                    className="flex-1 rounded-lg border border-zinc-300 px-2 py-1 text-sm outline-none focus:border-zinc-500"
+                                    className="flex-1 rounded-lg border border-paper-300 px-2 py-1 text-sm outline-none focus:border-paper-500"
                                   />
                                   <button
                                     type="button"
                                     disabled={renamingId === child.id}
                                     onClick={() => handleRename(child.id)}
-                                    className="text-xs font-medium text-zinc-900 hover:underline disabled:opacity-50"
+                                    className="text-xs font-medium text-paper-900 hover:underline disabled:opacity-50"
                                   >
                                     {renamingId === child.id ? "保存中…" : "保存"}
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => setEditingId(null)}
-                                    className="text-xs text-zinc-400 hover:text-zinc-600"
+                                    className="text-xs text-paper-500 hover:text-paper-600"
                                   >
                                     取消
                                   </button>
                                 </div>
                               ) : (
-                                <span className="flex-1 text-sm text-zinc-700">
+                                <span className="flex-1 text-sm text-paper-700">
                                   {child.name}
-                                  <span className="ml-2 text-xs text-zinc-400">
+                                  <span className="ml-2 text-xs text-paper-500">
                                     {childProducts.length} 件商品
                                   </span>
                                 </span>
@@ -535,9 +535,9 @@ export default function CategoriesClient({
 
                             {/* 展开区：商品列表 + 添加入口 */}
                             {isExpanded && (
-                              <div className="border-t border-zinc-50 bg-zinc-50/60 px-8 py-3">
+                              <div className="border-t border-paper-100 bg-paper-100/60 px-8 py-3">
                                 {childProducts.length === 0 ? (
-                                  <p className="py-2 text-xs text-zinc-400">暂无商品</p>
+                                  <p className="py-2 text-xs text-paper-500">暂无商品</p>
                                 ) : (
                                   <ul className="mb-3 space-y-1">
                                     {childProducts.map((p) => (
@@ -548,17 +548,17 @@ export default function CategoriesClient({
                                         <button
                                           type="button"
                                           onClick={() => setEditingProduct(p)}
-                                          className="min-w-0 flex-1 truncate text-left text-xs text-zinc-700 hover:text-zinc-900 hover:underline"
+                                          className="min-w-0 flex-1 truncate text-left text-xs text-paper-700 hover:text-paper-900 hover:underline"
                                         >
                                           {p.name}
                                         </button>
-                                        <span className="shrink-0 text-xs text-zinc-500">€{Number(p.price).toFixed(2)}</span>
+                                        <span className="shrink-0 text-xs text-paper-500">€{Number(p.price).toFixed(2)}</span>
                                         {renderStockBadge(p)}
                                         <button
                                           type="button"
                                           disabled={removingProductId === p.id}
                                           onClick={() => handleRemoveProduct(p.id, p.name)}
-                                          className="shrink-0 rounded px-2 py-0.5 text-xs text-zinc-400 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-40"
+                                          className="shrink-0 rounded px-2 py-0.5 text-xs text-paper-500 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-40"
                                         >
                                           {removingProductId === p.id ? "…" : "移出分类"}
                                         </button>
@@ -569,7 +569,7 @@ export default function CategoriesClient({
                                 <button
                                   type="button"
                                   onClick={() => openAddModal(child.id, child.name)}
-                                  className="rounded-lg border border-dashed border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-500 transition-colors hover:border-zinc-400 hover:bg-white hover:text-zinc-700"
+                                  className="rounded-lg border border-dashed border-paper-300 px-3 py-1.5 text-xs font-medium text-paper-500 transition-colors hover:border-paper-400 hover:bg-white hover:text-paper-700"
                                 >
                                   + 添加商品到此分类
                                 </button>
@@ -610,19 +610,19 @@ export default function CategoriesClient({
           }}
         >
           <div className="flex max-h-[80vh] w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-xl">
-            <div className="flex items-center justify-between border-b border-zinc-100 px-5 py-4">
+            <div className="flex items-center justify-between border-b border-paper-100 px-5 py-4">
               <div>
-                <h3 className="text-sm font-semibold text-zinc-900">
+                <h3 className="text-sm font-semibold text-paper-900">
                   添加商品到「{addModalCatName}」
                 </h3>
-                <p className="mt-0.5 text-xs text-zinc-400">
+                <p className="mt-0.5 text-xs text-paper-500">
                   选择要归入此分类的商品（已在此分类的商品不在列表中）
                 </p>
               </div>
               <button
                 type="button"
                 onClick={closeModal}
-                className="text-zinc-400 hover:text-zinc-600"
+                className="text-paper-500 hover:text-paper-600"
               >
                 ✕
               </button>
@@ -630,13 +630,13 @@ export default function CategoriesClient({
 
             <div className="overflow-y-auto flex-1 px-5 py-3">
               {modalProducts.length === 0 ? (
-                <p className="py-6 text-center text-sm text-zinc-400">
+                <p className="py-6 text-center text-sm text-paper-500">
                   所有商品已在此分类中
                 </p>
               ) : (
                 <>
                   <div className="mb-2 flex items-center justify-between">
-                    <label className="flex cursor-pointer items-center gap-2 text-xs text-zinc-500">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs text-paper-500">
                       <input
                         type="checkbox"
                         checked={allModalSelected}
@@ -646,7 +646,7 @@ export default function CategoriesClient({
                       全选（{modalProducts.length} 件）
                     </label>
                     {modalSelected.size > 0 && (
-                      <span className="text-xs text-zinc-500">
+                      <span className="text-xs text-paper-500">
                         已选 {modalSelected.size} 件
                       </span>
                     )}
@@ -654,16 +654,16 @@ export default function CategoriesClient({
                   <ul className="space-y-1">
                     {modalProducts.map((p) => (
                       <li key={p.id}>
-                        <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 hover:bg-zinc-50">
+                        <label className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 hover:bg-paper-100">
                           <input
                             type="checkbox"
                             checked={modalSelected.has(p.id)}
                             onChange={() => toggleModalProduct(p.id)}
                             className="h-3.5 w-3.5 rounded"
                           />
-                          <span className="text-sm text-zinc-800">{p.name}</span>
+                          <span className="text-sm text-paper-800">{p.name}</span>
                           {p.category_id && (
-                            <span className="ml-auto text-xs text-zinc-400">已有分类</span>
+                            <span className="ml-auto text-xs text-paper-500">已有分类</span>
                           )}
                         </label>
                       </li>
@@ -673,7 +673,7 @@ export default function CategoriesClient({
               )}
             </div>
 
-            <div className="flex items-center justify-between border-t border-zinc-100 px-5 py-4">
+            <div className="flex items-center justify-between border-t border-paper-100 px-5 py-4">
               {assignResult && "error" in assignResult && (
                 <p className="text-xs text-red-500">{assignResult.error}</p>
               )}

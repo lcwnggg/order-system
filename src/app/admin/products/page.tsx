@@ -2,7 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/actions/auth";
-import ProductForm from "./product-form";
+import AdminNav from "@/app/admin/admin-nav";
+import AddProductPanel from "./add-product-panel";
 import ProductList, { type Product } from "./product-list";
 import type { Category } from "@/app/admin/categories/categories-client";
 import type { ProductVariant } from "./actions";
@@ -43,53 +44,16 @@ export default async function AdminProductsPage() {
   const productVariants = (productVariantsData ?? []) as ProductVariant[];
 
   return (
-    <div className="min-h-screen bg-zinc-50">
-      <header className="border-b border-zinc-200 bg-white px-6 py-4">
+    <div className="min-h-screen bg-paper-100">
+      <header className="border-b border-paper-200 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <Link
-              href="/"
-              className="text-sm text-zinc-500 transition-colors hover:text-zinc-900"
-            >
-              ← 返回首页
-            </Link>
-            <span className="text-zinc-300">/</span>
-            <span className="text-sm font-semibold text-zinc-900">商品管理后台</span>
-            <span className="text-zinc-300">/</span>
-            <Link
-              href="/admin/orders"
-              className="text-sm text-zinc-500 transition-colors hover:text-zinc-900"
-            >
-              订单管理
-            </Link>
-            <span className="text-zinc-300">/</span>
-            <Link
-              href="/admin/stores"
-              className="text-sm text-zinc-500 transition-colors hover:text-zinc-900"
-            >
-              门店管理
-            </Link>
-            <span className="text-zinc-300">/</span>
-            <Link
-              href="/admin/categories"
-              className="text-sm text-zinc-500 transition-colors hover:text-zinc-900"
-            >
-              分类管理
-            </Link>
-            <span className="text-zinc-300">/</span>
-            <Link
-              href="/admin/products/import"
-              className="text-sm text-zinc-500 transition-colors hover:text-zinc-900"
-            >
-              批量导入
-            </Link>
-          </div>
+          <AdminNav />
           <div className="flex shrink-0 items-center gap-3">
-            <span className="hidden text-sm text-zinc-500 sm:block">{user.email}</span>
+            <span className="hidden text-sm text-paper-500 sm:block">{user.email}</span>
             <form action={signOut}>
               <button
                 type="submit"
-                className="rounded-lg border border-zinc-200 px-3 py-1.5 text-sm text-zinc-700 transition-colors hover:bg-zinc-50"
+                className="rounded-lg border border-paper-200 px-3 py-1.5 text-sm text-paper-700 transition-colors hover:bg-paper-100"
               >
                 退出登录
               </button>
@@ -99,21 +63,21 @@ export default async function AdminProductsPage() {
       </header>
 
       <main className="mx-auto max-w-5xl space-y-8 px-6 py-8">
-        <ProductForm categories={categories} />
+        <AddProductPanel categories={categories} />
 
         <div>
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-base font-semibold text-zinc-900">
+            <h2 className="text-base font-semibold text-paper-900">
               已添加商品
               {products && products.length > 0 && (
-                <span className="ml-2 text-sm font-normal text-zinc-400">
+                <span className="ml-2 text-sm font-normal text-paper-500">
                   共 {products.length} 件
                 </span>
               )}
             </h2>
             <Link
               href="/admin/products/import"
-              className="rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50"
+              className="rounded-lg border border-paper-200 bg-white px-3 py-1.5 text-sm font-medium text-paper-700 transition-colors hover:bg-paper-100"
             >
               批量导入 →
             </Link>
