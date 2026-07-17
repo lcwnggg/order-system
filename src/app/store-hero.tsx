@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useEffect, useRef } from "react";
 
 /** 鼠标到按钮中心多远以内开始点亮（px） */
-const GLOW_RADIUS = 240;
+const GLOW_RADIUS = 260;
 /** 每帧向目标值逼近的比例（越小越“拖尾”，越顺滑） */
-const SMOOTH = 0.18;
+const SMOOTH = 0.16;
 
 export default function StoreHero({ storeName }: { storeName: string | null }) {
   const rootRef = useRef<HTMLElement>(null);
@@ -106,33 +106,33 @@ export default function StoreHero({ storeName }: { storeName: string | null }) {
       ref={rootRef}
       className="hero-root relative isolate min-h-[70vh] overflow-hidden"
     >
-      {/* 底层生成纹理：点阵，平时极淡 */}
-      <div aria-hidden className="hero-texture" />
-      {/* 光斑揭示层：锈红点阵 + 柔光，只在鼠标附近显现 */}
+      {/* 顶光渐暗：始终存在，制造纵深 */}
+      <div aria-hidden className="hero-vignette" />
+      {/* 光斑揭示层：手电筒式的暖白微光核心 + 松林绿环境光晕，只在鼠标附近显现 */}
       <div aria-hidden className="hero-glow" />
 
       <div className="relative z-10 mx-auto flex min-h-[70vh] max-w-3xl flex-col items-center justify-center px-6 py-24 text-center">
-        <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.24em] text-paper-500">
+        <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.24em] text-ink-text-dim">
           门店订货 — B2B 目录
         </p>
-        <h1 className="animate-fade-up mt-6 text-6xl font-normal leading-[1.05] tracking-tight text-paper-900 sm:text-7xl">
+        <h1 className="animate-fade-up mt-6 text-6xl font-normal leading-[1.05] tracking-tight text-ink-text sm:text-7xl">
           {storeName ? `你好，${storeName}。` : "你好。"}
         </h1>
-        <p className="animate-fade-up mt-6 max-w-md text-base leading-relaxed text-paper-600 [animation-delay:150ms]">
+        <p className="animate-fade-up mt-6 max-w-md text-base leading-relaxed text-ink-text-dim [animation-delay:150ms]">
           浏览商品，加入购物车，一键提交。
         </p>
         <div className="animate-fade-up mt-10 flex flex-col items-center gap-3 [animation-delay:280ms] sm:flex-row">
           <Link
             ref={primaryRef}
             href="/shop"
-            className="hero-btn-solid rounded-full bg-paper-800 px-9 py-4 text-base font-medium text-white transition-colors duration-300 hover:bg-paper-700"
+            className="hero-btn-solid rounded-full px-9 py-4 text-base font-medium text-ink-text transition-colors duration-300 hover:bg-ink-600"
           >
             进入商城下单 →
           </Link>
           <Link
             ref={ghostRef}
             href="/shop/orders"
-            className="hero-btn-ghost rounded-full border px-7 py-4 text-base font-medium transition-colors duration-300"
+            className="hero-btn-ghost rounded-full border px-7 py-4 text-base font-medium transition-colors duration-300 hover:text-ink-text"
           >
             我的订单
           </Link>

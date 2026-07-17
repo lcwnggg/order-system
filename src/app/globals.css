@@ -34,6 +34,20 @@
   --color-ember-700: #8f3d1d;
   --color-ember-800: #6e2f16;
 
+  /* 暗调墨色（首页 hero 专用）：不是纯黑，偏暖，层次比 paper-900 更深一档 */
+  --color-ink-950: #131110;
+  --color-ink-900: #1a1613;
+  --color-ink-800: #241f1a;
+  --color-ink-700: #332b23;
+  --color-ink-600: #4a3f34;
+  --color-ink-text: #efe9de;      /* 暗底上的主文本 */
+  --color-ink-text-dim: #9c9083;  /* 暗底上的次级文本 */
+
+  /* pino／pine：hero 光斑的低饱和绿信号，只用在暗底场景 */
+  --color-pine-100: #b4c6b6;  /* 光斑核心的浅色高光 */
+  --color-pine-500: #3f5442;  /* 主色：环境光晕、按钮辉光 */
+  --color-pine-600: #64827c;  /* 描边／细环用的稍亮变体 */
+
   /* 动效：慢起决停的编辑风曲线（参考 Vivid+Co 的 focus-pull 曲线） */
   --ease-editorial: cubic-bezier(0.52, 0.01, 0, 1);
   --animate-fade-up: fade-up 0.8s var(--ease-editorial) both;
@@ -79,80 +93,64 @@
   initial-value: 0;
 }
 
-.hero-texture,
+.hero-root {
+  background: var(--color-ink-950);
+  color: var(--color-ink-text);
+}
+/* 顶光渐暗：中心略亮，四角压暗，制造纵深（始终存在，与鼠标无关） */
+.hero-vignette,
 .hero-glow {
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
-/* 底层：极淡的中性点阵，铺满整个 hero */
-.hero-texture {
-  color: var(--color-paper-400);
-  background-image: radial-gradient(currentColor 1px, transparent 1.6px);
-  background-size: 24px 24px;
-  opacity: 0.12;
+.hero-vignette {
+  background: radial-gradient(120% 90% at 50% 38%, rgb(51 43 35 / 0.5), transparent 65%);
 }
-/* 揭示层：锈红点阵 + 柔光，只在鼠标位置一圈显现。
+/* 揭示层：鼠标处的暖白微光核心（极淡，只是提示手电筒中心） + 松林绿环境光晕。
    --on / --mx / --my 由 JS 的 rAF 循环平滑写入（不用 CSS transition，
    因为 Chrome 对“过渡自定义属性”在本场景会卡住，见 store-hero.tsx） */
 .hero-glow {
   background:
-    radial-gradient(
-      circle 200px at var(--mx, 50%) var(--my, 50%),
-      rgba(204, 90, 46, 0.12),
-      transparent 70%
-    ),
-    radial-gradient(var(--color-ember-500) 1.2px, transparent 1.8px);
-  background-size: 100% 100%, 24px 24px;
+    radial-gradient(circle 55px at var(--mx, 50%) var(--my, 50%), rgb(180 198 182 / 0.007), transparent 100%),
+    radial-gradient(circle 340px at var(--mx, 50%) var(--my, 50%), rgb(63 84 66 / 0.16), transparent 72%);
   opacity: var(--on);
-  -webkit-mask-image: radial-gradient(
-    circle 220px at var(--mx, 50%) var(--my, 50%),
-    #000 0%,
-    rgba(0, 0, 0, 0.55) 38%,
-    transparent 72%
-  );
-  mask-image: radial-gradient(
-    circle 220px at var(--mx, 50%) var(--my, 50%),
-    #000 0%,
-    rgba(0, 0, 0, 0.55) 38%,
-    transparent 72%
-  );
 }
 
-/* 主按钮（墨色填充）：光斑扫到时用 ::after 叠一圈锈红细环 + 微光，
-   opacity 跟随 --lit（避开 calc 进颜色通道的兼容坑）。
-   过渡放在 --lit 上，离开时柔和淡出 */
+/* 主按钮：静止时是深墨色描边；光斑扫到时用 ::after 叠一圈松林绿细环 + 辉光，
+   opacity 跟随 --lit（避开 calc 进颜色通道的兼容坑） */
 .hero-btn-solid {
   position: relative;
+  background: var(--color-ink-700);
+  border: 1px solid var(--color-ink-600);
 }
 .hero-btn-solid::after {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: -1px;
   border-radius: inherit;
   box-shadow:
-    0 0 0 1px rgb(204 90 46 / 0.85),
-    0 0 26px rgb(204 90 46 / 0.45);
+    0 0 0 1px rgb(100 130 104 / 0.85),
+    0 0 28px rgb(63 84 66 / 0.55),
+    0 0 56px rgb(63 84 66 / 0.24);
   opacity: var(--lit);
   pointer-events: none;
 }
-/* 次按钮（描边）：光斑扫到时边框/文字/底色渐变到锈红 */
+/* 次按钮（描边）：静止时深墨色边框，光斑扫到时同样叠一圈松林绿细环 */
 .hero-btn-ghost {
-  border-color: color-mix(
-    in oklab,
-    var(--color-paper-800),
-    var(--color-ember-500) calc(var(--lit) * 100%)
-  );
-  color: color-mix(
-    in oklab,
-    var(--color-paper-800),
-    var(--color-ember-600) calc(var(--lit) * 100%)
-  );
-  background-color: color-mix(
-    in oklab,
-    transparent,
-    var(--color-ember-50) calc(var(--lit) * 100%)
-  );
+  position: relative;
+  border-color: var(--color-ink-600);
+  color: var(--color-ink-text-dim);
+  background: transparent;
+}
+.hero-btn-ghost::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  box-shadow: 0 0 0 1px rgb(100 130 104 / 0.85), 0 0 20px rgb(63 84 66 / 0.24);
+  opacity: var(--lit);
+  pointer-events: none;
 }
 
 /* 尊重系统减弱动效偏好 */
