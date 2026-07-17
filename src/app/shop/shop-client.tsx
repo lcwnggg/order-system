@@ -176,6 +176,29 @@ export default function ShopClient({
     return categories.filter((c) => c.parent_id === parentId).map((c) => c.id);
   }
 
+  // ── 侧栏计数：按大类 / 库存状态统计商品数（基于全量 products，不随筛选变化） ──
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    let uncategorized = 0;
+    for (const p of products) {
+      if (p.category_id === null) {
+        uncategorized++;
+        continue;
+      }
+      const cat = categories.find((c) => c.id === p.category_id);
+      const parentId = cat ? (cat.parent_id ?? cat.id) : null;
+      if (parentId) counts[parentId] = (counts[parentId] ?? 0) + 1;
+    }
+    return { counts, uncategorized };
+  }, [products, categories]);
+
+  const stockCounts = useMemo(() => {
+    let inStock = 0;
+    for (const p of products) if (totalStock(p) > 0) inStock++;
+    return { inStock, total: products.length };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, variantsByProduct]);
+
   const filteredProducts = products
     .filter((p) => {
       if (selectedChildId) {
@@ -359,11 +382,38 @@ export default function ShopClient({
     <div className={`mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8${cartCount > 0 ? " pb-28 lg:pb-6" : ""}`}>
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
 
+        {/* ── 分类侧栏：桌面端显示，替代大类导航（窄屏仍用下面的横向胶囊） ── */}
+        <aside className="hidden w-52 shrink-0 lg:block">
+          <div className="mb-6">
+            <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-paper-400">分类</p>
+            <nav className="space-y-0.5">
+              <CatSidebarItem active={selectedParentId === null} onClick={() => selectParent(null)} label="全部" count={products.length} />
+              {parentCategories.map((c) => (
+                <CatSidebarItem
+                  key={c.id}
+                  active={selectedParentId === c.id}
+                  onClick={() => selectParent(c.id)}
+                  label={c.name}
+                  count={categoryCounts.counts[c.id] ?? 0}
+                />
+              ))}
+              <CatSidebarItem active={selectedParentId === UNCATEGORIZED} onClick={() => selectParent(UNCATEGORIZED)} label="未分类" count={categoryCounts.uncategorized} />
+            </nav>
+          </div>
+          <div>
+            <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-paper-400">库存状态</p>
+            <nav className="space-y-0.5">
+              <CatSidebarItem active={!inStockOnly} onClick={() => setInStockOnly(false)} label="全部商品" count={stockCounts.total} />
+              <CatSidebarItem active={inStockOnly} onClick={() => setInStockOnly(true)} label="仅看有货" count={stockCounts.inStock} dotClassName="bg-paper-400" />
+            </nav>
+          </div>
+        </aside>
+
         {/* ── 商品区 ── */}
         <div className="min-w-0 flex-1">
 
-          {/* 大类导航 */}
-          <div className="mb-3 flex gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {/* 大类导航（窄屏专用，桌面端由左侧分类侧栏替代） */}
+          <div className="mb-3 flex gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden">
             {([null, ...parentCategories.map((c) => c.id), UNCATEGORIZED] as (string | null)[]).map((id) => {
               const label = id === null ? "全部" : id === UNCATEGORIZED ? "未分类" : parentCategories.find((c) => c.id === id)?.name ?? id;
               const active = selectedParentId === id;
@@ -492,7 +542,7 @@ export default function ShopClient({
               <button
                 type="button"
                 onClick={() => setInStockOnly((v) => !v)}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors lg:hidden ${
                   inStockOnly
                     ? "border-ember-500 bg-ember-50 text-ember-700"
                     : "border-paper-200 bg-paper-25 text-paper-500 hover:border-paper-300"
@@ -931,5 +981,38 @@ export default function ShopClient({
         </div>
       )}
     </div>
+  );
+}
+
+/** 分类侧栏单项：名称 + 右侧计数，选中态用墨色填充 */
+function CatSidebarItem({
+  active,
+  onClick,
+  label,
+  count,
+  dotClassName,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count: number;
+  dotClassName?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm transition-colors ${
+        active ? "bg-paper-800 text-white" : "text-paper-600 hover:bg-paper-100"
+      }`}
+    >
+      <span className="flex min-w-0 items-center gap-2">
+        {dotClassName && <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${active ? "bg-white" : dotClassName}`} />}
+        <span className="truncate">{label}</span>
+      </span>
+      <span className={`shrink-0 font-mono text-xs tabular-nums ${active ? "text-white/70" : "text-paper-400"}`}>
+        {count}
+      </span>
+    </button>
   );
 }
