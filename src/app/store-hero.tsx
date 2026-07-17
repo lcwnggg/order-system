@@ -104,14 +104,14 @@ export default function StoreHero({ storeName }: { storeName: string | null }) {
   return (
     <main
       ref={rootRef}
-      className="hero-root relative isolate min-h-[70vh] overflow-hidden"
+      className="hero-root relative isolate flex min-h-[70vh] flex-1 flex-col overflow-hidden"
     >
       {/* 顶光渐暗：始终存在，制造纵深 */}
       <div aria-hidden className="hero-vignette" />
       {/* 光斑揭示层：手电筒式的暖白微光核心 + 松林绿环境光晕，只在鼠标附近显现 */}
       <div aria-hidden className="hero-glow" />
 
-      <div className="relative z-10 mx-auto flex min-h-[70vh] max-w-3xl flex-col items-center justify-center px-6 py-24 text-center">
+      <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col items-center justify-center px-6 py-24 text-center">
         <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.24em] text-ink-text-dim">
           门店订货 — B2B 目录
         </p>

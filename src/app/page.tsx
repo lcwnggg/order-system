@@ -62,7 +62,7 @@ export default async function Home() {
   });
 
   return (
-    <div className="min-h-screen bg-paper-100">
+    <div className="flex min-h-screen flex-col bg-paper-100">
       {/* ── Header ── */}
       <header className="border-b border-paper-200 bg-white px-6 py-4">
         <div className="mx-auto flex max-w-5xl items-center justify-between">
