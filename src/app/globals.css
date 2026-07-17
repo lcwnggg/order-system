@@ -43,10 +43,10 @@
   --color-ink-text: #efe9de;      /* 暗底上的主文本 */
   --color-ink-text-dim: #9c9083;  /* 暗底上的次级文本 */
 
-  /* pino／pine：hero 光斑的低饱和绿信号，只用在暗底场景 */
-  --color-pine-100: #b4c6b6;  /* 光斑核心的浅色高光 */
-  --color-pine-500: #3f5442;  /* 主色：环境光晕、按钮辉光 */
-  --color-pine-600: #64827c;  /* 描边／细环用的稍亮变体 */
+  /* 橄榄绿／olive：hero 光斑的低饱和绿信号，只用在暗底场景 */
+  --color-olive-100: #d2d2b2;  /* 光斑核心的浅色高光 */
+  --color-olive-500: #767650;  /* 主色：环境光晕、按钮辉光 */
+  --color-olive-600: #9e9e74;  /* 描边／细环用的稍亮变体 */
 
   /* 动效：慢起决停的编辑风曲线（参考 Vivid+Co 的 focus-pull 曲线） */
   --ease-editorial: cubic-bezier(0.52, 0.01, 0, 1);
@@ -107,17 +107,17 @@
 .hero-vignette {
   background: radial-gradient(120% 90% at 50% 38%, rgb(51 43 35 / 0.5), transparent 65%);
 }
-/* 揭示层：鼠标处的暖白微光核心（极淡，只是提示手电筒中心） + 松林绿环境光晕。
+/* 揭示层：鼠标处的暖白微光核心（极淡，只是提示手电筒中心） + 橄榄绿环境光晕。
    --on / --mx / --my 由 JS 的 rAF 循环平滑写入（不用 CSS transition，
    因为 Chrome 对“过渡自定义属性”在本场景会卡住，见 store-hero.tsx） */
 .hero-glow {
   background:
-    radial-gradient(circle 55px at var(--mx, 50%) var(--my, 50%), rgb(180 198 182 / 0.007), transparent 100%),
-    radial-gradient(circle 340px at var(--mx, 50%) var(--my, 50%), rgb(63 84 66 / 0.16), transparent 72%);
+    radial-gradient(circle 55px at var(--mx, 50%) var(--my, 50%), rgb(210 210 178 / 0.007), transparent 100%),
+    radial-gradient(circle 340px at var(--mx, 50%) var(--my, 50%), rgb(118 118 80 / 0.16), transparent 72%);
   opacity: var(--on);
 }
 
-/* 主按钮：静止时是深墨色描边；光斑扫到时用 ::after 叠一圈松林绿细环 + 辉光，
+/* 主按钮：静止时是深墨色描边；光斑扫到时用 ::after 叠一圈橄榄绿细环 + 辉光，
    opacity 跟随 --lit（避开 calc 进颜色通道的兼容坑） */
 .hero-btn-solid {
   position: relative;
@@ -130,13 +130,13 @@
   inset: -1px;
   border-radius: inherit;
   box-shadow:
-    0 0 0 1px rgb(100 130 104 / 0.85),
-    0 0 28px rgb(63 84 66 / 0.55),
-    0 0 56px rgb(63 84 66 / 0.24);
+    0 0 0 1px rgb(158 158 116 / 0.85),
+    0 0 28px rgb(118 118 80 / 0.55),
+    0 0 56px rgb(118 118 80 / 0.24);
   opacity: var(--lit);
   pointer-events: none;
 }
-/* 次按钮（描边）：静止时深墨色边框，光斑扫到时同样叠一圈松林绿细环 */
+/* 次按钮（描边）：静止时深墨色边框，光斑扫到时同样叠一圈橄榄绿细环 */
 .hero-btn-ghost {
   position: relative;
   border-color: var(--color-ink-600);
@@ -148,7 +148,7 @@
   position: absolute;
   inset: -1px;
   border-radius: inherit;
-  box-shadow: 0 0 0 1px rgb(100 130 104 / 0.85), 0 0 20px rgb(63 84 66 / 0.24);
+  box-shadow: 0 0 0 1px rgb(158 158 116 / 0.85), 0 0 20px rgb(118 118 80 / 0.24);
   opacity: var(--lit);
   pointer-events: none;
 }
