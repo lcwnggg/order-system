@@ -1,9 +1,10 @@
 import { LoginForm } from "./login-form";
+import LoginHeroBg from "./login-hero-bg";
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-full flex-col items-center justify-center bg-paper-100 px-6 py-12">
+    <LoginHeroBg>
       <LoginForm />
-    </div>
+    </LoginHeroBg>
   );
 }
