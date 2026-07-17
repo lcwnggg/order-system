@@ -78,6 +78,8 @@ export default function ShopClient({
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   useEffect(() => {
     const saved = localStorage.getItem(VIEW_MODE_KEY);
+    // 从 localStorage 水合客户端状态，避免 SSR 首屏水合不一致（与购物车水合同一模式）
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (saved === "compact" || saved === "grid") setViewMode(saved);
   }, []);
   function switchViewMode(mode: ViewMode) {
@@ -283,7 +285,8 @@ export default function ShopClient({
       const maxStock = item.variant ? item.variant.stock : item.product.stock;
       const next = item.quantity + delta;
       if (next <= 0) {
-        const { [key]: _, ...rest } = prev;
+        const rest = { ...prev };
+        delete rest[key];
         return rest;
       }
       return { ...prev, [key]: { ...item, quantity: Math.min(next, maxStock) } };
@@ -292,7 +295,8 @@ export default function ShopClient({
 
   function removeFromCart(key: string) {
     setCart((prev) => {
-      const { [key]: _, ...rest } = prev;
+      const rest = { ...prev };
+      delete rest[key];
       return rest;
     });
   }
