@@ -150,6 +150,35 @@ export default function ProductList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filteredProducts, parentCategories, categories]);
 
+  // ── 侧栏计数：按分类/状态统计商品数（基于全量 products，不随筛选变化，方便一眼看清全貌） ──
+  const categoryCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    let uncategorized = 0;
+    for (const p of products) {
+      const parentId = getParentCatId(p);
+      if (parentId === null) {
+        uncategorized++;
+        continue;
+      }
+      map.set(parentId, (map.get(parentId) ?? 0) + 1);
+    }
+    return { map, uncategorized };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, categories]);
+
+  const statusCounts = useMemo(() => {
+    let active = 0;
+    let inactive = 0;
+    let low = 0;
+    for (const p of products) {
+      if (p.is_active) active++;
+      else inactive++;
+      if (isLowStock(p)) low++;
+    }
+    return { active, inactive, low };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, variants]);
+
   function toggleGroup(catId: string | null) {
     const key = catId ?? "__null__";
     setCollapsedGroups((prev) => {
@@ -627,6 +656,47 @@ export default function ProductList({
         </div>
       )}
 
+      <div className="flex gap-6">
+        {/* ── 侧栏：分类 / 状态计数，桌面端显示，替代分类与状态下拉 ── */}
+        <aside className="hidden w-52 shrink-0 lg:block">
+          <div className="mb-6">
+            <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-paper-400">分类</p>
+            <nav className="space-y-0.5">
+              <SidebarItem
+                active={filterCategory === ""}
+                onClick={() => setFilterCategory("")}
+                label="全部"
+                count={products.length}
+              />
+              {parentCategories.map((c) => (
+                <SidebarItem
+                  key={c.id}
+                  active={filterCategory === c.id}
+                  onClick={() => setFilterCategory(c.id)}
+                  label={c.name}
+                  count={categoryCounts.map.get(c.id) ?? 0}
+                />
+              ))}
+              <SidebarItem
+                active={filterCategory === "__uncategorized__"}
+                onClick={() => setFilterCategory("__uncategorized__")}
+                label="未分类"
+                count={categoryCounts.uncategorized}
+              />
+            </nav>
+          </div>
+          <div>
+            <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-paper-400">状态</p>
+            <nav className="space-y-0.5">
+              <SidebarItem active={filterStatus === "all"} onClick={() => setFilterStatus("all")} label="全部状态" count={products.length} />
+              <SidebarItem active={filterStatus === "active"} onClick={() => setFilterStatus("active")} label="上架中" count={statusCounts.active} dotClassName="bg-paper-400" />
+              <SidebarItem active={filterStatus === "inactive"} onClick={() => setFilterStatus("inactive")} label="已下架" count={statusCounts.inactive} dotClassName="bg-paper-300" />
+              <SidebarItem active={filterStatus === "low-stock"} onClick={() => setFilterStatus("low-stock")} label="库存告急" count={statusCounts.low} dotClassName="bg-ember-500" />
+            </nav>
+          </div>
+        </aside>
+
+        <div className="min-w-0 flex-1">
       {/* ── 筛选栏 ── */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {/* 搜索框 */}
@@ -653,11 +723,11 @@ export default function ProductList({
           className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-paper-300 bg-white px-3 py-1.5 text-sm font-medium text-paper-700 transition-colors hover:border-paper-400 hover:bg-paper-100"
         />
 
-        {/* 分类筛选 */}
+        {/* 分类筛选（桌面端已有侧栏，这里只在窄屏显示） */}
         <select
           value={filterCategory}
           onChange={(e) => setFilterCategory(e.target.value)}
-          className="rounded-lg border border-paper-200 bg-white px-2.5 py-1.5 text-sm text-paper-700 outline-none focus:border-paper-400 focus:ring-2 focus:ring-paper-200"
+          className="rounded-lg border border-paper-200 bg-white px-2.5 py-1.5 text-sm text-paper-700 outline-none focus:border-paper-400 focus:ring-2 focus:ring-paper-200 lg:hidden"
         >
           <option value="">全部分类</option>
           {parentCategories.map((c) => (
@@ -666,11 +736,11 @@ export default function ProductList({
           <option value="__uncategorized__">未分类</option>
         </select>
 
-        {/* 状态筛选 */}
+        {/* 状态筛选（桌面端已有侧栏，这里只在窄屏显示） */}
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value as StatusFilter)}
-          className="rounded-lg border border-paper-200 bg-white px-2.5 py-1.5 text-sm text-paper-700 outline-none focus:border-paper-400 focus:ring-2 focus:ring-paper-200"
+          className="rounded-lg border border-paper-200 bg-white px-2.5 py-1.5 text-sm text-paper-700 outline-none focus:border-paper-400 focus:ring-2 focus:ring-paper-200 lg:hidden"
         >
           <option value="all">全部状态</option>
           <option value="active">上架中</option>
@@ -795,6 +865,8 @@ export default function ProductList({
           </div>
         )
       )}
+        </div>
+      </div>
 
       {editingProduct && (
         <ProductEditModal
@@ -805,5 +877,38 @@ export default function ProductList({
         />
       )}
     </>
+  );
+}
+
+/** 侧栏单项：分类/状态名 + 右侧计数，选中态用墨色填充 */
+function SidebarItem({
+  active,
+  onClick,
+  label,
+  count,
+  dotClassName,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+  count: number;
+  dotClassName?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm transition-colors ${
+        active ? "bg-paper-800 text-white" : "text-paper-600 hover:bg-paper-100"
+      }`}
+    >
+      <span className="flex min-w-0 items-center gap-2">
+        {dotClassName && <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${active ? "bg-white" : dotClassName}`} />}
+        <span className="truncate">{label}</span>
+      </span>
+      <span className={`shrink-0 font-mono text-xs tabular-nums ${active ? "text-white/70" : "text-paper-400"}`}>
+        {count}
+      </span>
+    </button>
   );
 }
