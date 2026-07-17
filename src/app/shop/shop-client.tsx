@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useTransition, useState, useMemo, useEffect } from "react";
+import { useTransition, useState, useMemo, useEffect, useRef } from "react";
 import { submitOrder } from "./actions";
 import ScanButton from "@/app/scan-button";
 
@@ -73,6 +73,19 @@ export default function ShopClient({
   const [inStockOnly, setInStockOnly] = useState(false);
   // 扫码下单反馈（成功加购 / 未找到 / 缺货）
   const [scanFeedback, setScanFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // ── 分类/状态抽屉：默认收起，桌面端悬停自动展开，触屏点击展开 ──
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const canHoverRef = useRef(false);
+  useEffect(() => {
+    canHoverRef.current = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  }, []);
+  function openSidebarOnHover() {
+    if (canHoverRef.current) setSidebarOpen(true);
+  }
+  function closeSidebarOnHover() {
+    if (canHoverRef.current) setSidebarOpen(false);
+  }
 
   // ── 视图模式（localStorage 持久化） ──
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -380,10 +393,13 @@ export default function ShopClient({
 
   return (
     <div className={`mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8${cartCount > 0 ? " pb-28 lg:pb-6" : ""}`}>
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-
-        {/* ── 分类侧栏：桌面端显示，替代大类导航（窄屏仍用下面的横向胶囊） ── */}
-        <aside className="hidden w-52 shrink-0 lg:block">
+      {/* ── 分类/状态抽屉：默认收起，鼠标靠近左边缘自动展开，点击把手也可展开/收起 ── */}
+      <div
+        onMouseEnter={openSidebarOnHover}
+        onMouseLeave={closeSidebarOnHover}
+        className={`fixed inset-y-0 left-0 z-40 flex transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-56"}`}
+      >
+        <div className="h-full w-56 overflow-y-auto border-r border-paper-200 bg-paper-25 p-5 pt-8">
           <div className="mb-6">
             <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-paper-400">分类</p>
             <nav className="space-y-0.5">
@@ -407,30 +423,26 @@ export default function ShopClient({
               <CatSidebarItem active={inStockOnly} onClick={() => setInStockOnly(true)} label="仅看有货" count={stockCounts.inStock} dotClassName="bg-paper-400" />
             </nav>
           </div>
-        </aside>
+        </div>
+        <button
+          type="button"
+          onClick={() => setSidebarOpen((v) => !v)}
+          className="flex h-12 w-8 shrink-0 items-center justify-center self-center rounded-r-lg border border-l-0 border-paper-200 bg-white text-paper-500 transition-colors hover:text-paper-800"
+          aria-label={sidebarOpen ? "收起分类筛选" : "展开分类筛选"}
+        >
+          <svg className={`h-4 w-4 transition-transform duration-300 ${sidebarOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-30 bg-paper-900/10" onClick={() => setSidebarOpen(false)} />
+      )}
+
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
 
         {/* ── 商品区 ── */}
         <div className="min-w-0 flex-1">
-
-          {/* 大类导航（窄屏专用，桌面端由左侧分类侧栏替代） */}
-          <div className="mb-3 flex gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden">
-            {([null, ...parentCategories.map((c) => c.id), UNCATEGORIZED] as (string | null)[]).map((id) => {
-              const label = id === null ? "全部" : id === UNCATEGORIZED ? "未分类" : parentCategories.find((c) => c.id === id)?.name ?? id;
-              const active = selectedParentId === id;
-              return (
-                <button
-                  key={id ?? "__all__"}
-                  type="button"
-                  onClick={() => selectParent(id)}
-                  className={`flex-shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                    active ? "bg-paper-700 text-white" : "border border-paper-200 bg-white text-paper-600 hover:bg-paper-100"
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
 
           {/* 小类导航 */}
           {currentChildren.length > 0 && (
@@ -539,20 +551,6 @@ export default function ShopClient({
               {searchQuery && <span className="ml-1 text-paper-400">· 搜索「{searchQuery}」</span>}
             </p>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setInStockOnly((v) => !v)}
-                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors lg:hidden ${
-                  inStockOnly
-                    ? "border-ember-500 bg-ember-50 text-ember-700"
-                    : "border-paper-200 bg-paper-25 text-paper-500 hover:border-paper-300"
-                }`}
-              >
-                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                </svg>
-                只看有货
-              </button>
               <div className="relative">
                 <select
                   value={sortBy}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useRef, useEffect } from "react";
 import {
   deleteProduct,
   toggleProductActive,
@@ -83,6 +83,19 @@ export default function ProductList({
   const [stockLessThan, setStockLessThan] = useState(""); // 按库存合计筛选：少于 N 件
   const [activeTab, setActiveTab] = useState<Tab>("recent");
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+
+  // ── 分类/状态抽屉：默认收起，桌面端悬停自动展开，触屏点击展开 ──
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const canHoverRef = useRef(false);
+  useEffect(() => {
+    canHoverRef.current = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  }, []);
+  function openSidebarOnHover() {
+    if (canHoverRef.current) setSidebarOpen(true);
+  }
+  function closeSidebarOnHover() {
+    if (canHoverRef.current) setSidebarOpen(false);
+  }
 
   // ── 编辑弹窗状态 ──
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -656,9 +669,13 @@ export default function ProductList({
         </div>
       )}
 
-      <div className="flex gap-6">
-        {/* ── 侧栏：分类 / 状态计数，桌面端显示，替代分类与状态下拉 ── */}
-        <aside className="hidden w-52 shrink-0 lg:block">
+      {/* ── 分类/状态抽屉：默认收起，鼠标靠近左边缘自动展开，点击把手也可展开/收起 ── */}
+      <div
+        onMouseEnter={openSidebarOnHover}
+        onMouseLeave={closeSidebarOnHover}
+        className={`fixed inset-y-0 left-0 z-40 flex transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-56"}`}
+      >
+        <div className="h-full w-56 overflow-y-auto border-r border-paper-200 bg-paper-25 p-5 pt-8">
           <div className="mb-6">
             <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-paper-400">分类</p>
             <nav className="space-y-0.5">
@@ -694,9 +711,22 @@ export default function ProductList({
               <SidebarItem active={filterStatus === "low-stock"} onClick={() => setFilterStatus("low-stock")} label="库存告急" count={statusCounts.low} dotClassName="bg-ember-500" />
             </nav>
           </div>
-        </aside>
+        </div>
+        <button
+          type="button"
+          onClick={() => setSidebarOpen((v) => !v)}
+          className="flex h-12 w-8 shrink-0 items-center justify-center self-center rounded-r-lg border border-l-0 border-paper-200 bg-white text-paper-500 transition-colors hover:text-paper-800"
+          aria-label={sidebarOpen ? "收起分类筛选" : "展开分类筛选"}
+        >
+          <svg className={`h-4 w-4 transition-transform duration-300 ${sidebarOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-30 bg-paper-900/10" onClick={() => setSidebarOpen(false)} />
+      )}
 
-        <div className="min-w-0 flex-1">
       {/* ── 筛选栏 ── */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {/* 搜索框 */}
@@ -722,31 +752,6 @@ export default function ProductList({
           label="扫码查找"
           className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-paper-300 bg-white px-3 py-1.5 text-sm font-medium text-paper-700 transition-colors hover:border-paper-400 hover:bg-paper-100"
         />
-
-        {/* 分类筛选（桌面端已有侧栏，这里只在窄屏显示） */}
-        <select
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
-          className="rounded-lg border border-paper-200 bg-white px-2.5 py-1.5 text-sm text-paper-700 outline-none focus:border-paper-400 focus:ring-2 focus:ring-paper-200 lg:hidden"
-        >
-          <option value="">全部分类</option>
-          {parentCategories.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-          <option value="__uncategorized__">未分类</option>
-        </select>
-
-        {/* 状态筛选（桌面端已有侧栏，这里只在窄屏显示） */}
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value as StatusFilter)}
-          className="rounded-lg border border-paper-200 bg-white px-2.5 py-1.5 text-sm text-paper-700 outline-none focus:border-paper-400 focus:ring-2 focus:ring-paper-200 lg:hidden"
-        >
-          <option value="all">全部状态</option>
-          <option value="active">上架中</option>
-          <option value="inactive">已下架</option>
-          <option value="low-stock">库存告急 ≤5</option>
-        </select>
 
         {/* 按库存合计筛选：少于 N 件 */}
         <div className="flex items-center gap-1 rounded-lg border border-paper-200 bg-white px-2.5 py-1.5">
@@ -865,8 +870,6 @@ export default function ProductList({
           </div>
         )
       )}
-        </div>
-      </div>
 
       {editingProduct && (
         <ProductEditModal
