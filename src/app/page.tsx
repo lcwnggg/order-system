@@ -26,16 +26,18 @@ export default async function Home() {
   let lowStockCount = 0;
   let storeCount = 0;
   let categoryCount = 0;
+  let lowStockItems: { id: string; name: string; category: string | null; stock: number }[] = [];
 
   if (isWarehouse) {
-    const [pending, total, stores, cats, prodStock, varStock] = await Promise.all([
+    const [pending, total, stores, cats, prodStock, varStock, catNames] = await Promise.all([
       supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "pending"),
       supabase.from("products").select("id", { count: "exact", head: true }),
       supabase.from("profiles").select("id", { count: "exact", head: true }).eq("role", "store"),
       supabase.from("categories").select("id", { count: "exact", head: true }).is("parent_id", null),
-      // 库存告急需按变体口径统计：拉全部商品的 has_variants/stock 与所有变体库存，在内存中判断
-      supabase.from("products").select("id, has_variants, stock"),
+      // 库存告急需按变体口径统计：拉全部商品的 has_variants/stock/名称/分类 与所有变体库存，在内存中判断
+      supabase.from("products").select("id, name, category_id, has_variants, stock"),
       supabase.from("product_variants").select("product_id, stock"),
+      supabase.from("categories").select("id, name"),
     ]);
     pendingCount = pending.count ?? 0;
     productCount = total.count ?? 0;
@@ -48,9 +50,26 @@ export default async function Home() {
       arr.push({ stock: v.stock });
       variantsByProduct.set(v.product_id, arr);
     }
-    lowStockCount = (prodStock.data ?? []).filter((p) =>
+    const catNameById = new Map<string, string>();
+    for (const c of catNames.data ?? []) catNameById.set(c.id, c.name);
+
+    const lowStock = (prodStock.data ?? []).filter((p) =>
       isLowStock(p, variantsByProduct.get(p.id) ?? [])
-    ).length;
+    );
+    lowStockCount = lowStock.length;
+    lowStockItems = lowStock
+      .map((p) => {
+        const vs = variantsByProduct.get(p.id) ?? [];
+        const eff = p.has_variants ? vs.reduce((s, v) => s + v.stock, 0) : p.stock;
+        return {
+          id: p.id,
+          name: p.name as string,
+          category: p.category_id ? catNameById.get(p.category_id) ?? null : null,
+          stock: eff,
+        };
+      })
+      .sort((a, b) => a.stock - b.stock)
+      .slice(0, 6);
   }
 
   const dateStr = new Date().toLocaleDateString("zh-CN", {
@@ -61,209 +80,247 @@ export default async function Home() {
     timeZone: "Asia/Shanghai",
   });
 
-  return (
-    <div className="flex min-h-screen flex-col bg-paper-100">
-      {/* ── Header ── */}
-      <header className="border-b border-paper-200 bg-white px-6 py-4">
-        <div className="mx-auto flex max-w-5xl items-center justify-between">
-          <span className="text-sm font-semibold text-paper-900">我的小店</span>
-          <div className="flex items-center gap-2 sm:gap-3">
-            {isWarehouse && (
-              <div className="hidden items-center gap-2 sm:flex">
-                <Link
-                  href="/admin/products"
-                  className="rounded-lg bg-paper-700 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-paper-800"
-                >
-                  商品管理
-                </Link>
-                <Link
-                  href="/admin/orders"
-                  className="rounded-lg border border-paper-200 bg-white px-3 py-1.5 text-sm font-medium text-paper-700 transition-colors hover:bg-paper-100"
-                >
-                  订单管理
-                </Link>
-                <Link
-                  href="/admin/stores"
-                  className="rounded-lg border border-paper-200 bg-white px-3 py-1.5 text-sm font-medium text-paper-700 transition-colors hover:bg-paper-100"
-                >
-                  门店管理
-                </Link>
-                <Link
-                  href="/admin/categories"
-                  className="rounded-lg border border-paper-200 bg-white px-3 py-1.5 text-sm font-medium text-paper-700 transition-colors hover:bg-paper-100"
-                >
-                  分类管理
-                </Link>
-              </div>
-            )}
-            {isStore && (
-              <Link
-                href="/shop"
-                className="rounded-lg bg-paper-700 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-paper-800"
-              >
-                门店下单
-              </Link>
-            )}
-            {user ? (
-              <>
-                <span className="hidden text-sm text-paper-500 sm:block">{user.email}</span>
-                <form action={signOut}>
-                  <button
-                    type="submit"
-                    className="rounded-lg border border-paper-200 px-3 py-1.5 text-sm text-paper-700 transition-colors hover:bg-paper-100"
-                  >
-                    退出登录
-                  </button>
-                </form>
-              </>
-            ) : (
-              <Link
-                href="/login"
-                className="rounded-lg bg-paper-700 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-paper-800"
-              >
-                登录
-              </Link>
-            )}
-          </div>
-        </div>
-      </header>
+  // ── Warehouse 仪表盘：液态玻璃 app-shell（sidebar + 概览 + 库存告急表） ──
+  if (isWarehouse) {
+    const NAV = [
+      { href: "/", label: "仪表盘", active: true, d: "M4 6h16M4 12h16M4 18h7" },
+      { href: "/admin/products", label: "商品管理", d: "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" },
+      { href: "/admin/orders", label: "订单管理", d: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" },
+      { href: "/admin/stores", label: "门店管理", d: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m4-14h1m-1 4h1m4-4h1m-1 4h1" },
+      { href: "/admin/categories", label: "分类管理", d: "M7 7h.01M7 3h5a2 2 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" },
+    ];
 
-      {/* ── Warehouse 仪表盘 ── */}
-      {isWarehouse && (
-        <main className="mx-auto max-w-5xl space-y-6 px-6 py-8">
-          {/* 欢迎：编辑风 hero —— mono 印章眉标 + 大号 display 标题 */}
-          <div className="pb-2 pt-4">
-            <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.22em] text-paper-500">
-              仓库控制台 — {dateStr}
-            </p>
-            <h1 className="animate-fade-up mt-3 text-5xl font-normal tracking-tight text-paper-900 sm:text-6xl">
-              欢迎回来。
-            </h1>
-          </div>
+    return (
+      <div className="relative min-h-screen p-3 sm:p-5">
+        <div className="app-bg" />
+        <div className="app-grain" />
 
-          {/* 待备货提醒 */}
-          {pendingCount > 0 && (
-            <Link
-              href="/admin/orders"
-              className="flex items-center gap-4 rounded-xl border border-ember-200 bg-ember-50 px-5 py-4 transition-colors hover:bg-ember-100"
-            >
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-ember-50">
-                <svg className="h-5 w-5 text-ember-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                    d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-                </svg>
-              </div>
+        <div className="glass mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1240px] flex-col overflow-hidden rounded-[26px] sm:min-h-[calc(100vh-2.5rem)] md:grid md:grid-cols-[228px_1fr]">
+          {/* ── sidebar ── */}
+          <aside className="flex flex-col gap-1 border-b border-white/40 bg-gradient-to-b from-white/40 to-white/10 p-4 md:border-b-0 md:border-r">
+            <div className="flex items-center gap-2.5 px-2 pb-4 pt-1">
+              <span className="flex h-7 w-7 items-center justify-center rounded-[9px] bg-gradient-to-br from-accent-500 to-[#8f7fd8] text-sm text-white">铺</span>
+              <span className="text-[17px] font-semibold text-paper-900">我的小店</span>
+            </div>
+            <nav className="flex flex-row flex-wrap gap-1 md:flex-col">
+              {NAV.map((t) => (
+                <Link
+                  key={t.href}
+                  href={t.href}
+                  aria-current={t.active ? "page" : undefined}
+                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${
+                    t.active
+                      ? "bg-white font-medium text-paper-900 shadow-[0_8px_18px_-10px_rgba(46,52,84,.4)]"
+                      : "text-paper-600 hover:bg-white/50 hover:text-paper-900"
+                  }`}
+                >
+                  <svg className={`h-[18px] w-[18px] ${t.active ? "text-accent-500" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={t.d} />
+                  </svg>
+                  {t.label}
+                </Link>
+              ))}
+            </nav>
+            <div className="mt-auto hidden items-center gap-2.5 rounded-2xl bg-white/40 p-2.5 md:flex">
+              <span className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-accent-200 to-[#d8b8cf]" />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-ember-800">
-                  你有 {pendingCount} 笔订单待备货
+                <p className="truncate text-[13px] font-medium text-paper-900">{profile?.store_name ?? "仓库"}</p>
+                <p className="truncate text-[11px] text-paper-400">{user?.email}</p>
+              </div>
+              <form action={signOut}>
+                <button type="submit" aria-label="退出登录" className="rounded-lg p-1.5 text-paper-400 transition-colors hover:bg-white/60 hover:text-paper-700">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+                </button>
+              </form>
+            </div>
+          </aside>
+
+          {/* ── main ── */}
+          <main className="flex flex-col gap-4 overflow-auto p-5 sm:p-7">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-semibold tracking-tight text-paper-900">欢迎回来</h1>
+                <p className="mt-1.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-paper-400">
+                  仓库控制台 · {dateStr}
                 </p>
-                <p className="text-xs text-ember-600">点击进入订单管理 →</p>
               </div>
-            </Link>
-          )}
+            </div>
 
-          {/* 5 个可点击数字卡 */}
-          <div className="stagger-children grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-            <Link
-              href="/admin/orders"
-              className={`group rounded-2xl border bg-paper-25 p-5 transition duration-200 ${
-                pendingCount > 0 ? "border-ember-200" : "border-paper-200"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${pendingCount > 0 ? "bg-ember-50 text-ember-600" : "bg-paper-100 text-paper-500"}`}>
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
-                </span>
-                <span className="text-paper-300 transition group-hover:translate-x-0.5 group-hover:text-paper-500">→</span>
-              </div>
-              <p className={`mt-3 text-3xl font-normal tracking-tight ${pendingCount > 0 ? "text-ember-600" : "text-paper-400"}`}>{pendingCount}</p>
-              <p className="mt-0.5 text-xs font-medium text-paper-500">待处理订单</p>
-            </Link>
-
-            <Link
-              href="/admin/products"
-              className="group rounded-2xl border border-paper-200 bg-paper-25 p-5 transition duration-200"
-            >
-              <div className="flex items-center justify-between">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-paper-100 text-paper-600">
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
-                </span>
-                <span className="text-paper-300 transition group-hover:translate-x-0.5 group-hover:text-paper-500">→</span>
-              </div>
-              <p className="mt-3 text-3xl font-normal tracking-tight text-paper-900">{productCount}</p>
-              <p className="mt-0.5 text-xs font-medium text-paper-500">商品总数</p>
-            </Link>
-
-            <Link
-              href="/admin/stock-alert"
-              className={`group rounded-2xl border bg-paper-25 p-5 transition duration-200 ${
-                lowStockCount > 0 ? "border-ember-200" : "border-paper-200"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${lowStockCount > 0 ? "bg-ember-50 text-ember-600" : "bg-paper-100 text-paper-500"}`}>
+            {/* 待备货提醒 */}
+            {pendingCount > 0 && (
+              <Link
+                href="/admin/orders"
+                className="glass-strong flex items-center gap-4 rounded-2xl px-5 py-4 transition-transform hover:-translate-y-0.5"
+              >
+                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-ember-50 text-ember-600">
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
                 </span>
-                <span className="text-paper-300 transition group-hover:translate-x-0.5 group-hover:text-paper-500">→</span>
-              </div>
-              <p className={`mt-3 text-3xl font-normal tracking-tight ${lowStockCount > 0 ? "text-ember-600" : "text-paper-400"}`}>{lowStockCount}</p>
-              <p className="mt-0.5 text-xs font-medium text-paper-500">库存告急 <span className="text-paper-400">≤ 5</span></p>
-            </Link>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-ember-700">你有 {pendingCount} 笔订单待备货</p>
+                  <p className="text-xs text-ember-600">点击进入订单管理 →</p>
+                </div>
+              </Link>
+            )}
 
-            <Link
-              href="/admin/stores"
-              className="group rounded-2xl border border-paper-200 bg-paper-25 p-5 transition duration-200"
-            >
+            {/* 库存概览：数字 funnel + 趋势曲线 */}
+            <div className="glass-strong rounded-[22px] p-5 sm:p-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="text-[15px] font-semibold text-paper-900">库存概览</h2>
+                  <p className="text-xs text-paper-400">全部门店 · 实时</p>
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4">
+                <Link href="/admin/products" className="group">
+                  <p className="text-3xl font-semibold tracking-tight text-paper-900">{productCount}</p>
+                  <p className="mt-1 text-xs text-paper-400 group-hover:text-paper-600">商品总数</p>
+                </Link>
+                <Link href="/admin/stock-alert" className="group">
+                  <p className={`text-3xl font-semibold tracking-tight ${lowStockCount > 0 ? "text-ember-600" : "text-paper-400"}`}>{lowStockCount}</p>
+                  <p className="mt-1 text-xs text-paper-400 group-hover:text-paper-600">库存告急 ≤5</p>
+                </Link>
+                <Link href="/admin/categories" className="group">
+                  <p className="text-3xl font-semibold tracking-tight text-paper-900">{categoryCount}</p>
+                  <p className="mt-1 text-xs text-paper-400 group-hover:text-paper-600">商品大类</p>
+                </Link>
+                <Link href="/admin/orders" className="group">
+                  <p className={`text-3xl font-semibold tracking-tight ${pendingCount > 0 ? "text-accent-600" : "text-paper-400"}`}>{pendingCount}</p>
+                  <p className="mt-1 text-xs text-paper-400 group-hover:text-paper-600">待处理订单</p>
+                </Link>
+              </div>
+              {/* 趋势曲线（示意） */}
+              <div className="mt-5">
+                <svg viewBox="0 0 520 120" className="h-[120px] w-full" preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="trend" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stopColor="#5b6fd6" stopOpacity="0.4" />
+                      <stop offset="1" stopColor="#5b6fd6" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  <path d="M0,82 C70,56 120,90 190,70 C260,48 320,96 390,66 C450,42 490,54 520,48 L520,120 L0,120 Z" fill="url(#trend)" />
+                  <path d="M0,82 C70,56 120,90 190,70 C260,48 320,96 390,66 C450,42 490,54 520,48" fill="none" stroke="#5b6fd6" strokeWidth="2.5" />
+                  <circle cx="520" cy="48" r="4" fill="#5b6fd6" stroke="#fff" strokeWidth="2" />
+                </svg>
+              </div>
+              <div className="mt-2 grid grid-cols-3 gap-3 border-t border-paper-900/10 pt-4">
+                <div>
+                  <p className="text-lg font-semibold text-paper-900">{storeCount}</p>
+                  <p className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-paper-400"><span className="h-1.5 w-1.5 rounded-full bg-accent-500" />门店数</p>
+                </div>
+                <div>
+                  <p className="text-lg font-semibold text-mint-600">
+                    {productCount > 0 ? Math.round(((productCount - lowStockCount) / productCount) * 100) : 0}%
+                  </p>
+                  <p className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-paper-400"><span className="h-1.5 w-1.5 rounded-full bg-mint-500" />库存健康</p>
+                </div>
+                <div>
+                  <p className="text-lg font-semibold text-ember-600">{lowStockItems.filter((i) => i.stock === 0).length}</p>
+                  <p className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-paper-400"><span className="h-1.5 w-1.5 rounded-full bg-ember-500" />已断货</p>
+                </div>
+              </div>
+            </div>
+
+            {/* 库存告急商品表 */}
+            <div className="glass-strong rounded-[22px] p-5 sm:p-6">
               <div className="flex items-center justify-between">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-paper-100 text-paper-600">
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m14 0h2m-2 0h-4m-6 0H3m2 0h4M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
-                </span>
-                <span className="text-paper-300 transition group-hover:translate-x-0.5 group-hover:text-paper-500">→</span>
+                <div>
+                  <h2 className="text-[15px] font-semibold text-paper-900">库存告急商品</h2>
+                  <p className="text-xs text-paper-400">按变体口径 · {lowStockCount} 项需处理</p>
+                </div>
+                <Link href="/admin/stock-alert" className="rounded-lg bg-accent-50 px-3 py-1.5 text-xs font-medium text-accent-600 transition-colors hover:bg-accent-100">
+                  查看全部
+                </Link>
               </div>
-              <p className="mt-3 text-3xl font-normal tracking-tight text-paper-900">{storeCount}</p>
-              <p className="mt-0.5 text-xs font-medium text-paper-500">门店数</p>
-            </Link>
 
-            <Link
-              href="/admin/categories"
-              className="group rounded-2xl border border-paper-200 bg-paper-25 p-5 transition duration-200"
-            >
-              <div className="flex items-center justify-between">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-paper-100 text-paper-600">
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5a1.99 1.99 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.99 1.99 0 013 12V7a4 4 0 014-4z" /></svg>
-                </span>
-                <span className="text-paper-300 transition group-hover:translate-x-0.5 group-hover:text-paper-500">→</span>
-              </div>
-              <p className="mt-3 text-3xl font-normal tracking-tight text-paper-900">{categoryCount}</p>
-              <p className="mt-0.5 text-xs font-medium text-paper-500">商品大类</p>
-            </Link>
-          </div>
-        </main>
-      )}
+              {lowStockItems.length === 0 ? (
+                <p className="py-10 text-center text-sm text-paper-500">🎉 暂无库存告急商品</p>
+              ) : (
+                <div className="mt-4 overflow-x-auto">
+                  <table className="w-full border-collapse text-sm">
+                    <thead>
+                      <tr className="text-left text-[11.5px] font-medium text-paper-400">
+                        <th className="pb-2.5 pr-3">商品</th>
+                        <th className="pb-2.5 pr-3">分类</th>
+                        <th className="pb-2.5 pr-3">库存风险</th>
+                        <th className="pb-2.5 pr-3 text-right tabular-nums">剩余</th>
+                        <th className="pb-2.5 text-right">状态</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {lowStockItems.map((item) => {
+                        const out = item.stock === 0;
+                        const bars = out ? 4 : item.stock <= 2 ? 4 : item.stock <= 3 ? 3 : 2;
+                        return (
+                          <tr key={item.id} className="border-t border-paper-900/10">
+                            <td className="py-2.5 pr-3">
+                              <div className="flex items-center gap-3">
+                                <span className="h-7 w-7 shrink-0 rounded-[9px] bg-gradient-to-br from-accent-200 to-[#d8c4e8]" />
+                                <span className="font-medium text-paper-900">{item.name}</span>
+                              </div>
+                            </td>
+                            <td className="py-2.5 pr-3">
+                              <span className="rounded-lg bg-accent-50 px-2 py-1 text-[11px] text-accent-600">{item.category ?? "未分类"}</span>
+                            </td>
+                            <td className="py-2.5 pr-3">
+                              <span className="inline-flex gap-[3px]">
+                                {[0, 1, 2, 3].map((i) => (
+                                  <span key={i} className={`h-[15px] w-[5px] rounded-sm ${i < bars ? "bg-ember-500" : "bg-paper-900/15"}`} />
+                                ))}
+                              </span>
+                            </td>
+                            <td className="py-2.5 pr-3 text-right font-mono tabular-nums text-paper-900">{item.stock}</td>
+                            <td className="py-2.5 text-right">
+                              <span className={`rounded-lg px-2.5 py-1 text-[11.5px] font-medium ${out ? "bg-ember-50 text-ember-600" : "bg-[#f7efe0] text-[#b07d2c]"}`}>
+                                {out ? "断货" : "告急"}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </main>
+        </div>
+      </div>
+    );
+  }
 
-      {/* ── Store 首页：编辑风 hero（鼠标光斑纹理交互） ── */}
-      {isStore && <StoreHero storeName={profile?.store_name ?? null} />}
+  // ── Store 首页：编辑风 hero ──
+  if (isStore) {
+    return (
+      <div className="relative flex min-h-screen flex-col">
+        <div className="app-bg" />
+        <div className="app-grain" />
+        <StoreHero storeName={profile?.store_name ?? null} />
+      </div>
+    );
+  }
 
-      {/* ── 未登录：编辑风 hero ── */}
-      {!user && (
-        <main className="mx-auto flex min-h-[70vh] max-w-3xl flex-col items-center justify-center px-6 py-24 text-center">
-          <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.24em] text-paper-500">
-            供应商 × 分店 — 订货平台
-          </p>
-          <h1 className="animate-fade-up mt-6 text-6xl font-normal leading-[1.05] tracking-tight text-paper-900 sm:text-7xl">
-            我的小店。
-          </h1>
-          <p className="animate-fade-up mt-6 max-w-md text-base leading-relaxed text-paper-600 [animation-delay:150ms]">
-            连接仓库与门店的订货管理平台。请登录以继续。
-          </p>
-          <Link
-            href="/login"
-            className="animate-fade-up mt-10 rounded-full bg-paper-800 px-9 py-4 text-base font-medium text-white transition-colors duration-300 [animation-delay:280ms] hover:bg-paper-700"
-          >
-            立即登录
-          </Link>
-        </main>
-      )}
+  // ── 未登录：玻璃 hero ──
+  return (
+    <div className="relative flex min-h-screen flex-col">
+      <div className="app-bg" />
+      <div className="app-grain" />
+      <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center px-6 py-24 text-center">
+        <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.24em] text-paper-500">
+          供应商 × 分店 — 订货平台
+        </p>
+        <h1 className="animate-fade-up mt-6 text-6xl font-semibold leading-[1.05] tracking-tight text-paper-900 sm:text-7xl">
+          我的小店。
+        </h1>
+        <p className="animate-fade-up mt-6 max-w-md text-base leading-relaxed text-paper-600 [animation-delay:150ms]">
+          连接仓库与门店的订货管理平台。请登录以继续。
+        </p>
+        <Link
+          href="/login"
+          className="animate-fade-up mt-10 rounded-full bg-paper-800 px-9 py-4 text-base font-medium text-white transition-colors duration-300 [animation-delay:280ms] hover:bg-paper-700"
+        >
+          立即登录
+        </Link>
+      </main>
     </div>
   );
 }

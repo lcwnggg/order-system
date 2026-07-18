@@ -47,9 +47,14 @@ export default async function ShopPage() {
   const lastOrderItems =
     (lastOrders?.[0]?.order_items ?? []) as { product_id: string; variant_id: string | null; quantity: number }[];
 
+  const parentCatCount = (categoriesData ?? []).filter((c) => c.parent_id === null).length;
+
   return (
-    <div className="min-h-screen bg-paper-100">
-      <header className="border-b border-paper-200 bg-white px-6 py-4">
+    <div className="relative min-h-screen">
+      <div className="app-bg" />
+      <div className="app-grain" />
+
+      <header className="glass sticky top-0 z-30 px-4 py-3 sm:px-6">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
@@ -64,7 +69,7 @@ export default async function ShopPage() {
           <div className="flex shrink-0 items-center gap-3">
             <Link
               href="/shop/orders"
-              className="rounded-lg border border-paper-200 px-3 py-1.5 text-sm text-paper-700 transition-colors hover:bg-paper-100"
+              className="rounded-lg border border-white/50 bg-white/40 px-3 py-1.5 text-sm text-paper-700 transition-colors hover:bg-white/70"
             >
               我的订单
             </Link>
@@ -72,7 +77,7 @@ export default async function ShopPage() {
             <form action={signOut}>
               <button
                 type="submit"
-                className="rounded-lg border border-paper-200 px-3 py-1.5 text-sm text-paper-700 transition-colors hover:bg-paper-100"
+                className="rounded-lg border border-white/50 bg-white/40 px-3 py-1.5 text-sm text-paper-700 transition-colors hover:bg-white/70"
               >
                 退出登录
               </button>
@@ -81,14 +86,32 @@ export default async function ShopPage() {
         </div>
       </header>
 
-      {/* 编辑风页头：mono 印章 + display 标题 */}
-      <div className="mx-auto max-w-7xl px-4 pt-10 sm:px-6 lg:px-8">
-        <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.24em] text-paper-500">
-          B2B 订货目录 — {products?.length ?? 0} 件商品
-        </p>
-        <h1 className="animate-fade-up mt-3 text-4xl font-normal tracking-tight text-paper-900 sm:text-5xl">
-          挑选商品，一键下单。
-        </h1>
+      {/* 玻璃欢迎横幅：标题 + 快捷数据 + 虹彩球（参考 Streamxy 促销卡） */}
+      <div className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8">
+        <div className="glass-strong relative flex items-center justify-between gap-4 overflow-hidden rounded-[24px] px-6 py-7 sm:px-8">
+          <div className="relative z-10">
+            <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.24em] text-paper-500">
+              B2B 订货目录 — {products?.length ?? 0} 件商品
+            </p>
+            <h1 className="animate-fade-up mt-3 text-3xl font-semibold tracking-tight text-paper-900 sm:text-4xl">
+              挑选商品，一键下单。
+            </h1>
+            <div className="animate-fade-up mt-4 flex flex-wrap gap-2 [animation-delay:150ms]">
+              <span className="rounded-full bg-white/55 px-3 py-1.5 text-xs font-medium text-paper-600">
+                <span className="font-mono tabular-nums text-paper-900">{products?.length ?? 0}</span> 件商品
+              </span>
+              <span className="rounded-full bg-white/55 px-3 py-1.5 text-xs font-medium text-paper-600">
+                <span className="font-mono tabular-nums text-paper-900">{parentCatCount}</span> 个分类
+              </span>
+              {lastOrderItems.length > 0 && (
+                <span className="rounded-full bg-accent-50 px-3 py-1.5 text-xs font-medium text-accent-600">
+                  可「再来一单」· {lastOrderItems.length} 件
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="iri-ball hidden h-28 w-28 shrink-0 sm:block" aria-hidden />
+        </div>
       </div>
 
       <ShopClient
