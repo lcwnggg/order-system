@@ -138,6 +138,15 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
+/* 无模糊玻璃：用于内部含 position:fixed 子元素的容器（backdrop-filter 会破坏 fixed 定位） */
+.glass-flat {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow:
+    0 22px 44px -26px rgba(46, 52, 84, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
 /* 液态虹彩球（dashboard / 焦点卡装饰） */
 .iri-ball {
   border-radius: 50%;

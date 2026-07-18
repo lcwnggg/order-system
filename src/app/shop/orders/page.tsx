@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { signOut } from "@/app/actions/auth";
+import AppShell from "@/app/app-shell";
 import OrdersHistoryClient, { type StoreOrder } from "./orders-history-client";
 
 export default async function ShopOrdersPage() {
@@ -76,36 +76,15 @@ export default async function ShopOrdersPage() {
   }));
 
   return (
-    <div className="min-h-screen bg-paper-100">
-      <header className="border-b border-paper-200 bg-white px-6 py-4">
-        <div className="mx-auto flex max-w-3xl items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/shop"
-              className="text-sm text-paper-500 transition-colors hover:text-paper-900"
-            >
-              ← 返回下单
-            </Link>
-            <span className="text-paper-400">/</span>
-            <span className="text-sm font-semibold text-paper-900">我的订单</span>
-          </div>
-          <div className="flex shrink-0 items-center gap-3">
-            <span className="hidden text-sm text-paper-500 sm:block">{user.email}</span>
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="rounded-lg border border-paper-200 px-3 py-1.5 text-sm text-paper-700 transition-colors hover:bg-paper-100"
-              >
-                退出登录
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6">
-        <OrdersHistoryClient orders={orders} />
-      </main>
-    </div>
+    <AppShell variant="store" email={user.email}>
+      <div className="flex items-center gap-3">
+        <Link href="/shop" className="text-sm text-paper-500 transition-colors hover:text-paper-900">
+          ← 返回下单
+        </Link>
+        <span className="text-paper-400">/</span>
+        <h1 className="text-sm font-semibold text-paper-900">我的订单</h1>
+      </div>
+      <OrdersHistoryClient orders={orders} />
+    </AppShell>
   );
 }

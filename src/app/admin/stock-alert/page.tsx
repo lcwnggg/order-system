@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { signOut } from "@/app/actions/auth";
-import AdminNav from "@/app/admin/admin-nav";
+import AppShell from "@/app/app-shell";
 import { getTotalStock, isLowStock } from "@/lib/stock";
 
 export default async function StockAlertPage() {
@@ -52,27 +51,7 @@ export default async function StockAlertPage() {
     .sort((a, b) => a.totalStock - b.totalStock || a.name.localeCompare(b.name));
 
   return (
-    <div className="relative min-h-screen">
-      <div className="app-bg" />
-      <div className="app-grain" />
-      <header className="glass sticky top-0 z-30 px-6 py-3">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-2">
-          <AdminNav />
-          <div className="flex shrink-0 items-center gap-3">
-            <span className="hidden text-sm text-paper-500 sm:block">{user.email}</span>
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="rounded-lg border border-white/50 bg-white/40 px-3 py-1.5 text-sm text-paper-700 transition-colors hover:bg-white/70"
-              >
-                退出登录
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-3xl px-6 py-8">
+    <AppShell email={user.email}>
         <div className="mb-6">
           <h1 className="text-xl font-semibold text-paper-900">库存告急商品</h1>
           <p className="mt-1 text-sm text-paper-500">
@@ -174,7 +153,6 @@ export default async function StockAlertPage() {
             </table>
           </div>
         )}
-      </main>
-    </div>
+      </AppShell>
   );
 }

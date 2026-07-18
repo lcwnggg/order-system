@@ -120,7 +120,7 @@ export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }
         return (
           <div
             key={order.id}
-            className="overflow-hidden rounded-2xl border border-paper-200 bg-paper-25 transition duration-200"
+            className="overflow-hidden rounded-2xl glass-strong transition duration-200"
           >
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-paper-100 bg-paper-50 px-5 py-3">
               <div className="flex items-center gap-3">

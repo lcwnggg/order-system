@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { signOut } from "@/app/actions/auth";
-import AdminNav from "@/app/admin/admin-nav";
+import AppShell from "@/app/app-shell";
 import StoresClient, { type StoreUser } from "./stores-client";
 
 export default async function AdminStoresPage() {
@@ -40,27 +39,7 @@ export default async function AdminStoresPage() {
   }
 
   return (
-    <div className="relative min-h-screen">
-      <div className="app-bg" />
-      <div className="app-grain" />
-      <header className="glass sticky top-0 z-30 px-6 py-3">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-2">
-          <AdminNav />
-          <div className="flex shrink-0 items-center gap-3">
-            <span className="hidden text-sm text-paper-500 sm:block">{user.email}</span>
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="rounded-lg border border-white/50 bg-white/40 px-3 py-1.5 text-sm text-paper-700 transition-colors hover:bg-white/70"
-              >
-                退出登录
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
-
-      <main className="mx-auto max-w-5xl px-6 py-8">
+    <AppShell email={user.email}>
         <div className="mb-6">
           <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.22em] text-paper-500">仓库 — 门店</p>
           <h1 className="animate-fade-up mt-2 text-3xl font-normal tracking-tight text-paper-900">门店管理</h1>
@@ -69,7 +48,6 @@ export default async function AdminStoresPage() {
           </p>
         </div>
         <StoresClient stores={stores} />
-      </main>
-    </div>
+      </AppShell>
   );
 }

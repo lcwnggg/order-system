@@ -50,11 +50,12 @@ export default async function ShopPage() {
   const parentCatCount = (categoriesData ?? []).filter((c) => c.parent_id === null).length;
 
   return (
-    <div className="relative min-h-screen">
+    <div className="relative min-h-screen p-3 sm:p-5">
       <div className="app-bg" />
       <div className="app-grain" />
 
-      <header className="glass sticky top-0 z-30 px-4 py-3 sm:px-6">
+      <div className="glass-flat mx-auto min-h-[calc(100vh-1.5rem)] max-w-[1360px] overflow-hidden rounded-[26px] sm:min-h-[calc(100vh-2.5rem)]">
+      <header className="border-b border-white/50 bg-white/30 px-4 py-3 sm:px-6">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
@@ -120,6 +121,7 @@ export default async function ShopPage() {
         lastOrderItems={lastOrderItems}
         variants={(variantsData ?? []) as { id: string; product_id: string; color: string; stock: number; sort_order: number }[]}
       />
+      </div>
     </div>
   );
 }

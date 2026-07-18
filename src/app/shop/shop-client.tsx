@@ -399,7 +399,7 @@ export default function ShopClient({
         onMouseLeave={closeSidebarOnHover}
         className={`fixed inset-y-0 left-0 z-40 flex transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-56"}`}
       >
-        <div className="h-full w-56 overflow-y-auto border-r border-paper-200 bg-paper-25 p-5 pt-8">
+        <div className="h-full w-56 overflow-y-auto glass-strong p-5 pt-8">
           <div className="mb-6">
             <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-paper-400">分类</p>
             <nav className="space-y-0.5">
@@ -588,7 +588,7 @@ export default function ShopClient({
                 const catName = product.category_id ? catNameById[product.category_id] : null;
 
                 return (
-                  <div key={product.id} className="group flex flex-col overflow-hidden rounded-xl border border-paper-200 bg-paper-25 transition-colors duration-200 hover:border-paper-400">
+                  <div key={product.id} className="group flex flex-col overflow-hidden rounded-xl glass-strong transition-colors duration-200 hover:border-paper-400">
                     {/* 顶部信息条：品牌／分类 + 库存（mono 系统声，编辑风） */}
                     <div className="flex items-center justify-between gap-2 border-b border-paper-100 px-3.5 py-2.5">
                       <span className="truncate font-mono text-[10px] uppercase tracking-[0.14em] text-paper-500">
@@ -688,7 +688,7 @@ export default function ShopClient({
                 const qty = inputQty[product.id] ?? 0;
 
                 return (
-                  <div key={product.id} className="group flex flex-col overflow-hidden rounded-xl border border-paper-200 bg-paper-25 transition duration-200 hover:border-paper-300">
+                  <div key={product.id} className="group flex flex-col overflow-hidden rounded-xl glass-strong transition duration-200 hover:border-paper-300">
                     {/* 图片（正方形，紧凑） */}
                     <div className="relative aspect-square w-full overflow-hidden bg-paper-100">
                       {product.image_url ? (
@@ -766,7 +766,7 @@ export default function ShopClient({
 
         {/* ── 购物车侧边栏 ── */}
         <div className="w-full lg:w-80 lg:shrink-0">
-          <div className="sticky top-4 rounded-xl border border-paper-200 bg-white">
+          <div className="sticky top-4 rounded-xl glass-strong">
             <div className="border-b border-paper-100 px-5 py-4">
               <h2 className="font-semibold text-paper-900">
                 购物车
