@@ -247,7 +247,7 @@ export default function CategoriesClient({
         {/* ── 新增表单区 ── */}
         <div className="grid gap-4 sm:grid-cols-2">
           {/* 新增大类 */}
-          <div className="rounded-xl border border-paper-200 bg-white p-5">
+          <div className="rounded-xl glass-strong p-5">
             <h3 className="mb-3 text-sm font-semibold text-paper-900">添加大类</h3>
             <div className="flex gap-2">
               <input
@@ -273,7 +273,7 @@ export default function CategoriesClient({
           </div>
 
           {/* 新增小类 */}
-          <div className="rounded-xl border border-paper-200 bg-white p-5">
+          <div className="rounded-xl glass-strong p-5">
             <h3 className="mb-3 text-sm font-semibold text-paper-900">在大类下添加小类</h3>
             <div className="space-y-2">
               <select
@@ -325,7 +325,7 @@ export default function CategoriesClient({
               return (
                 <div
                   key={parent.id}
-                  className="overflow-hidden rounded-2xl border border-paper-200 bg-paper-25"
+                  className="overflow-hidden rounded-2xl glass-strong"
                 >
                   {/* 大类行 */}
                   <div className="flex items-center gap-3 border-b border-paper-100 bg-paper-100 px-5 py-3">

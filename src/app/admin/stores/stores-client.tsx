@@ -62,7 +62,7 @@ export default function StoresClient({ stores }: { stores: StoreUser[] }) {
       {/* ── 新建门店账号 ── */}
       <form
         onSubmit={handleCreate}
-        className="rounded-2xl border border-paper-200 bg-paper-25 p-5"
+        className="rounded-2xl glass-strong p-5"
       >
         <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.18em] text-paper-500">
           新建门店账号
@@ -117,7 +117,7 @@ export default function StoresClient({ stores }: { stores: StoreUser[] }) {
           <p className="text-sm text-paper-500">还没有门店账号，用上面的表单创建第一个。</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-paper-200 bg-paper-25">
+        <div className="overflow-hidden rounded-2xl glass-strong">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-paper-100 bg-paper-100 text-left">

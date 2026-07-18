@@ -295,7 +295,7 @@ export default function ImportClient({
   // ── 导入完成后的结果页 ──
   if (importResult && !("error" in importResult)) {
     return (
-      <div className="rounded-xl border border-paper-200 bg-white p-8 text-center">
+      <div className="rounded-xl glass-strong p-8 text-center">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-green-50">
           <svg className="h-7 w-7 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -336,7 +336,7 @@ export default function ImportClient({
   return (
     <div className="space-y-6">
       {/* 说明 + 模板下载 */}
-      <div className="flex items-center justify-between rounded-xl border border-paper-200 bg-white p-5">
+      <div className="flex items-center justify-between rounded-xl glass-strong p-5">
         <div>
           <p className="text-sm font-medium text-paper-900">1. 下载模板，按格式填写商品数据</p>
           <p className="mt-1 text-xs text-paper-500">
@@ -355,7 +355,7 @@ export default function ImportClient({
       </div>
 
       {/* 上传区域 */}
-      <div className="rounded-xl border border-paper-200 bg-white p-5">
+      <div className="rounded-xl glass-strong p-5">
         <p className="mb-3 text-sm font-medium text-paper-900">2. 上传文件（.csv / .xlsx）</p>
         <input
           ref={fileInputRef}

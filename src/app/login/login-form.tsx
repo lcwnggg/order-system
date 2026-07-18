@@ -45,23 +45,23 @@ export function LoginForm() {
   }
 
   return (
-    <div className="animate-fade-up w-full max-w-sm rounded-2xl border border-ink-700 bg-ink-900 p-7 sm:p-8">
+    <div className="animate-fade-up glass-strong w-full max-w-sm rounded-[24px] p-7 sm:p-8">
       <div className="mb-7 text-center">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-olive-500">
-          <svg className="h-7 w-7 text-ink-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-accent-500 to-[#8f7fd8] shadow-[0_14px_28px_-12px_rgba(91,111,214,.7)]">
+          <svg className="h-7 w-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
               d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
         </div>
-        <h1 className="text-2xl font-semibold text-ink-text">我的小店</h1>
-        <p className="mt-1.5 text-sm text-ink-text-dim">登录你的账号</p>
+        <h1 className="text-2xl font-semibold text-paper-900">我的小店</h1>
+        <p className="mt-1.5 text-sm text-paper-500">登录你的账号</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label
             htmlFor="email"
-            className="mb-1.5 block text-sm font-medium text-ink-text-dim"
+            className="mb-1.5 block text-sm font-medium text-paper-600"
           >
             邮箱
           </label>
@@ -73,14 +73,14 @@ export function LoginForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
-            className="w-full rounded-lg border border-ink-600 bg-ink-800 px-3 py-2.5 text-sm text-ink-text placeholder:text-ink-text-dim outline-none focus:border-olive-600 focus:ring-2 focus:ring-olive-600/20"
+            className="w-full rounded-lg border border-paper-200 bg-white/70 px-3 py-2.5 text-sm text-paper-900 placeholder:text-paper-400 outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
           />
         </div>
 
         <div>
           <label
             htmlFor="password"
-            className="mb-1.5 block text-sm font-medium text-ink-text-dim"
+            className="mb-1.5 block text-sm font-medium text-paper-600"
           >
             密码
           </label>
@@ -94,13 +94,13 @@ export function LoginForm() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="至少 6 位"
-              className="w-full rounded-lg border border-ink-600 bg-ink-800 px-3 py-2.5 pr-10 text-sm text-ink-text placeholder:text-ink-text-dim outline-none focus:border-olive-600 focus:ring-2 focus:ring-olive-600/20"
+              className="w-full rounded-lg border border-paper-200 bg-white/70 px-3 py-2.5 pr-10 text-sm text-paper-900 placeholder:text-paper-400 outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
             />
             <button
               type="button"
               tabIndex={-1}
               onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-text-dim hover:text-ink-text"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-paper-400 hover:text-paper-700"
               aria-label={showPassword ? "隐藏密码" : "显示密码"}
             >
               {showPassword ? (
@@ -121,7 +121,7 @@ export function LoginForm() {
         </div>
 
         {error && (
-          <p className="rounded-lg border border-ember-500/30 bg-ember-500/10 px-3 py-2 text-sm text-ember-500">
+          <p className="rounded-lg border border-ember-200 bg-ember-50 px-3 py-2 text-sm text-ember-600">
             {error}
           </p>
         )}
@@ -129,7 +129,7 @@ export function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-olive-500 py-2.5 text-sm font-medium text-ink-950 transition-colors hover:bg-olive-600 disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-full rounded-lg bg-paper-800 py-2.5 text-sm font-medium text-white transition-colors hover:bg-paper-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {loading ? "请稍候…" : "登录"}
         </button>

@@ -44,8 +44,10 @@ export default async function AdminProductsPage() {
   const productVariants = (productVariantsData ?? []) as ProductVariant[];
 
   return (
-    <div className="min-h-screen bg-paper-100">
-      <header className="border-b border-paper-200 bg-white px-6 py-4">
+    <div className="relative min-h-screen">
+      <div className="app-bg" />
+      <div className="app-grain" />
+      <header className="glass sticky top-0 z-30 px-6 py-3">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-2">
           <AdminNav />
           <div className="flex shrink-0 items-center gap-3">
@@ -53,7 +55,7 @@ export default async function AdminProductsPage() {
             <form action={signOut}>
               <button
                 type="submit"
-                className="rounded-lg border border-paper-200 px-3 py-1.5 text-sm text-paper-700 transition-colors hover:bg-paper-100"
+                className="rounded-lg border border-white/50 bg-white/40 px-3 py-1.5 text-sm text-paper-700 transition-colors hover:bg-white/70"
               >
                 退出登录
               </button>

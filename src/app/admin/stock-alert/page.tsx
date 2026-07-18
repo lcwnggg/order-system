@@ -52,8 +52,10 @@ export default async function StockAlertPage() {
     .sort((a, b) => a.totalStock - b.totalStock || a.name.localeCompare(b.name));
 
   return (
-    <div className="min-h-screen bg-paper-100">
-      <header className="border-b border-paper-200 bg-white px-6 py-4">
+    <div className="relative min-h-screen">
+      <div className="app-bg" />
+      <div className="app-grain" />
+      <header className="glass sticky top-0 z-30 px-6 py-3">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-2">
           <AdminNav />
           <div className="flex shrink-0 items-center gap-3">
@@ -61,7 +63,7 @@ export default async function StockAlertPage() {
             <form action={signOut}>
               <button
                 type="submit"
-                className="rounded-lg border border-paper-200 px-3 py-1.5 text-sm text-paper-700 transition-colors hover:bg-paper-100"
+                className="rounded-lg border border-white/50 bg-white/40 px-3 py-1.5 text-sm text-paper-700 transition-colors hover:bg-white/70"
               >
                 退出登录
               </button>
@@ -83,7 +85,7 @@ export default async function StockAlertPage() {
             <p className="text-sm text-paper-500">暂无库存告急商品</p>
           </div>
         ) : (
-          <div className="overflow-hidden rounded-2xl border border-paper-200 bg-paper-25">
+          <div className="overflow-hidden rounded-2xl glass-strong">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-paper-100 bg-paper-100 text-left">

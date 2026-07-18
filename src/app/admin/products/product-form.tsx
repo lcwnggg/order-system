@@ -185,7 +185,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
   const uploading = phase === "compressing" || phase === "uploading";
 
   return (
-    <div className="rounded-2xl border border-paper-200 bg-paper-25 p-6">
+    <div className="rounded-2xl glass-strong p-6">
       <h2 className="mb-5 text-base font-semibold text-paper-900">添加商品</h2>
 
       <form ref={formRef} action={action} className="space-y-4">

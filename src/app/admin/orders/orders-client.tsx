@@ -381,7 +381,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
             return (
               <div
                 key={order.id}
-                className="overflow-hidden rounded-2xl border border-paper-200 bg-paper-25 transition duration-200"
+                className="overflow-hidden rounded-2xl glass-strong transition duration-200"
               >
                 {/* 头部：门店 + 状态 + 元信息 + 金额 */}
                 <div className="flex items-start gap-3 px-5 py-4">

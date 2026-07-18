@@ -479,7 +479,7 @@ export default function ProductList({
     return (
       <div
         key={product.id}
-        className={`overflow-hidden rounded-2xl border border-paper-200 bg-paper-25${!product.is_active ? " opacity-60" : ""}`}
+        className={`overflow-hidden rounded-2xl glass-strong${!product.is_active ? " opacity-60" : ""}`}
       >
         {/* 主信息行 */}
         <div className="flex items-start gap-3 p-3">
@@ -646,7 +646,7 @@ export default function ProductList({
           {items.map(renderCard)}
         </div>
         {/* 桌面端表格 */}
-        <div className="hidden overflow-hidden rounded-2xl border border-paper-200 bg-paper-25 sm:block">
+        <div className="hidden overflow-hidden rounded-2xl glass-strong sm:block">
           <div className="overflow-x-auto">
             <table className="w-full">{TABLE_HEADER}
               <tbody className="divide-y divide-paper-100">{items.map(renderRow)}</tbody>
@@ -826,7 +826,7 @@ export default function ProductList({
               return (
                 <div
                   key={group.catId ?? "__null__"}
-                  className="overflow-hidden rounded-2xl border border-paper-200 bg-paper-25"
+                  className="overflow-hidden rounded-2xl glass-strong"
                 >
                   <button
                     type="button"
