@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/app/app-shell";
+import { getTransferBoard } from "@/lib/transfers";
 import OrdersClient, { type Order, type OrderItem } from "./orders-client";
+import WarehouseTransferPanel from "./warehouse-transfer-panel";
 
 export default async function AdminOrdersPage() {
   const supabase = await createClient();
@@ -78,6 +80,8 @@ export default async function AdminOrdersPage() {
     }
   }
 
+  const transferRequests = await getTransferBoard(supabase);
+
   const orders: Order[] = (rawOrders ?? []).map((o) => ({
     id: o.id as string,
     store_id: o.store_id as string,
@@ -112,6 +116,7 @@ export default async function AdminOrdersPage() {
           <h1 className="animate-fade-up mt-2 text-3xl font-normal tracking-tight text-paper-900">订单管理</h1>
           <span className="text-sm text-paper-500">共 {orders.length} 笔订单</span>
         </div>
+        <WarehouseTransferPanel requests={transferRequests} />
         <OrdersClient orders={orders} categories={categories} />
       </AppShell>
   );

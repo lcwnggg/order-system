@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { signOut } from "@/app/actions/auth";
+import TransferNavBadge from "@/app/transfer-nav-badge";
 
 type NavItem = { href: string; label: string; d: string };
 
@@ -19,6 +20,7 @@ const ADMIN_NAV: NavItem[] = [
 const STORE_NAV: NavItem[] = [
   { href: "/", label: "首页", d: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
   { href: "/shop", label: "门店下单", d: "M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" },
+  { href: "/transfers", label: "门店互调", d: "M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" },
   { href: "/shop/orders", label: "我的订单", d: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" },
 ];
 
@@ -73,6 +75,7 @@ export default function AppShell({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d={t.d} />
                   </svg>
                   {t.label}
+                  {t.href === "/transfers" && <TransferNavBadge />}
                 </Link>
               );
             })}
