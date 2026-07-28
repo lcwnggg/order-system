@@ -43,15 +43,23 @@ type VariantDraft = { color: string; stock: string };
 // 记住上一次选的分类，作为下一次添加的默认值（而不是每次都清空重选）。
 const LAST_CATEGORY_KEY = "addProduct:lastCategory";
 
-function readSavedCategory(): { parentId: string; childId: string } {
-  if (typeof window === "undefined") return { parentId: "", childId: "" };
+// 读取上次选择，并对着当前分类表校验：分类可能已被改名/删除/挪走，
+// 直接信任 localStorage 会把商品挂到已不存在、或已不属于该大类的分类上。
+function readSavedCategory(categories: Category[]): { parentId: string; childId: string } {
+  const empty = { parentId: "", childId: "" };
+  if (typeof window === "undefined") return empty;
   try {
     const raw = window.localStorage.getItem(LAST_CATEGORY_KEY);
-    if (!raw) return { parentId: "", childId: "" };
+    if (!raw) return empty;
     const saved = JSON.parse(raw) as { parentId?: string; childId?: string };
-    return { parentId: saved.parentId ?? "", childId: saved.childId ?? "" };
+
+    const parent = categories.find((c) => c.id === saved.parentId && !c.parent_id);
+    if (!parent) return empty;
+
+    const child = categories.find((c) => c.id === saved.childId && c.parent_id === parent.id);
+    return { parentId: parent.id, childId: child?.id ?? "" };
   } catch {
-    return { parentId: "", childId: "" };
+    return empty;
   }
 }
 
@@ -69,14 +77,12 @@ export default function ProductForm({ categories = [] }: { categories?: Category
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [selectedParentCatId, setSelectedParentCatId] = useState(() => {
-    const saved = readSavedCategory();
-    return categories.some((c) => c.id === saved.parentId) ? saved.parentId : "";
-  });
-  const [selectedChildCatId, setSelectedChildCatId] = useState(() => {
-    const saved = readSavedCategory();
-    return categories.some((c) => c.id === saved.childId) ? saved.childId : "";
-  });
+  const [selectedParentCatId, setSelectedParentCatId] = useState(
+    () => readSavedCategory(categories).parentId
+  );
+  const [selectedChildCatId, setSelectedChildCatId] = useState(
+    () => readSavedCategory(categories).childId
+  );
   const [hasVariants, setHasVariants] = useState(false);
   const [variants, setVariants] = useState<VariantDraft[]>([{ color: "", stock: "0" }]);
   const [barcode, setBarcode] = useState("");
@@ -196,12 +202,14 @@ export default function ProductForm({ categories = [] }: { categories?: Category
     setVariants((prev) => prev.map((v, i) => (i === idx ? { ...v, [field]: value } : v)));
   }
 
-  // AI 识别：第一张照片作为商品图
-  function handleAiImage(url: string) {
+  // AI 识别：第一张照片作为商品图。保留原图，让用户可以对这张图裁剪构图
+  // （AI 面板那个"拍照"按钮拍出来的图会直接成为商品图，不给裁剪机会的话构图就没法调）
+  function handleAiImage(url: string, file: File) {
     setImageUrl(url);
     setPreview(url);
     setPhase("done");
     setUploadError(null);
+    setOriginalFile(file);
   }
 
   // AI 识别：把结果填入各字段（名称/品牌/描述为非受控输入，直接写 DOM 值）
@@ -462,7 +470,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
                 onClick={handleRecrop}
                 className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-paper-700 hover:bg-paper-200"
               >
-                重新裁剪
+                裁剪
               </button>
             )}
             {phase === "done" && (

@@ -45,7 +45,13 @@ export default function ImageCropModal({
   useEffect(() => {
     const el = viewportRef.current;
     if (!el) return;
-    const update = () => setViewSize(el.clientWidth);
+    // 只接受正数宽度：首帧布局尚未完成时 clientWidth 可能是 0，
+    // 一旦把 0 存进 state，baseScale 会变成 0、裁剪时 k=OUTPUT/0=Infinity，
+    // 画布 transform 变成 NaN，结果是一张全黑图（且不报错）。
+    const update = () => {
+      const w = el.clientWidth;
+      if (w > 0) setViewSize(w);
+    };
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
@@ -123,6 +129,15 @@ export default function ImageCropModal({
   async function handleConfirm() {
     const img = imgElRef.current;
     if (!img || !natural || !effSize) return;
+    // 预览是用 viewSize state 渲染的，导出必须用同一个值，所见才等于所得；
+    // 只有它异常时才退回去读真实宽度
+    const basis = viewSize > 0 ? viewSize : viewportRef.current?.clientWidth ?? 0;
+    const k = OUTPUT_SIZE / basis;
+    const scale = totalScale * k;
+    // 任何一步算出 0 / NaN / Infinity 都会让画布静默地什么都不画，导出一张全黑图。
+    // 与其交出一张黑图，不如直接中止。
+    if (!Number.isFinite(k) || !Number.isFinite(scale) || scale <= 0) return;
+
     setBusy(true);
     try {
       const canvas = document.createElement("canvas");
@@ -131,10 +146,9 @@ export default function ImageCropModal({
       const ctx = canvas.getContext("2d");
       if (!ctx) throw new Error("Canvas 不可用");
 
-      const k = OUTPUT_SIZE / viewSize;
       ctx.translate(OUTPUT_SIZE / 2 + offset.x * k, OUTPUT_SIZE / 2 + offset.y * k);
       ctx.rotate((rotation * Math.PI) / 180);
-      ctx.scale(totalScale * k, totalScale * k);
+      ctx.scale(scale, scale);
       ctx.drawImage(img, -natural.w / 2, -natural.h / 2, natural.w, natural.h);
 
       const blob = await new Promise<Blob | null>((resolve) =>

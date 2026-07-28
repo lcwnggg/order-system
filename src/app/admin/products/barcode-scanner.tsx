@@ -20,6 +20,11 @@ export function isMobileDevice() {
 
 type ScannerControls = { stop: () => void };
 
+// 两次识别尝试之间的间隔。zxing 默认 500ms（每秒只试 2 次），是"对准了却迟迟不识别"的
+// 主因之一。调小 = 更跟手，但解码在主线程上跑，配合 TRY_HARDER + 1080p 会更吃 CPU。
+// 200ms 是手感与低端机发热/掉帧之间的折中；若旧手机上预览卡顿，把这个值调大即可。
+const SCAN_ATTEMPT_INTERVAL_MS = 200;
+
 // 只保留零售场景会用到的一维码格式 + TRY_HARDER：
 // 默认不加 hints 时 zxing 会尝试所有格式（含二维码等用不到的格式），既慢又更容易在
 // 手抖/光线差时误判或漏判，这是"有时候扫得到有时候扫不到"的主因之一。
@@ -78,9 +83,9 @@ export function ScannerOverlay({
           import("@zxing/browser"),
           buildHints(),
         ]);
-        // 缩短两次识别尝试的间隔（默认 500ms），扫码手感更跟手，
-        // 减少"条码已经对准了但还没轮到下一次识别"造成的漏检。
-        const reader = new BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 150 });
+        const reader = new BrowserMultiFormatReader(hints, {
+          delayBetweenScanAttempts: SCAN_ATTEMPT_INTERVAL_MS,
+        });
         if (!videoRef.current) return;
         controls = await reader.decodeFromConstraints(
           {
@@ -134,7 +139,12 @@ export function ScannerOverlay({
     if (!track) return;
     const next = !torchOn;
     track
-      .applyConstraints({ advanced: [{ torch: next } as unknown as MediaTrackConstraintSet] })
+      .applyConstraints({
+        // fillLightMode 是旧草案里的名字，部分浏览器只认它；两个都给以兼容更多机型
+        advanced: [
+          { torch: next, fillLightMode: next ? "flash" : "off" } as unknown as MediaTrackConstraintSet,
+        ],
+      })
       .then(() => setTorchOn(next))
       .catch(() => {});
   }

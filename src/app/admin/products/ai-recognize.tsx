@@ -35,8 +35,10 @@ export default function AiRecognizePanel({
   onImageUploaded,
   onSuggestion,
 }: {
-  // 第一张照片上传后的公开 URL，父表单用它作为商品图
-  onImageUploaded: (url: string) => void;
+  // 第一张照片上传后的公开 URL + 对应的原始文件。
+  // 原始文件回传给父表单，是为了让用户能对这张"顺便当成商品图"的照片做裁剪，
+  // 否则拍完就直接成了商品图，没有任何调整构图的机会。
+  onImageUploaded: (url: string, originalFile: File) => void;
   // 识别结果，父表单用它自动填字段
   onSuggestion: (s: AiSuggestion) => void;
 }) {
@@ -64,8 +66,8 @@ export default function AiRecognizePanel({
         urls.push(data.publicUrl);
       }
 
-      // 第一张直接用作商品图，省得再传一次
-      if (urls[0]) onImageUploaded(urls[0]);
+      // 第一张直接用作商品图，省得再传一次（原图一并回传，供后续裁剪）
+      if (urls[0] && list[0]) onImageUploaded(urls[0], list[0]);
 
       setPhase("recognizing");
       const result = await suggestProductFromImages(urls);
