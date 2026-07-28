@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { signOut } from "@/app/actions/auth";
 
 export default function StoreHero({ storeName }: { storeName: string | null }) {
   return (
@@ -31,6 +32,17 @@ export default function StoreHero({ storeName }: { storeName: string | null }) {
               我的订单
             </Link>
           </div>
+
+          {/* 退出登录：手机上也要能换账号 */}
+          <form action={signOut} className="animate-fade-up mt-8 [animation-delay:360ms]">
+            <button
+              type="submit"
+              className="inline-flex items-center gap-1.5 text-sm text-paper-500 transition-colors hover:text-paper-800"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+              退出登录
+            </button>
+          </form>
         </div>
       </div>
     </main>

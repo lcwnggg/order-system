@@ -80,7 +80,7 @@ export default function AppShell({
               );
             })}
           </nav>
-          <div className="mt-auto hidden items-center gap-2.5 rounded-2xl bg-white/40 p-2.5 md:flex">
+          <div className="mt-auto flex items-center gap-2.5 rounded-2xl bg-white/40 p-2.5">
             <span className="h-9 w-9 shrink-0 rounded-full bg-gradient-to-br from-accent-200 to-[#d8b8cf]" />
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-medium text-paper-900">{displayName ?? (variant === "store" ? "门店" : "仓库")}</p>

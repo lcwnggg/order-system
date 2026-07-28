@@ -1,35 +1,34 @@
 -- ═══════════════════════════════════════════════════════════════
--- 修复：把所有门店挂到 movilspa@gmail.com（真正在用的老板账号）名下
+-- 回滚：把门店改回挂在 luciawang815@gmail.com 名下
 --
--- 背景：7 家门店的 warehouse_id 指向 luciawang815@gmail.com，
---       但商品/订单都在 movilspa@gmail.com 下 → 仓库端看板查不到任何门店。
+-- 为什么要回滚：
+--   luciawang815 名下有 125 个商品 + 4 笔订单（真正的目录）
+--   movilspa     名下只有 8 个商品 + 0 笔订单
+--   之前误把门店挂到了 movilspa，导致门店只能看到 8 个商品的目录。
+--   门店必须和商品目录挂在同一个老板下才正常。
 --
 -- 用法：整个文件复制到 Supabase SQL Editor 跑一次。
---       最后会显示一张结果表，确认「门店数」变成 7。
---
--- ⚠️ 这个脚本会【修改数据】（只改 profiles.warehouse_id 这一列，不动商品/订单）。
---    想撤销的话，见文件最下方的「回滚」注释。
+--       跑完看结果表，确认 luciawang815 的「门店数」回到 7。
 -- ═══════════════════════════════════════════════════════════════
 
 
 -- ───────────────────────────────────────────────
--- 1. 把所有门店改挂到 movilspa 名下
---    （包含目前挂在 luciawang815 下的，以及任何没挂到老板的孤儿门店）
+-- 1. 门店改回挂到 luciawang815（有 125 商品 / 4 订单的那个）
 -- ───────────────────────────────────────────────
 UPDATE public.profiles s
 SET warehouse_id = (
   SELECT p.id
   FROM public.profiles p
   JOIN auth.users u ON u.id = p.id
-  WHERE u.email = 'movilspa@gmail.com'
+  WHERE u.email = 'luciawang815@gmail.com'
     AND p.role = 'warehouse'
 )
 WHERE s.role = 'store';
 
 
 -- ───────────────────────────────────────────────
--- 2. 验证：跑完这一条会显示结果。
---    movilspa 那一行的「门店数」应该变成 7，luciawang815 变成 0。
+-- 2. 验证：luciawang815 应该是 门店数=7 / 商品数=125 / 订单数=4
+--          movilspa     应该是 门店数=0 / 商品数=8   / 订单数=0
 -- ───────────────────────────────────────────────
 SELECT
   u.email                                                                AS 老板邮箱,
@@ -41,16 +40,3 @@ FROM public.profiles w
 LEFT JOIN auth.users u ON u.id = w.id
 WHERE w.role = 'warehouse'
 ORDER BY u.email;
-
-
--- ═══════════════════════════════════════════════════════════════
--- 回滚（万一改错了，想把门店改回 luciawang815 名下，跑这段）：
---
---   UPDATE public.profiles s
---   SET warehouse_id = (
---     SELECT p.id FROM public.profiles p
---     JOIN auth.users u ON u.id = p.id
---     WHERE u.email = 'luciawang815@gmail.com' AND p.role = 'warehouse'
---   )
---   WHERE s.role = 'store';
--- ═══════════════════════════════════════════════════════════════
