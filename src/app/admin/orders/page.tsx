@@ -116,7 +116,7 @@ export default async function AdminOrdersPage() {
           <h1 className="animate-fade-up mt-2 text-3xl font-normal tracking-tight text-paper-900">订单管理</h1>
           <span className="text-sm text-paper-500">共 {orders.length} 笔订单</span>
         </div>
-        <WarehouseTransferPanel requests={transferRequests} />
+        <WarehouseTransferPanel requests={transferRequests} currentUserId={user.id} />
         <OrdersClient orders={orders} categories={categories} />
       </AppShell>
   );

@@ -22,6 +22,24 @@ async function requireStore(): Promise<SupabaseClient | null> {
   return supabase;
 }
 
+// 认领 / 流转状态：门店和仓库老板都可（仓库万一自己有货也能接）；具体归属由 RPC 内部校验
+async function requireStoreOrWarehouse(): Promise<SupabaseClient | null> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  if (profile?.role !== "store" && profile?.role !== "warehouse") return null;
+  return supabase;
+}
+
 function revalidate() {
   revalidatePath("/transfers");
   revalidatePath("/admin/orders");
@@ -49,7 +67,7 @@ export async function createTransferRequest(input: {
 }
 
 export async function claimTransferRequest(id: string): Promise<{ error?: string }> {
-  const supabase = await requireStore();
+  const supabase = await requireStoreOrWarehouse();
   if (!supabase) return { error: "无权限" };
 
   const { error } = await supabase.rpc("claim_transfer_request", { p_id: id });
@@ -74,7 +92,7 @@ export async function setTransferStatus(
   id: string,
   status: "done" | "open" | "cancelled"
 ): Promise<{ error?: string }> {
-  const supabase = await requireStore();
+  const supabase = await requireStoreOrWarehouse();
   if (!supabase) return { error: "无权限" };
 
   const { error } = await supabase.rpc("update_transfer_status", {

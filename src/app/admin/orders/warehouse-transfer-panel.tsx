@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
 import type { TransferRequest, TransferStatus } from "@/lib/transfers";
 import { useTransferRealtime } from "@/app/transfers/use-transfer-realtime";
+import { claimTransferRequest, setTransferStatus } from "@/app/transfers/actions";
+import TransferAlerts from "@/app/transfers/transfer-alerts";
 
 const STATUS_LABEL: Record<TransferStatus, string> = {
   open: "找货中",
@@ -34,11 +36,17 @@ function timeAgo(iso: string): string {
 }
 
 /**
- * 仓库端「门店互调」监看面板：折叠进订单管理页顶部。
- * 仓库不参与认领，只需看到门店之间在调什么货、到哪一步了——
+ * 仓库端「门店互调」面板：折叠进订单管理页顶部。
+ * 仓库既能监看门店之间的调货动态，也能在自己有货时直接「我有」认领并备货，
  * 和自己的订单在同一屏里，一眼看全。
  */
-export default function WarehouseTransferPanel({ requests }: { requests: TransferRequest[] }) {
+export default function WarehouseTransferPanel({
+  requests,
+  currentUserId,
+}: {
+  requests: TransferRequest[];
+  currentUserId: string;
+}) {
   useTransferRealtime();
   const [collapsed, setCollapsed] = useState(false);
 
@@ -50,11 +58,7 @@ export default function WarehouseTransferPanel({ requests }: { requests: Transfe
 
   return (
     <div className="overflow-hidden rounded-2xl border border-accent-200 bg-accent-50/50">
-      <button
-        type="button"
-        onClick={() => setCollapsed((c) => !c)}
-        className="flex w-full items-center gap-3 px-5 pt-4 pb-3 text-left"
-      >
+      <div className="flex w-full items-center gap-3 px-5 pt-4 pb-3">
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-accent-100 text-accent-600">
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
         </span>
@@ -67,10 +71,18 @@ export default function WarehouseTransferPanel({ requests }: { requests: Transfe
               </span>
             )}
           </h2>
-          <p className="text-xs text-accent-600/80">门店之间互相调货的动态（仅监看）</p>
+          <p className="text-xs text-accent-600/80">门店之间互相调货 · 你有货也能直接认领</p>
         </div>
-        <svg className={`h-4 w-4 shrink-0 text-accent-500 transition-transform ${collapsed ? "" : "rotate-180"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-      </button>
+        <TransferAlerts currentUserId={currentUserId} />
+        <button
+          type="button"
+          onClick={() => setCollapsed((c) => !c)}
+          aria-label={collapsed ? "展开" : "收起"}
+          className="shrink-0 rounded-lg p-1.5 text-accent-500 transition-colors hover:bg-accent-100"
+        >
+          <svg className={`h-4 w-4 transition-transform ${collapsed ? "" : "rotate-180"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+        </button>
+      </div>
 
       {!collapsed && (
         <div className="px-5 pb-4">
@@ -79,35 +91,91 @@ export default function WarehouseTransferPanel({ requests }: { requests: Transfe
           ) : (
             <div className="grid gap-2.5 sm:grid-cols-2">
               {active.map((req) => (
-                <div key={req.id} className="flex items-center gap-3 rounded-xl bg-white/80 p-3 ring-1 ring-accent-100">
-                  {req.photoUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={req.photoUrl} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover ring-1 ring-paper-900/10" />
-                  ) : (
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent-100 text-accent-600">
-                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" /></svg>
-                    </span>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-paper-900">{req.itemText}</p>
-                    <p className="mt-0.5 truncate text-[11.5px] text-paper-500">
-                      <span className="text-paper-700">{req.requesterName ?? "某门店"}</span> 求
-                      {req.quantity ? ` ${req.quantity} 件` : ""}
-                      {req.status === "claimed" && (
-                        <> · <span className="text-blue-700">{req.claimerName ?? "某门店"}</span> 在备</>
-                      )}
-                      {" · "}
-                      {timeAgo(req.createdAt)}
-                    </p>
-                  </div>
-                  <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_PILL[req.status]}`}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[req.status]}`} />
-                    {STATUS_LABEL[req.status]}
-                  </span>
-                </div>
+                <PanelCard key={req.id} req={req} currentUserId={currentUserId} />
               ))}
             </div>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PanelCard({ req, currentUserId }: { req: TransferRequest; currentUserId: string }) {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const minedByMe = req.claimedBy === currentUserId;
+
+  function act(fn: () => Promise<{ error?: string }>) {
+    setError(null);
+    startTransition(async () => {
+      const res = await fn();
+      if (res.error) setError(res.error);
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-xl bg-white/80 p-3 ring-1 ring-accent-100">
+      <div className="flex items-center gap-3">
+        {req.photoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={req.photoUrl} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover ring-1 ring-paper-900/10" />
+        ) : (
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent-100 text-accent-600">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" /></svg>
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium text-paper-900">{req.itemText}</p>
+          <p className="mt-0.5 truncate text-[11.5px] text-paper-500">
+            <span className="text-paper-700">{req.requesterName ?? "某门店"}</span> 求
+            {req.quantity ? ` ${req.quantity} 件` : ""}
+            {req.status === "claimed" && !minedByMe && (
+              <> · <span className="text-blue-700">{req.claimerName ?? "某门店"}</span> 在备</>
+            )}
+            {" · "}
+            {timeAgo(req.createdAt)}
+          </p>
+        </div>
+        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_PILL[req.status]}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[req.status]}`} />
+          {minedByMe ? "我在备" : STATUS_LABEL[req.status]}
+        </span>
+      </div>
+
+      {error && <p className="text-[11px] text-red-500">{error}</p>}
+
+      {/* 仓库操作：open 可「我有」认领；自己认领的可「已交货 / 退回」 */}
+      {req.status === "open" && (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => act(() => claimTransferRequest(req.id))}
+          className="inline-flex items-center justify-center gap-1.5 self-start rounded-lg bg-mint-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-mint-600 disabled:opacity-50"
+        >
+          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+          仓库有货，我来
+        </button>
+      )}
+      {req.status === "claimed" && minedByMe && (
+        <div className="flex items-center gap-1.5 self-start">
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => act(() => setTransferStatus(req.id, "open"))}
+            className="rounded-lg px-2 py-1.5 text-[11px] font-medium text-paper-400 transition-colors hover:text-paper-700 disabled:opacity-50"
+          >
+            退回
+          </button>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => act(() => setTransferStatus(req.id, "done"))}
+            className="inline-flex items-center gap-1 rounded-lg bg-mint-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-mint-600 disabled:opacity-50"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+            {pending ? "…" : "已交货"}
+          </button>
         </div>
       )}
     </div>

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/app/app-shell";
 import { getTransferBoard } from "@/lib/transfers";
 import TransfersClient from "./transfers-client";
+import TransferAlerts from "./transfer-alerts";
 
 export default async function TransfersPage() {
   const supabase = await createClient();
@@ -26,12 +27,15 @@ export default async function TransfersPage() {
 
   return (
     <AppShell variant="store" email={user.email} displayName={profile?.store_name}>
-      <div className="mb-2">
-        <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.22em] text-paper-500">
-          门店 — 互相调货
-        </p>
-        <h1 className="animate-fade-up mt-2 text-3xl font-normal tracking-tight text-paper-900">门店互调</h1>
-        <p className="mt-1.5 text-sm text-paper-500">缺货、仓库也没有？问问其他门店谁有。</p>
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <div>
+          <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.22em] text-paper-500">
+            门店 — 互相调货
+          </p>
+          <h1 className="animate-fade-up mt-2 text-3xl font-normal tracking-tight text-paper-900">门店互调</h1>
+          <p className="mt-1.5 text-sm text-paper-500">缺货、仓库也没有？问问其他门店谁有。</p>
+        </div>
+        <TransferAlerts currentUserId={user.id} />
       </div>
       <TransfersClient requests={requests} currentStoreId={user.id} />
     </AppShell>

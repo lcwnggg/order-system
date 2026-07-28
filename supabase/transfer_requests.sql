@@ -101,20 +101,21 @@ GRANT EXECUTE ON FUNCTION public.create_transfer_request(text, text, int, text) 
 
 
 -- ───────────────────────────────────────────────
--- 4. RPC：认领「我有」（门店）——行锁 + 状态校验，避免两家店同时认领
+-- 4. RPC：认领「我有」（门店 或 仓库老板）——行锁 + 状态校验，避免同时认领
+--    仓库老板万一自己有货也能认领；current_warehouse_id() 对门店/仓库都给出各自「老板范围」。
 -- ───────────────────────────────────────────────
 CREATE OR REPLACE FUNCTION public.claim_transfer_request(p_id uuid)
 RETURNS void
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
 AS $$
-DECLARE v_wh uuid; r record;
+DECLARE v_scope uuid; r record;
 BEGIN
-  SELECT warehouse_id INTO v_wh FROM profiles WHERE id = auth.uid() AND role = 'store';
-  IF v_wh IS NULL THEN RAISE EXCEPTION '无权限'; END IF;
+  v_scope := public.current_warehouse_id();
+  IF v_scope IS NULL THEN RAISE EXCEPTION '无权限'; END IF;
 
   SELECT * INTO r FROM transfer_requests WHERE id = p_id FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION '请求不存在'; END IF;
-  IF r.warehouse_id <> v_wh THEN RAISE EXCEPTION '该请求不属于本仓库分组'; END IF;
+  IF r.warehouse_id <> v_scope THEN RAISE EXCEPTION '该请求不属于本仓库分组'; END IF;
   IF r.requester_store_id = auth.uid() THEN RAISE EXCEPTION '不能认领自己发起的请求'; END IF;
   IF r.status <> 'open' THEN RAISE EXCEPTION '该请求已被认领或已结束'; END IF;
 
@@ -218,7 +219,8 @@ AS $$
     t.note,
     t.status,
     t.claimed_by,
-    COALESCE(cp.store_name, cu.email::text) AS claimer_name,
+    CASE WHEN cp.role = 'warehouse' THEN COALESCE(cp.store_name, '仓库')
+         ELSE COALESCE(cp.store_name, cu.email::text) END AS claimer_name,
     t.created_at,
     EXISTS (
       SELECT 1 FROM transfer_declines d
