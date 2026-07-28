@@ -33,6 +33,19 @@ type RpcRow = {
   i_declined: boolean;
 };
 
+export type GroupStore = { id: string; name: string | null };
+
+/** 当前老板范围内的所有门店（画「每家店一个圈」的看板用）。 */
+export async function getGroupStores(
+  supabase: SupabaseClient
+): Promise<GroupStore[]> {
+  const { data } = await supabase.rpc("get_group_stores");
+  return ((data as { id: string; name: string | null }[] | null) ?? []).map((s) => ({
+    id: s.id,
+    name: s.name,
+  }));
+}
+
 /** 拉取当前老板范围内的全部互调请求（门店 / 仓库共用）。 */
 export async function getTransferBoard(
   supabase: SupabaseClient

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/app/app-shell";
-import { getTransferBoard } from "@/lib/transfers";
+import { getTransferBoard, getGroupStores } from "@/lib/transfers";
 import TransfersClient from "./transfers-client";
 import TransferAlerts from "./transfer-alerts";
 
@@ -23,7 +23,10 @@ export default async function TransfersPage() {
   if (profile?.role === "warehouse") redirect("/admin/orders");
   if (profile?.role !== "store") redirect("/login");
 
-  const requests = await getTransferBoard(supabase);
+  const [requests, stores] = await Promise.all([
+    getTransferBoard(supabase),
+    getGroupStores(supabase),
+  ]);
 
   return (
     <AppShell variant="store" email={user.email} displayName={profile?.store_name}>
@@ -37,7 +40,7 @@ export default async function TransfersPage() {
         </div>
         <TransferAlerts currentUserId={user.id} />
       </div>
-      <TransfersClient requests={requests} currentStoreId={user.id} />
+      <TransfersClient requests={requests} stores={stores} currentStoreId={user.id} />
     </AppShell>
   );
 }

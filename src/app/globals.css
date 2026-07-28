@@ -78,6 +78,25 @@
 }
 @keyframes orb-spin { to { transform: rotate(360deg); } }
 
+/* 门店互调看板：气泡入场 + 漂浮 + 门店圈脉冲光环 */
+@keyframes bubble-pop {
+  0% { opacity: 0; transform: translateY(6px) scale(0.7); }
+  60% { transform: translateY(-2px) scale(1.06); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes bubble-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+@keyframes ring-pulse {
+  0% { transform: scale(0.9); opacity: 0.55; }
+  70% { transform: scale(1.5); opacity: 0; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+.animate-bubble-pop { animation: bubble-pop 0.45s var(--ease-editorial) both; }
+.animate-bubble-bob { animation: bubble-bob 3.2s ease-in-out infinite; }
+.animate-ring-pulse { animation: ring-pulse 2.4s ease-out infinite; }
+
 /* 子元素入场交错 */
 .stagger-children > * {
   animation: fade-up 0.7s var(--ease-editorial) both;
@@ -231,9 +250,12 @@
   .animate-fade-up,
   .animate-fade-in,
   .stagger-children > *,
+  .animate-bubble-bob,
+  .animate-ring-pulse,
   .iri-ball {
     animation: none;
   }
+  .animate-bubble-pop { animation: fade-in 0.3s both; }
 }
 
 body {

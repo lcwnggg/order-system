@@ -238,6 +238,24 @@ GRANT EXECUTE ON FUNCTION public.get_transfer_board() TO authenticated;
 
 
 -- ───────────────────────────────────────────────
+-- 7b. RPC：本组门店名册（画「每家店一个圈」的看板用）
+--     门店之间彼此看不到对方 profile，这里用 SECURITY DEFINER 统一返回同一老板名下的所有门店。
+-- ───────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.get_group_stores()
+RETURNS TABLE (id uuid, name text)
+LANGUAGE sql SECURITY DEFINER SET search_path = public STABLE
+AS $$
+  SELECT p.id, COALESCE(p.store_name, u.email::text) AS name
+  FROM profiles p
+  JOIN auth.users u ON u.id = p.id
+  WHERE p.role = 'store'
+    AND p.warehouse_id = public.current_warehouse_id()
+  ORDER BY p.created_at NULLS FIRST;
+$$;
+GRANT EXECUTE ON FUNCTION public.get_group_stores() TO authenticated;
+
+
+-- ───────────────────────────────────────────────
 -- 8. 实时（Supabase Realtime）：把请求表加入发布，前端订阅后无刷新更新
 -- ───────────────────────────────────────────────
 DO $$
