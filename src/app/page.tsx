@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { isLowStock } from "@/lib/stock";
+import { getTransferBoard, getGroupStores } from "@/lib/transfers";
 import StoreHero from "./store-hero";
 import AppShell from "./app-shell";
+import WarehouseRosterCard from "./transfers/warehouse-roster-card";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -27,6 +29,8 @@ export default async function Home() {
   let storeCount = 0;
   let categoryCount = 0;
   let lowStockItems: { id: string; name: string; category: string | null; stock: number }[] = [];
+  let transferRequests: Awaited<ReturnType<typeof getTransferBoard>> = [];
+  let groupStores: Awaited<ReturnType<typeof getGroupStores>> = [];
 
   if (isWarehouse) {
     const [pending, total, stores, cats, prodStock, varStock, catNames] = await Promise.all([
@@ -70,6 +74,11 @@ export default async function Home() {
       })
       .sort((a, b) => a.stock - b.stock)
       .slice(0, 6);
+
+    [transferRequests, groupStores] = await Promise.all([
+      getTransferBoard(supabase),
+      getGroupStores(supabase),
+    ]);
   }
 
   const dateStr = new Date().toLocaleDateString("zh-CN", {
@@ -108,6 +117,9 @@ export default async function Home() {
                 </div>
               </Link>
             )}
+
+            {/* 门店互调：跟门店端一样的小屋看板 */}
+            <WarehouseRosterCard requests={transferRequests} stores={groupStores} currentUserId={user?.id ?? ""} />
 
             {/* 库存概览：数字 funnel + 趋势曲线 */}
             <div className="glass-strong rounded-[22px] p-5 sm:p-6">
