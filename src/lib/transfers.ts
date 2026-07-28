@@ -39,7 +39,9 @@ export type GroupStore = { id: string; name: string | null };
 export async function getGroupStores(
   supabase: SupabaseClient
 ): Promise<GroupStore[]> {
-  const { data } = await supabase.rpc("get_group_stores");
+  const { data, error } = await supabase.rpc("get_group_stores");
+  // RPC 失败时降级为空看板（页面不崩），但要在服务端日志留痕，否则「看板是空的」无从排查
+  if (error) console.error("[transfers] get_group_stores 失败：", error.message);
   return ((data as { id: string; name: string | null }[] | null) ?? []).map((s) => ({
     id: s.id,
     name: s.name,
@@ -50,7 +52,8 @@ export async function getGroupStores(
 export async function getTransferBoard(
   supabase: SupabaseClient
 ): Promise<TransferRequest[]> {
-  const { data } = await supabase.rpc("get_transfer_board");
+  const { data, error } = await supabase.rpc("get_transfer_board");
+  if (error) console.error("[transfers] get_transfer_board 失败：", error.message);
   return ((data as RpcRow[] | null) ?? []).map((r) => ({
     id: r.id,
     requesterStoreId: r.requester_store_id,
