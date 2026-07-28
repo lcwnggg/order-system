@@ -20,6 +20,26 @@ export function isMobileDevice() {
 
 type ScannerControls = { stop: () => void };
 
+// 只保留零售场景会用到的一维码格式 + TRY_HARDER：
+// 默认不加 hints 时 zxing 会尝试所有格式（含二维码等用不到的格式），既慢又更容易在
+// 手抖/光线差时误判或漏判，这是"有时候扫得到有时候扫不到"的主因之一。
+async function buildHints() {
+  const { BarcodeFormat, DecodeHintType } = await import("@zxing/library");
+  const hints = new Map();
+  hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+    BarcodeFormat.EAN_13,
+    BarcodeFormat.EAN_8,
+    BarcodeFormat.UPC_A,
+    BarcodeFormat.UPC_E,
+    BarcodeFormat.CODE_128,
+    BarcodeFormat.CODE_39,
+    BarcodeFormat.ITF,
+    BarcodeFormat.CODABAR,
+  ]);
+  hints.set(DecodeHintType.TRY_HARDER, true);
+  return hints;
+}
+
 function mapCameraError(err: unknown): string {
   const name = err instanceof Error ? err.name : "";
   if (name === "NotAllowedError" || name === "SecurityError") {
@@ -45,6 +65,8 @@ export function ScannerOverlay({
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(true);
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
 
   useEffect(() => {
     let controls: ScannerControls | undefined;
@@ -52,11 +74,25 @@ export function ScannerOverlay({
 
     (async () => {
       try {
-        const { BrowserMultiFormatReader } = await import("@zxing/browser");
-        const reader = new BrowserMultiFormatReader();
+        const [{ BrowserMultiFormatReader }, hints] = await Promise.all([
+          import("@zxing/browser"),
+          buildHints(),
+        ]);
+        // 缩短两次识别尝试的间隔（默认 500ms），扫码手感更跟手，
+        // 减少"条码已经对准了但还没轮到下一次识别"造成的漏检。
+        const reader = new BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 150 });
         if (!videoRef.current) return;
         controls = await reader.decodeFromConstraints(
-          { video: { facingMode: "environment" } },
+          {
+            video: {
+              facingMode: "environment",
+              // 分辨率太低时条码的细条纹会糊成一片，尤其在近距离对焦时；
+              // 提高期望分辨率能显著提升识别成功率。
+              width: { ideal: 1920 },
+              height: { ideal: 1080 },
+              advanced: [{ focusMode: "continuous" } as unknown as MediaTrackConstraintSet],
+            },
+          },
           videoRef.current,
           (result) => {
             if (result && !done) {
@@ -69,7 +105,15 @@ export function ScannerOverlay({
         );
         setStarting(false);
         // 若在等待期间已卸载，立即停止
-        if (done) controls.stop();
+        if (done) {
+          controls.stop();
+        } else {
+          // 检测是否支持手电筒（仓库光线不足时最常见的失败原因）
+          const stream = videoRef.current?.srcObject;
+          const track = stream instanceof MediaStream ? stream.getVideoTracks()[0] : undefined;
+          const capabilities = track?.getCapabilities?.() as (MediaTrackCapabilities & { torch?: boolean }) | undefined;
+          if (track && capabilities?.torch) setTorchSupported(true);
+        }
       } catch (err) {
         setError(mapCameraError(err));
         setStarting(false);
@@ -84,21 +128,50 @@ export function ScannerOverlay({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  function toggleTorch() {
+    const stream = videoRef.current?.srcObject;
+    const track = stream instanceof MediaStream ? stream.getVideoTracks()[0] : undefined;
+    if (!track) return;
+    const next = !torchOn;
+    track
+      .applyConstraints({ advanced: [{ torch: next } as unknown as MediaTrackConstraintSet] })
+      .then(() => setTorchOn(next))
+      .catch(() => {});
+  }
+
   return (
     <div className="fixed inset-0 z-[70] flex flex-col bg-black">
       {/* 顶部栏 */}
       <div className="flex shrink-0 items-center justify-between px-4 py-3">
         <span className="text-sm font-medium text-white/90">扫描条码</span>
-        <button
-          type="button"
-          onClick={onClose}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
-          aria-label="关闭扫码"
-        >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <div className="flex items-center gap-2">
+          {torchSupported && (
+            <button
+              type="button"
+              onClick={toggleTorch}
+              className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
+                torchOn ? "bg-amber-400 text-black" : "bg-white/15 text-white hover:bg-white/25"
+              }`}
+              aria-label="切换手电筒"
+              title="光线不足时可打开手电筒"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+            aria-label="关闭扫码"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
 
       {/* 视频 + 瞄准框 */}

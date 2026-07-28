@@ -7,8 +7,9 @@ import type { Category } from "@/app/admin/categories/categories-client";
 import BarcodeField from "./barcode-scanner";
 import AiRecognizePanel from "./ai-recognize";
 import type { AiSuggestion } from "./ai-actions";
+import ImageCropModal from "./image-crop-modal";
 
-function compressToJpeg(file: File, maxWidth = 1200, quality = 0.8): Promise<Blob> {
+function compressToJpeg(file: File | Blob, maxWidth = 1200, quality = 0.8): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
@@ -38,6 +39,22 @@ function compressToJpeg(file: File, maxWidth = 1200, quality = 0.8): Promise<Blo
 type UploadPhase = "idle" | "compressing" | "uploading" | "done" | "error";
 type VariantDraft = { color: string; stock: string };
 
+// 一次进货往往是同一分类的一整批商品，逐个添加时分类选一次就够了：
+// 记住上一次选的分类，作为下一次添加的默认值（而不是每次都清空重选）。
+const LAST_CATEGORY_KEY = "addProduct:lastCategory";
+
+function readSavedCategory(): { parentId: string; childId: string } {
+  if (typeof window === "undefined") return { parentId: "", childId: "" };
+  try {
+    const raw = window.localStorage.getItem(LAST_CATEGORY_KEY);
+    if (!raw) return { parentId: "", childId: "" };
+    const saved = JSON.parse(raw) as { parentId?: string; childId?: string };
+    return { parentId: saved.parentId ?? "", childId: saved.childId ?? "" };
+  } catch {
+    return { parentId: "", childId: "" };
+  }
+}
+
 export default function ProductForm({ categories = [] }: { categories?: Category[] }) {
   const parentCategories = categories.filter((c) => !c.parent_id);
   function childrenOf(parentId: string) {
@@ -52,31 +69,58 @@ export default function ProductForm({ categories = [] }: { categories?: Category
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [selectedParentCatId, setSelectedParentCatId] = useState("");
-  const [selectedChildCatId, setSelectedChildCatId] = useState("");
+  const [selectedParentCatId, setSelectedParentCatId] = useState(() => {
+    const saved = readSavedCategory();
+    return categories.some((c) => c.id === saved.parentId) ? saved.parentId : "";
+  });
+  const [selectedChildCatId, setSelectedChildCatId] = useState(() => {
+    const saved = readSavedCategory();
+    return categories.some((c) => c.id === saved.childId) ? saved.childId : "";
+  });
   const [hasVariants, setHasVariants] = useState(false);
   const [variants, setVariants] = useState<VariantDraft[]>([{ color: "", stock: "0" }]);
   const [barcode, setBarcode] = useState("");
+  // 待裁剪的原图（选择/拍照后先弹裁剪框，确认后才压缩上传）
+  const [pendingCrop, setPendingCrop] = useState<File | null>(null);
+  // 保留一份原图，"重新裁剪"时用原图而不是已裁剪过的图，避免越裁越小
+  const [originalFile, setOriginalFile] = useState<File | null>(null);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        LAST_CATEGORY_KEY,
+        JSON.stringify({ parentId: selectedParentCatId, childId: selectedChildCatId })
+      );
+    } catch {
+      /* 隐私模式等场景下 localStorage 可能不可用，忽略即可 */
+    }
+  }, [selectedParentCatId, selectedChildCatId]);
 
   useEffect(() => {
     if (state && "success" in state) {
-      formRef.current?.reset();
+      // 分类、品牌大概率与下一件商品相同（同一批进货），特意不清空，
+      // 减少连续添加时的重复选择/输入；其余字段（名称/价格/库存/图片等）逐件都不同，正常清空。
+      const form = formRef.current;
+      const brandEl = form?.elements.namedItem("brand") as HTMLInputElement | null;
+      const lastBrand = brandEl?.value ?? "";
+      form?.reset();
+      if (brandEl) brandEl.value = lastBrand;
       // 提交成功后清空表单：响应 action state 变化，属于正当的副作用重置
       /* eslint-disable react-hooks/set-state-in-effect */
       setImageUrl(null);
       setPreview(null);
       setPhase("idle");
       setUploadError(null);
-      setSelectedParentCatId("");
-      setSelectedChildCatId("");
       setHasVariants(false);
       setVariants([{ color: "", stock: "0" }]);
       setBarcode("");
+      setPendingCrop(null);
+      setOriginalFile(null);
       /* eslint-enable react-hooks/set-state-in-effect */
     }
   }, [state]);
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) {
       setImageUrl(null);
@@ -85,19 +129,36 @@ export default function ProductForm({ categories = [] }: { categories?: Category
       setUploadError(null);
       return;
     }
+    // 先弹裁剪框，确认之后再走压缩上传
+    setOriginalFile(file);
+    setPendingCrop(file);
+  }
+
+  function handleCropCancel() {
+    setPendingCrop(null);
+    // 清空 input 的值，这样用户重新选择同一张图片时浏览器仍会触发 change 事件
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function handleRecrop() {
+    if (originalFile) setPendingCrop(originalFile);
+  }
+
+  async function handleCropConfirm(blob: Blob) {
+    setPendingCrop(null);
     try {
       setPhase("compressing");
       setUploadError(null);
       setImageUrl(null);
       setPreview(null);
-      const blob = await compressToJpeg(file);
-      setPreview(URL.createObjectURL(blob));
+      const compressed = await compressToJpeg(blob);
+      setPreview(URL.createObjectURL(compressed));
       setPhase("uploading");
       const supabase = createClient();
       const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
       const { error } = await supabase.storage
         .from("product-images")
-        .upload(fileName, blob, { contentType: "image/jpeg", upsert: false });
+        .upload(fileName, compressed, { contentType: "image/jpeg", upsert: false });
       if (error) throw new Error(error.message);
       const { data } = supabase.storage.from("product-images").getPublicUrl(fileName);
       setImageUrl(data.publicUrl);
@@ -122,6 +183,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
     setPreview(null);
     setPhase("idle");
     setUploadError(null);
+    setOriginalFile(null);
   }
 
   function addVariantRow() {
@@ -394,6 +456,15 @@ export default function ProductForm({ categories = [] }: { categories?: Category
               {phase === "done" && <p className="font-medium text-green-600">图片上传成功</p>}
               {uploading && <p className="text-paper-500">处理中…</p>}
             </div>
+            {phase === "done" && originalFile && (
+              <button
+                type="button"
+                onClick={handleRecrop}
+                className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-paper-700 hover:bg-paper-200"
+              >
+                重新裁剪
+              </button>
+            )}
             {phase === "done" && (
               <button
                 type="button"
@@ -404,6 +475,10 @@ export default function ProductForm({ categories = [] }: { categories?: Category
               </button>
             )}
           </div>
+        )}
+
+        {pendingCrop && (
+          <ImageCropModal file={pendingCrop} onCancel={handleCropCancel} onConfirm={handleCropConfirm} />
         )}
 
         {state && "error" in state && (
