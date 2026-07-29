@@ -2,39 +2,49 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useT } from "@/lib/i18n/client";
-import {
-  canvasToBlob,
-  cutOutPolygon,
-  detectSubject,
-  warpQuad,
-  whitenBackground,
-  type Point,
-} from "@/lib/image-scan";
 
 // ─────────────────────────────────────────────────────────────
-// Editor de la foto del producto. Tres herramientas encadenables:
+// Recorte de la foto del producto.
 //
-//   · Encuadrar  → mover/zoom/girar dentro del cuadrado (lo de siempre)
-//   · Auto       → detecta el producto y lo recorta enderezado, como el
-//                  escáner de documentos de iOS (ver src/lib/image-scan.ts)
-//   · Libre      → se dibuja la silueta a dedo y el resto queda en blanco
+// La foto se ve ENTERA (nunca recortada de oficio) y encima hay un
+// rectángulo que se arrastra por las esquinas o los lados, con la
+// proporción que se quiera. Lo que quede fuera se tira; lo que falte
+// para completar el cuadrado final se rellena de BLANCO.
 //
-// "Encadenables" es literal: cada operación produce una imagen nueva que
-// se apila sobre la anterior, así que se puede escanear, luego quitar el
-// fondo y luego encuadrar. `Deshacer` retrocede una capa.
-//
-// La salida es siempre un cuadrado de 1200 px sobre fondo BLANCO (no
-// transparente: al pasar a JPEG lo transparente se vuelve negro, y una
-// foto de producto con marco negro queda fatal en la tienda).
+// Blanco y no transparente a propósito: la salida es JPEG y ahí lo
+// transparente se vuelve negro, así que una foto de producto acabaría
+// con marco negro en la tienda.
 // ─────────────────────────────────────────────────────────────
 
+/** Lado del cuadrado que se entrega, en px. */
 const OUTPUT_SIZE = 1200;
-const MAX_ZOOM = 3;
-/** Distancia mínima entre puntos del trazo libre, en px de pantalla. */
-const LASSO_MIN_STEP = 4;
+/**
+ * Lado máximo al que se rasteriza la foto para exportar. Una foto de móvil de
+ * 12 MP son ~48 MB por copia en memoria: en un iPhone eso es quedarse sin
+ * memoria a mitad del recorte. Como la salida es de 1200 px, 2400 sobra.
+ */
+const WORK_MAX = 2400;
+/** Lado mínimo del recorte, en px de pantalla (para que no se pueda anular). */
+const MIN_CROP_PX = 44;
+/**
+ * Margen entre la foto y el borde del escenario. Los tiradores van centrados
+ * en la esquina, así que la mitad de cada uno cae fuera de la foto: sin este
+ * margen, en un móvil los de la izquierda y la derecha quedan medio fuera de
+ * la pantalla y no hay forma de agarrarlos con el dedo.
+ */
+const STAGE_INSET = 26;
 
-type Mode = "frame" | "lasso";
-type Natural = { url: string; w: number; h: number };
+/** Rectángulo de recorte en coordenadas normalizadas (0..1) de la imagen ya girada. */
+type Crop = { x: number; y: number; w: number; h: number };
+type Handle = "nw" | "n" | "ne" | "e" | "se" | "s" | "sw" | "w";
+type DragKind = Handle | "move";
+
+const FULL_CROP: Crop = { x: 0, y: 0, w: 1, h: 1 };
+const HANDLES: Handle[] = ["nw", "n", "ne", "e", "se", "s", "sw", "w"];
+
+function clamp(v: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, v));
+}
 
 export default function ImageCropModal({
   file,
@@ -46,62 +56,52 @@ export default function ImageCropModal({
   onConfirm: (blob: Blob) => void;
 }) {
   const t = useT();
-  const viewportRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<HTMLDivElement>(null);
   const imgElRef = useRef<HTMLImageElement>(null);
 
-  // Pila de capas: [0] es el original; cada herramienta apila un resultado.
-  const [layers, setLayers] = useState<string[]>([]);
-  // Todas las object URL creadas aquí, para revocarlas de golpe al cerrar.
-  const createdUrls = useRef<string[]>([]);
-
-  const [natural, setNatural] = useState<Natural | null>(null);
-  const [viewSize, setViewSize] = useState(320);
-  const [mode, setMode] = useState<Mode>("frame");
+  const [url, setUrl] = useState<string | null>(null);
+  const [natural, setNatural] = useState<{ w: number; h: number } | null>(null);
+  const [stage, setStage] = useState({ w: 0, h: 0 });
   const [rotation, setRotation] = useState(0); // 0 / 90 / 180 / 270
-  const [zoom, setZoom] = useState(1);
-  const [offset, setOffset] = useState({ x: 0, y: 0 });
-  const [lasso, setLasso] = useState<Point[]>([]);
+  const [crop, setCrop] = useState<Crop>(FULL_CROP);
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const dragRef = useRef<{ startX: number; startY: number; startOffX: number; startOffY: number } | null>(null);
-  const drawingRef = useRef(false);
+  const dragRef = useRef<{
+    kind: DragKind;
+    startX: number;
+    startY: number;
+    start: Crop;
+    boxW: number;
+    boxH: number;
+  } | null>(null);
 
-  const currentUrl = layers[layers.length - 1] ?? null;
-  // `natural` se rellena en el onLoad del <img>; hasta que corresponda a la
-  // capa actual no se puede calcular nada (si no, se usan las medidas de la
-  // capa anterior y sale un encuadre desplazado durante un frame).
-  const ready = natural !== null && natural.url === currentUrl;
-
+  // Object URL de la foto. Se revoca al cambiar de archivo o al cerrar.
   useEffect(() => {
-    const url = URL.createObjectURL(file);
-    createdUrls.current = [url];
-    // Sincronizar recursos externos (object URL) con la prop `file` es
+    const objectUrl = URL.createObjectURL(file);
+    // Sincronizar un recurso externo (object URL) con la prop `file` es
     // justamente para lo que sirve un efecto.
     /* eslint-disable react-hooks/set-state-in-effect */
-    setLayers([url]);
+    setUrl(objectUrl);
     setNatural(null);
     setRotation(0);
-    setZoom(1);
-    setOffset({ x: 0, y: 0 });
-    setLasso([]);
-    setStatus(null);
+    setCrop(FULL_CROP);
+    setError(null);
     /* eslint-enable react-hooks/set-state-in-effect */
-    return () => {
-      for (const u of createdUrls.current) URL.revokeObjectURL(u);
-      createdUrls.current = [];
-    };
+    return () => URL.revokeObjectURL(objectUrl);
   }, [file]);
 
+  // Tamaño del escenario donde se pinta la foto.
   useEffect(() => {
-    const el = viewportRef.current;
+    const el = stageRef.current;
     if (!el) return;
-    // Solo anchuras positivas: antes del primer layout clientWidth puede ser 0,
-    // y con 0 el factor de exportación se va a Infinity → canvas en NaN →
-    // JPEG completamente negro, sin lanzar ningún error.
+    // Solo medidas positivas: antes del primer layout clientWidth puede ser 0 y
+    // con 0 los factores de escala se van a Infinity → canvas en NaN → JPEG
+    // completamente negro, y sin lanzar ningún error.
     const update = () => {
       const w = el.clientWidth;
-      if (w > 0) setViewSize(w);
+      const h = el.clientHeight;
+      if (w > 0 && h > 0) setStage({ w, h });
     };
     update();
     const ro = new ResizeObserver(update);
@@ -109,506 +109,339 @@ export default function ImageCropModal({
     return () => ro.disconnect();
   }, []);
 
-  // Medidas efectivas tras girar (a 90°/270° se intercambian ancho y alto)
-  const effSize = useMemo(() => {
-    if (!ready) return null;
+  // Medidas de la foto tras girar (a 90°/270° se intercambian ancho y alto).
+  const eff = useMemo(() => {
+    if (!natural) return null;
     const swapped = rotation % 180 !== 0;
     return { w: swapped ? natural.h : natural.w, h: swapped ? natural.w : natural.h };
-  }, [ready, natural, rotation]);
+  }, [natural, rotation]);
 
-  // zoom = 1 llena el cuadrado (cover). El mínimo del slider es el zoom que
-  // hace caber la imagen entera (contain), útil después de un recorte
-  // automático: se ve el producto completo con márgenes blancos.
-  const coverScale = effSize ? viewSize / Math.min(effSize.w, effSize.h) : 1;
-  const containZoom = effSize ? Math.min(effSize.w, effSize.h) / Math.max(effSize.w, effSize.h) : 1;
-  const totalScale = coverScale * zoom;
+  // Caja donde se ve la foto entera dentro del escenario (contain, centrada).
+  const box = useMemo(() => {
+    if (!eff || stage.w <= 0 || stage.h <= 0) return null;
+    const availW = Math.max(1, stage.w - STAGE_INSET * 2);
+    const availH = Math.max(1, stage.h - STAGE_INSET * 2);
+    const scale = Math.min(availW / eff.w, availH / eff.h);
+    const w = eff.w * scale;
+    const h = eff.h * scale;
+    return { left: (stage.w - w) / 2, top: (stage.h - h) / 2, w, h };
+  }, [eff, stage]);
 
-  const maxOffset = useMemo(() => {
-    if (!effSize) return { x: 0, y: 0 };
-    return {
-      x: Math.max(0, (effSize.w * totalScale - viewSize) / 2),
-      y: Math.max(0, (effSize.h * totalScale - viewSize) / 2),
-    };
-  }, [effSize, totalScale, viewSize]);
+  const ready = box !== null && natural !== null && !error;
 
-  const clamp = useCallback(
-    (off: { x: number; y: number }, max: { x: number; y: number }) => ({
-      x: Math.min(max.x, Math.max(-max.x, off.x)),
-      y: Math.min(max.y, Math.max(-max.y, off.y)),
-    }),
-    []
-  );
+  // ── arrastre: mover el rectángulo o tirar de un tirador ──
 
-  // Al cambiar el zoom hay que volver a encajar el desplazamiento en el nuevo
-  // margen; si no, al alejar quedarían huecos fuera del encuadre.
-  useEffect(() => {
-    /* eslint-disable-next-line react-hooks/set-state-in-effect */
-    setOffset((prev) => clamp(prev, maxOffset));
-  }, [maxOffset, clamp]);
-
-  // ── conversión pantalla → píxeles de la imagen ──
-  // Inversa exacta del transform CSS: translate(offset) rotate(θ) scale(k)
-  // aplicado a un elemento centrado en el visor.
-  const viewToImage = useCallback(
-    (vx: number, vy: number): Point => {
-      if (!natural) return { x: 0, y: 0 };
-      const dx = (vx - (viewSize / 2 + offset.x)) / totalScale;
-      const dy = (vy - (viewSize / 2 + offset.y)) / totalScale;
-      const rad = (-rotation * Math.PI) / 180;
-      const c = Math.cos(rad);
-      const s = Math.sin(rad);
-      return {
-        x: dx * c - dy * s + natural.w / 2,
-        y: dx * s + dy * c + natural.h / 2,
+  const startDrag = useCallback(
+    (kind: DragKind) => (e: React.PointerEvent) => {
+      if (!box || busy) return;
+      e.preventDefault();
+      e.stopPropagation();
+      try {
+        (e.currentTarget as Element).setPointerCapture(e.pointerId);
+      } catch {
+        /* el puntero puede haberse soltado ya; capturarlo es una mejora, no un requisito */
+      }
+      dragRef.current = {
+        kind,
+        startX: e.clientX,
+        startY: e.clientY,
+        start: crop,
+        boxW: box.w,
+        boxH: box.h,
       };
     },
-    [natural, viewSize, offset.x, offset.y, totalScale, rotation]
+    [box, busy, crop]
   );
 
-  // ── pila de capas ──
+  const onDragMove = useCallback((e: React.PointerEvent) => {
+    const drag = dragRef.current;
+    if (!drag) return;
+    const { kind, start, boxW, boxH } = drag;
+    const dx = (e.clientX - drag.startX) / boxW;
+    const dy = (e.clientY - drag.startY) / boxH;
+    // El mínimo se fija en px de pantalla y se pasa a proporción; el tope de
+    // 0.5 evita que en una caja diminuta el mínimo sea mayor que la foto.
+    const minW = Math.min(0.5, MIN_CROP_PX / boxW);
+    const minH = Math.min(0.5, MIN_CROP_PX / boxH);
 
-  function resetTransform(fit: boolean) {
-    setRotation(0);
-    setOffset({ x: 0, y: 0 });
-    setZoom(fit ? 0 : 1); // 0 = «ajústalo al cargar» (se corrige en onLoad)
-    setLasso([]);
-  }
-
-  const pushCanvas = useCallback(async (canvas: HTMLCanvasElement) => {
-    const blob = await canvasToBlob(canvas);
-    const url = URL.createObjectURL(blob);
-    createdUrls.current.push(url);
-    setLayers((prev) => [...prev, url]);
-  }, []);
-
-  function handleUndo() {
-    if (layers.length <= 1) return;
-    // No se revoca la URL descartada: React aún puede tener el <img> viejo en
-    // el árbol durante el commit y quedaría una imagen rota. Se revocan todas
-    // juntas al desmontar.
-    setLayers((prev) => prev.slice(0, -1));
-    setNatural(null);
-    resetTransform(false);
-    setStatus(null);
-  }
-
-  // ── herramientas ──
-
-  /**
-   * Cede el hilo un momento para que se pinte el estado "ocupado" antes de
-   * bloquearlo con el análisis.
-   *
-   * A propósito con setTimeout y NO con requestAnimationFrame: si la usuaria
-   * se cambia de pestaña justo al pulsar, rAF deja de dispararse y el editor
-   * se queda en «Detectando…» para siempre, con el botón de aceptar
-   * deshabilitado y sin forma de salir salvo cerrar.
-   */
-  function yieldToPaint(): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, 32));
-  }
-
-  async function handleAuto() {
-    const img = imgElRef.current;
-    if (!img || !ready) return;
-    setBusy(true);
-    setStatus(t("crop.detecting"));
-    try {
-      await yieldToPaint();
-      const detection = detectSubject(img, natural.w, natural.h);
-      if (!detection) {
-        setStatus(t("crop.autoNotFound"));
-        return;
-      }
-      const warped = warpQuad(img, natural.w, natural.h, detection.quad);
-      if (!warped) {
-        setStatus(t("crop.autoNotFound"));
-        return;
-      }
-      await pushCanvas(warped);
-      resetTransform(true);
-      setStatus(
-        detection.kind === "document" ? t("crop.autoDoneDocument") : t("crop.autoDoneObject")
-      );
-    } catch {
-      setStatus(t("crop.failed"));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleRemoveBackground() {
-    const img = imgElRef.current;
-    if (!img || !ready) return;
-    setBusy(true);
-    setStatus(t("crop.detecting"));
-    try {
-      await yieldToPaint();
-      const detection = detectSubject(img, natural.w, natural.h);
-      if (!detection) {
-        setStatus(t("crop.autoNotFound"));
-        return;
-      }
-      await pushCanvas(whitenBackground(img, natural.w, natural.h, detection));
-      resetTransform(false);
-      setStatus(t("crop.bgRemoved"));
-    } catch {
-      setStatus(t("crop.failed"));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function handleApplyLasso() {
-    const img = imgElRef.current;
-    if (!img || !ready || lasso.length < 3) return;
-    setBusy(true);
-    setStatus(null);
-    try {
-      await yieldToPaint();
-      const points = lasso.map((p) => viewToImage(p.x, p.y));
-      const cut = cutOutPolygon(img, natural.w, natural.h, points);
-      if (!cut) {
-        setStatus(t("crop.lassoTooSmall"));
-        return;
-      }
-      await pushCanvas(cut);
-      resetTransform(true);
-      setMode("frame");
-      setStatus(t("crop.lassoDone"));
-    } catch {
-      setStatus(t("crop.failed"));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  // ── puntero: arrastrar (encuadre) o dibujar (libre) ──
-
-  function handlePointerDown(e: React.PointerEvent) {
-    if (!ready || busy) return;
-    try {
-      (e.currentTarget as Element).setPointerCapture(e.pointerId);
-    } catch {
-      /* el puntero puede haberse soltado ya; capturarlo es una mejora, no un requisito */
-    }
-    if (mode === "lasso") {
-      drawingRef.current = true;
-      const rect = e.currentTarget.getBoundingClientRect();
-      setLasso([{ x: e.clientX - rect.left, y: e.clientY - rect.top }]);
-      return;
-    }
-    dragRef.current = {
-      startX: e.clientX,
-      startY: e.clientY,
-      startOffX: offset.x,
-      startOffY: offset.y,
-    };
-  }
-
-  function handlePointerMove(e: React.PointerEvent) {
-    if (mode === "lasso") {
-      if (!drawingRef.current) return;
-      const rect = e.currentTarget.getBoundingClientRect();
-      const p = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-      setLasso((prev) => {
-        const last = prev[prev.length - 1];
-        if (last && Math.hypot(p.x - last.x, p.y - last.y) < LASSO_MIN_STEP) return prev;
-        return [...prev, p];
+    if (kind === "move") {
+      setCrop({
+        ...start,
+        x: clamp(start.x + dx, 0, 1 - start.w),
+        y: clamp(start.y + dy, 0, 1 - start.h),
       });
       return;
     }
-    const drag = dragRef.current;
-    if (!drag) return;
-    setOffset(
-      clamp(
-        {
-          x: drag.startOffX + (e.clientX - drag.startX),
-          y: drag.startOffY + (e.clientY - drag.startY),
-        },
-        maxOffset
-      )
-    );
-  }
 
-  function handlePointerUp(e: React.PointerEvent) {
+    let { x, y, w, h } = start;
+    if (kind.includes("w")) {
+      const nx = clamp(start.x + dx, 0, start.x + start.w - minW);
+      w = start.x + start.w - nx;
+      x = nx;
+    }
+    if (kind.includes("e")) {
+      w = clamp(start.w + dx, minW, 1 - start.x);
+    }
+    if (kind.includes("n")) {
+      const ny = clamp(start.y + dy, 0, start.y + start.h - minH);
+      h = start.y + start.h - ny;
+      y = ny;
+    }
+    if (kind.includes("s")) {
+      h = clamp(start.h + dy, minH, 1 - start.y);
+    }
+    setCrop({ x, y, w, h });
+  }, []);
+
+  const endDrag = useCallback((e: React.PointerEvent) => {
     dragRef.current = null;
-    drawingRef.current = false;
     try {
       (e.currentTarget as Element).releasePointerCapture(e.pointerId);
     } catch {
       /* el puntero ya se había liberado */
     }
-  }
+  }, []);
+
+  const dragHandlers = (kind: DragKind) => ({
+    onPointerDown: startDrag(kind),
+    onPointerMove: onDragMove,
+    onPointerUp: endDrag,
+    onPointerCancel: endDrag,
+  });
 
   function handleRotate() {
+    // Se gira también el recorte para no perder lo que ya haya elegido:
+    // al girar 90° en sentido horario, (x,y) pasa a (1−y, x).
+    setCrop((c) => ({ x: 1 - (c.y + c.h), y: c.x, w: c.h, h: c.w }));
     setRotation((r) => (r + 90) % 360);
-    setZoom(1);
-    setOffset({ x: 0, y: 0 });
-    setLasso([]);
   }
 
   // ── exportar ──
 
   async function handleConfirm() {
     const img = imgElRef.current;
-    if (!img || !ready || !effSize) return;
-    // El preview se dibuja con `viewSize`; exportar con ese mismo número es lo
-    // que garantiza que lo que se ve es lo que sale.
-    const basis = viewSize > 0 ? viewSize : viewportRef.current?.clientWidth ?? 0;
-    const k = OUTPUT_SIZE / basis;
-    const scale = totalScale * k;
-    // Cualquier 0 / NaN / Infinity aquí hace que el canvas no pinte nada y se
-    // exporte una imagen en negro sin dar error. Mejor abortar.
-    if (!Number.isFinite(k) || !Number.isFinite(scale) || scale <= 0) return;
-
+    if (!img || !natural || !eff || busy) return;
     setBusy(true);
+    setError(null);
     try {
-      const canvas = document.createElement("canvas");
-      canvas.width = OUTPUT_SIZE;
-      canvas.height = OUTPUT_SIZE;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error(t("common.canvasUnavailable"));
+      // 1. la foto, girada y con el lado máximo acotado
+      const scale = Math.min(1, WORK_MAX / Math.max(natural.w, natural.h));
+      const w = Math.max(1, Math.round(natural.w * scale));
+      const h = Math.max(1, Math.round(natural.h * scale));
+      const swapped = rotation % 180 !== 0;
+      const rotW = swapped ? h : w;
+      const rotH = swapped ? w : h;
 
-      // Fondo blanco primero: si la imagen no llena el cuadrado (zoom alejado,
-      // o recorte libre), el hueco queda blanco en vez de negro.
+      const rotated = document.createElement("canvas");
+      rotated.width = rotW;
+      rotated.height = rotH;
+      const rctx = rotated.getContext("2d");
+      if (!rctx) throw new Error(t("common.canvasUnavailable"));
+      rctx.imageSmoothingQuality = "high";
+      rctx.translate(rotW / 2, rotH / 2);
+      rctx.rotate((rotation * Math.PI) / 180);
+      rctx.drawImage(img, -w / 2, -h / 2, w, h);
+
+      // 2. el trozo elegido, en píxeles de esa foto girada
+      const sx = clamp(Math.round(crop.x * rotW), 0, rotW - 1);
+      const sy = clamp(Math.round(crop.y * rotH), 0, rotH - 1);
+      const sw = clamp(Math.round(crop.w * rotW), 1, rotW - sx);
+      const sh = clamp(Math.round(crop.h * rotH), 1, rotH - sy);
+
+      // 3. centrado dentro del cuadrado, sin deformarlo y sin recortar más:
+      //    el hueco que sobra a los lados (o arriba y abajo) queda blanco.
+      const k = Math.min(OUTPUT_SIZE / sw, OUTPUT_SIZE / sh);
+      if (!Number.isFinite(k) || k <= 0) throw new Error(t("crop.failed"));
+      const dw = sw * k;
+      const dh = sh * k;
+
+      const out = document.createElement("canvas");
+      out.width = OUTPUT_SIZE;
+      out.height = OUTPUT_SIZE;
+      const ctx = out.getContext("2d");
+      if (!ctx) throw new Error(t("common.canvasUnavailable"));
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, OUTPUT_SIZE, OUTPUT_SIZE);
-
-      ctx.translate(OUTPUT_SIZE / 2 + offset.x * k, OUTPUT_SIZE / 2 + offset.y * k);
-      ctx.rotate((rotation * Math.PI) / 180);
-      ctx.scale(scale, scale);
-      ctx.drawImage(img, -natural.w / 2, -natural.h / 2, natural.w, natural.h);
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(rotated, sx, sy, sw, sh, (OUTPUT_SIZE - dw) / 2, (OUTPUT_SIZE - dh) / 2, dw, dh);
 
       const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(resolve, "image/jpeg", 0.9)
+        out.toBlob(resolve, "image/jpeg", 0.92)
       );
       if (!blob) throw new Error(t("crop.failed"));
       onConfirm(blob);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("crop.failed"));
     } finally {
       setBusy(false);
     }
   }
 
-  const lassoPath =
-    lasso.length > 1 ? lasso.map((p) => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ") : "";
+  // ── pintado ──
+
+  // Rectángulo de recorte en px del escenario.
+  const rect = box
+    ? {
+        left: box.left + crop.x * box.w,
+        top: box.top + crop.y * box.h,
+        width: crop.w * box.w,
+        height: crop.h * box.h,
+      }
+    : null;
+
+  const handleStyle: Record<Handle, string> = {
+    nw: "left-0 top-0 -translate-x-1/2 -translate-y-1/2 cursor-nwse-resize",
+    n: "left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 cursor-ns-resize",
+    ne: "left-full top-0 -translate-x-1/2 -translate-y-1/2 cursor-nesw-resize",
+    e: "left-full top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-ew-resize",
+    se: "left-full top-full -translate-x-1/2 -translate-y-1/2 cursor-nwse-resize",
+    s: "left-1/2 top-full -translate-x-1/2 -translate-y-1/2 cursor-ns-resize",
+    sw: "left-0 top-full -translate-x-1/2 -translate-y-1/2 cursor-nesw-resize",
+    w: "left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-ew-resize",
+  };
+  /** Los tiradores de esquina se ven como una escuadra; los de lado, como una barra. */
+  const handleInner: Record<Handle, string> = {
+    nw: "h-5 w-5 border-l-[3px] border-t-[3px] rounded-tl-sm",
+    ne: "h-5 w-5 border-r-[3px] border-t-[3px] rounded-tr-sm",
+    se: "h-5 w-5 border-r-[3px] border-b-[3px] rounded-br-sm",
+    sw: "h-5 w-5 border-l-[3px] border-b-[3px] rounded-bl-sm",
+    n: "h-[3px] w-7 rounded-full bg-white border-0",
+    s: "h-[3px] w-7 rounded-full bg-white border-0",
+    e: "h-7 w-[3px] rounded-full bg-white border-0",
+    w: "h-7 w-[3px] rounded-full bg-white border-0",
+  };
 
   return (
     <div className="fixed inset-0 z-[70] flex flex-col bg-black/90">
       <div className="flex shrink-0 items-center justify-between px-4 py-3">
         <span className="text-sm font-medium text-white/90">{t("crop.title")}</span>
-        <div className="flex items-center gap-2">
-          {layers.length > 1 && (
-            <button
-              type="button"
-              onClick={handleUndo}
-              disabled={busy}
-              className="rounded-full bg-white/15 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/25 disabled:opacity-40"
-            >
-              {t("crop.undo")}
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
-            aria-label={t("common.cancel")}
-          >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      {/* Selector de herramienta */}
-      <div className="flex shrink-0 justify-center px-4 pb-3">
-        <div className="flex gap-1 rounded-xl bg-white/10 p-1">
-          {(["frame", "lasso"] as Mode[]).map((m) => (
-            <button
-              key={m}
-              type="button"
-              onClick={() => {
-                setMode(m);
-                setLasso([]);
-                setStatus(m === "lasso" ? t("crop.lassoHint") : null);
-              }}
-              className={`rounded-lg px-3.5 py-1.5 text-xs font-medium transition-colors ${
-                mode === m ? "bg-white text-paper-900" : "text-white/80 hover:text-white"
-              }`}
-            >
-              {m === "frame" ? t("crop.modeFrame") : t("crop.modeLasso")}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6">
-        <div
-          ref={viewportRef}
-          className={`relative mx-auto w-full max-w-[420px] touch-none overflow-hidden rounded-2xl bg-white select-none ${
-            mode === "lasso" ? "cursor-crosshair" : "cursor-move"
-          }`}
-          style={{ aspectRatio: "1 / 1" }}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-          onPointerCancel={handlePointerUp}
+        <button
+          type="button"
+          onClick={onCancel}
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
+          aria-label={t("common.cancel")}
         >
-          {currentUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              key={currentUrl}
-              ref={imgElRef}
-              src={currentUrl}
-              alt={t("crop.imageAlt")}
-              draggable={false}
-              onLoad={(e) => {
-                const el = e.currentTarget;
-                setNatural({ url: currentUrl, w: el.naturalWidth, h: el.naturalHeight });
-                // zoom 0 es la señal de «encájalo entero» que deja resetTransform(true)
-                setZoom((z) =>
-                  z === 0
-                    ? Math.min(el.naturalWidth, el.naturalHeight) /
-                      Math.max(el.naturalWidth, el.naturalHeight)
-                    : z
-                );
-              }}
-              style={
-                ready
-                  ? {
-                      position: "absolute",
-                      left: viewSize / 2,
-                      top: viewSize / 2,
-                      width: natural.w,
-                      height: natural.h,
-                      marginLeft: -natural.w / 2,
-                      marginTop: -natural.h / 2,
-                      maxWidth: "none",
-                      transformOrigin: "center center",
-                      transform: `translate(${offset.x}px, ${offset.y}px) rotate(${rotation}deg) scale(${totalScale})`,
-                    }
-                  : { display: "none" }
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Escenario: la foto entera + el rectángulo de recorte encima */}
+      <div ref={stageRef} className="relative min-h-0 flex-1 touch-none overflow-hidden select-none">
+        {url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={url}
+            ref={imgElRef}
+            src={url}
+            alt={t("crop.imageAlt")}
+            draggable={false}
+            onLoad={(e) => {
+              const el = e.currentTarget;
+              if (el.naturalWidth > 0 && el.naturalHeight > 0) {
+                setNatural({ w: el.naturalWidth, h: el.naturalHeight });
+              } else {
+                setError(t("crop.loadFailed"));
               }
-            />
-          )}
-
-          {/* Trazo del recorte libre */}
-          {mode === "lasso" && lassoPath && (
-            <svg
-              className="pointer-events-none absolute inset-0 h-full w-full"
-              viewBox={`0 0 ${viewSize} ${viewSize}`}
-            >
-              <polygon
-                points={lassoPath}
-                fill="rgba(59,130,246,0.18)"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                strokeLinejoin="round"
-              />
-            </svg>
-          )}
-
-          {/* Guías (solo estorban mientras se dibuja a mano) */}
-          {mode === "frame" && (
-            <div className="pointer-events-none absolute inset-0">
-              <div className="absolute left-1/3 top-0 h-full w-px bg-black/10" />
-              <div className="absolute left-2/3 top-0 h-full w-px bg-black/10" />
-              <div className="absolute top-1/3 left-0 w-full h-px bg-black/10" />
-              <div className="absolute top-2/3 left-0 w-full h-px bg-black/10" />
-            </div>
-          )}
-          <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/40" />
-        </div>
-
-        {status && (
-          <p className="min-h-[1rem] text-center text-xs text-white/70">{status}</p>
+            }}
+            onError={() => setError(t("crop.loadFailed"))}
+            style={
+              box && eff
+                ? {
+                    position: "absolute",
+                    left: box.left + box.w / 2,
+                    top: box.top + box.h / 2,
+                    // El <img> conserva su orientación original; al girarlo 90°
+                    // ocupa la caja con el ancho y el alto intercambiados.
+                    width: rotation % 180 === 0 ? box.w : box.h,
+                    height: rotation % 180 === 0 ? box.h : box.w,
+                    maxWidth: "none",
+                    transformOrigin: "center center",
+                    transform: `translate(-50%, -50%) rotate(${rotation}deg)`,
+                  }
+                : { visibility: "hidden", position: "absolute" }
+            }
+          />
         )}
 
-        {/* Acciones automáticas */}
-        <div className="flex w-full max-w-[420px] flex-wrap justify-center gap-2">
-          <button
-            type="button"
-            onClick={handleAuto}
-            disabled={busy || !ready}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3.5 py-2 text-xs font-medium text-white hover:bg-white/25 disabled:opacity-40"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M4 8V6a2 2 0 012-2h2M4 16v2a2 2 0 002 2h2m8-16h2a2 2 0 012 2v2m-4 12h2a2 2 0 002-2v-2" />
-            </svg>
-            {t("crop.auto")}
-          </button>
-          <button
-            type="button"
-            onClick={handleRemoveBackground}
-            disabled={busy || !ready}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3.5 py-2 text-xs font-medium text-white hover:bg-white/25 disabled:opacity-40"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M4 4h16v16H4z M9 9h6v6H9z" />
-            </svg>
-            {t("crop.removeBg")}
-          </button>
-          {mode === "lasso" && (
-            <>
-              <button
-                type="button"
-                onClick={handleApplyLasso}
-                disabled={busy || lasso.length < 3}
-                className="rounded-lg bg-blue-500 px-3.5 py-2 text-xs font-medium text-white hover:bg-blue-600 disabled:opacity-40"
-              >
-                {t("crop.applyLasso")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setLasso([])}
-                disabled={busy || lasso.length === 0}
-                className="rounded-lg bg-white/15 px-3.5 py-2 text-xs font-medium text-white hover:bg-white/25 disabled:opacity-40"
-              >
-                {t("crop.clearLasso")}
-              </button>
-            </>
-          )}
-        </div>
-
-        {/* Zoom + giro (solo tienen sentido encuadrando) */}
-        {mode === "frame" && (
-          <div className="flex w-full max-w-[420px] items-center gap-3">
-            <svg className="h-4 w-4 shrink-0 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
-            </svg>
-            <input
-              type="range"
-              min={containZoom}
-              max={MAX_ZOOM}
-              step={0.01}
-              value={Math.max(containZoom, Math.min(MAX_ZOOM, zoom))}
-              onChange={(e) => setZoom(parseFloat(e.target.value))}
-              className="flex-1 accent-white"
-              aria-label={t("crop.zoom")}
+        {ready && rect && (
+          <>
+            {/* Oscurecido de todo lo que queda fuera del recorte */}
+            <div
+              className="pointer-events-none absolute"
+              style={{
+                left: rect.left,
+                top: rect.top,
+                width: rect.width,
+                height: rect.height,
+                boxShadow: "0 0 0 9999px rgba(0,0,0,0.55)",
+              }}
             />
-            <button
-              type="button"
-              onClick={() => setZoom(containZoom)}
-              className="shrink-0 rounded-lg bg-white/15 px-2.5 py-1.5 text-[11px] font-medium text-white hover:bg-white/25"
+            {/* Marco arrastrable + tiradores */}
+            <div
+              className="absolute cursor-move touch-none"
+              style={{ left: rect.left, top: rect.top, width: rect.width, height: rect.height }}
+              {...dragHandlers("move")}
             >
-              {t("crop.fit")}
-            </button>
-            <button
-              type="button"
-              onClick={handleRotate}
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
-              aria-label={t("crop.rotate90")}
-              title={t("crop.rotate")}
-            >
-              <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-            </button>
+              <div className="pointer-events-none absolute inset-0 border border-white/90" />
+              {/* Guías de tercios */}
+              <div className="pointer-events-none absolute inset-0">
+                <div className="absolute left-1/3 top-0 h-full w-px bg-white/25" />
+                <div className="absolute left-2/3 top-0 h-full w-px bg-white/25" />
+                <div className="absolute top-1/3 left-0 h-px w-full bg-white/25" />
+                <div className="absolute top-2/3 left-0 h-px w-full bg-white/25" />
+              </div>
+              {HANDLES.map((hd) => (
+                <div
+                  key={hd}
+                  // La zona sensible (44 px) es bastante mayor que el dibujo:
+                  // con el dedo hay que poder agarrar la esquina sin puntería.
+                  className={`absolute flex h-11 w-11 items-center justify-center touch-none ${handleStyle[hd]}`}
+                  {...dragHandlers(hd)}
+                >
+                  <span className={`block border-white ${handleInner[hd]}`} />
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {!ready && (
+          <div className="absolute inset-0 flex items-center justify-center px-8 text-center text-sm text-white/70">
+            {error ?? t("common.processing")}
           </div>
         )}
+      </div>
+
+      <p className="shrink-0 px-6 pt-3 text-center text-xs text-white/60">{t("crop.hint")}</p>
+
+      <div className="flex shrink-0 items-center justify-center gap-2 px-6 pt-3">
+        <button
+          type="button"
+          onClick={handleRotate}
+          disabled={!ready || busy}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3.5 py-2 text-xs font-medium text-white hover:bg-white/25 disabled:opacity-40"
+          title={t("crop.rotate90")}
+        >
+          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
+          </svg>
+          {t("crop.rotate")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setCrop(FULL_CROP)}
+          disabled={!ready || busy}
+          className="rounded-lg bg-white/15 px-3.5 py-2 text-xs font-medium text-white hover:bg-white/25 disabled:opacity-40"
+        >
+          {t("crop.selectAll")}
+        </button>
       </div>
 
       <div className="flex shrink-0 items-center justify-center gap-3 px-6 py-5">

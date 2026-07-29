@@ -259,29 +259,15 @@ const es = {
   "camera.startFailed": "No se pudo iniciar la cámara.",
 
   // ── recorte de imagen ──
-  "crop.title": "Ajustar la imagen",
+  "crop.title": "Recortar la imagen",
   "crop.imageAlt": "Imagen por recortar",
-  "crop.zoom": "Zoom",
   "crop.rotate": "Girar",
   "crop.rotate90": "Girar 90 grados",
+  "crop.selectAll": "Toda la foto",
+  "crop.hint":
+    "Arrastra las esquinas o los lados para elegir el recorte, con la forma que quieras. Lo que falte se rellena de blanco.",
   "crop.failed": "No se pudo recortar la imagen",
-  "crop.modeFrame": "Encuadrar",
-  "crop.modeLasso": "Recorte libre",
-  "crop.auto": "Recorte automático",
-  "crop.removeBg": "Quitar fondo",
-  "crop.undo": "Deshacer",
-  "crop.fit": "Ajustar",
-  "crop.detecting": "Detectando el producto…",
-  "crop.autoNotFound":
-    "No se distingue el producto del fondo. Prueba con más contraste (fondo liso) o recorta a mano.",
-  "crop.autoDoneDocument": "Detectado y enderezado. ¿No te convence? Deshacer.",
-  "crop.autoDoneObject": "Recortado al producto. ¿No te convence? Deshacer.",
-  "crop.bgRemoved": "Fondo puesto en blanco. ¿No te convence? Deshacer.",
-  "crop.lassoHint": "Dibuja con el dedo (o el ratón) alrededor de lo que quieres conservar.",
-  "crop.applyLasso": "Aplicar recorte",
-  "crop.clearLasso": "Borrar trazo",
-  "crop.lassoDone": "Recortado. El resto ha quedado en blanco.",
-  "crop.lassoTooSmall": "El trazo es demasiado pequeño.",
+  "crop.loadFailed": "No se pudo abrir la imagen. Prueba con otra foto.",
 
   // ── reconocimiento con IA ──
   "ai.title": "Reconocimiento con IA (opcional)",
