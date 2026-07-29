@@ -167,7 +167,13 @@ export default function CategoriesClient({
   }
 
   function handleDelete(id: string, name: string) {
-    if (!window.confirm(t("categories.confirmDelete", { name }))) return;
+    // Borrar la categoría desasigna sus productos (no los borra). Avisar de cuántos
+    // son antes de confirmar, que desde el árbol no siempre se ve.
+    const affected = products.filter((p) => p.category_id === id).length;
+    const message = affected
+      ? t("categories.confirmDeleteWithProducts", { name, n: affected })
+      : t("categories.confirmDelete", { name });
+    if (!window.confirm(message)) return;
     setDeletingId(id);
     startTransition(async () => {
       const result = await deleteCategory(id);

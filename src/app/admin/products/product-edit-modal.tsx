@@ -157,10 +157,13 @@ export default function ProductEditModal({
   }
 
   async function handleDeleteImage() {
-    const urlToDelete = typeof newImageUrl === "string" ? newImageUrl : product.image_url;
-    if (urlToDelete) {
+    // 只删「这次刚传上来、还没保存」的那张：它没有别的引用，删掉即回收。
+    // 商品原有的图片在这里【不能】真删——用户点完 ✕ 再点「取消」，商品行里的
+    // image_url 还指着这个文件，结果就是一张永久裂图，且无法恢复。
+    // 保存时把 image_url 置空即可，存储里留个孤儿文件远比丢图划算。
+    if (typeof newImageUrl === "string") {
       try {
-        const fileName = urlToDelete.split("/product-images/").pop();
+        const fileName = newImageUrl.split("/product-images/").pop();
         if (fileName) {
           await createClient().storage.from("product-images").remove([decodeURIComponent(fileName)]);
         }
@@ -202,12 +205,16 @@ export default function ProductEditModal({
         barcode: editBarcode,
       });
       if ("error" in result) { setSaveResult(result); setIsSaving(false); return; }
+      // Si el producto deja de tener variantes, sus filas de color ya no pintan nada:
+      // se borran en el mismo guardado. Antes se quedaban huérfanas en la base de datos
+      // (invisibles, pero acumulándose y listas para resucitar con datos viejos si se
+      // volvía a activar el interruptor).
       const variantInputs = editVariants.map((v, i) => ({
         id: v.id,
         color: v.color,
         stock: parseInt(v.stock, 10) || 0,
         sort_order: i,
-        _delete: v._delete,
+        _delete: editHasVariants ? v._delete : true,
       }));
       if (variantInputs.length > 0) {
         const varResult = await upsertVariants(product.id, variantInputs);

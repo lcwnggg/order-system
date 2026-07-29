@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { cancelOrder } from "../actions";
 import { useI18n } from "@/lib/i18n/client";
+import { formatDateTime } from "@/lib/i18n/datetime";
 import type { TranslationKey } from "@/lib/i18n/dictionaries";
 
 type StoreOrderItem = {
@@ -40,14 +41,8 @@ const STATUS_COLOR: Record<StoreOrder["status"], string> = {
   cancelled: "bg-paper-100 text-paper-500",
 };
 
-function formatDateTime(iso: string): string {
-  const d = new Date(iso);
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
-}
-
 export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -127,7 +122,7 @@ export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }
           >
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-paper-100 bg-paper-50 px-5 py-3">
               <div className="flex items-center gap-3">
-                <span className="text-xs text-paper-500">{formatDateTime(order.created_at)}</span>
+                <span className="text-xs text-paper-500">{formatDateTime(order.created_at, locale)}</span>
                 <span
                   className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[order.status]}`}
                 >

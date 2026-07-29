@@ -83,10 +83,24 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
     return { error: t("err.deleteChildrenFirst", { n: count }) };
   }
 
+  // Antes de borrar la categoría hay que soltar los productos que cuelgan de ella.
+  // Si no, el resultado depende de cómo esté declarada la FK products.category_id
+  // en Supabase, y ninguna de las tres opciones es aceptable a ciegas:
+  //   ON DELETE CASCADE  → borraría los productos junto con la categoría (pérdida de datos)
+  //   ON DELETE RESTRICT → error de Postgres en crudo delante del usuario
+  //   ON DELETE SET NULL → correcto, pero solo por suerte
+  // Desasignarlos explícitamente da el mismo resultado en los tres casos.
+  const { error: unassignErr } = await supabase
+    .from("products")
+    .update({ category_id: null })
+    .eq("category_id", id);
+  if (unassignErr) return { error: unassignErr.message };
+
   const { error } = await supabase.from("categories").delete().eq("id", id);
   if (error) return { error: error.message };
 
   revalidateAll();
+  revalidatePath("/shop");
   return { success: true };
 }
 

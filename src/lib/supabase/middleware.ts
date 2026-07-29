@@ -31,7 +31,15 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  if (!user && (pathname === "/" || pathname.startsWith("/admin") || pathname.startsWith("/shop"))) {
+  // /transfers 也要挡：页面里虽然自己 redirect 了，但少一条就等于少一层防线，
+  // 而且未登录的人会先看到一次服务端渲染再被弹走
+  if (
+    !user &&
+    (pathname === "/" ||
+      pathname.startsWith("/admin") ||
+      pathname.startsWith("/shop") ||
+      pathname.startsWith("/transfers"))
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);

@@ -14,7 +14,10 @@ import type { Translate } from "@/lib/i18n/translate";
 function compressToJpeg(file: File, t: Translate, maxWidth = 1200, quality = 0.8): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image();
+    // 用完要 revoke，否则每选一张图都会在页面存活期间漏一个 blob（项目里其他两处压缩都已这样做）
+    const objectUrl = URL.createObjectURL(file);
     img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
       const scale = Math.min(1, maxWidth / img.width);
       const canvas = document.createElement("canvas");
       canvas.width = Math.round(img.width * scale);
@@ -28,8 +31,11 @@ function compressToJpeg(file: File, t: Translate, maxWidth = 1200, quality = 0.8
         quality
       );
     };
-    img.onerror = () => reject(new Error(t("transfers.imgReadFail")));
-    img.src = URL.createObjectURL(file);
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error(t("transfers.imgReadFail")));
+    };
+    img.src = objectUrl;
   });
 }
 

@@ -113,10 +113,14 @@ export default async function AdminOrdersPage() {
 
   return (
     <AppShell email={user.email}>
-        <div className="mb-6 flex items-center justify-between">
-          <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.22em] text-paper-500">{t("adminOrders.eyebrow")}</p>
-          <h1 className="animate-fade-up mt-2 text-3xl font-normal tracking-tight text-paper-900">{t("adminOrders.title")}</h1>
-          <span className="text-sm text-paper-500">{t("adminOrders.countTotal", { n: orders.length })}</span>
+        {/* eyebrow + 标题要竖着叠在一起：三个都直接放进 flex 行里，
+            标题会被挤到中间，mt-2 也失效（其他页面都是包一层 div 的写法） */}
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div>
+            <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.22em] text-paper-500">{t("adminOrders.eyebrow")}</p>
+            <h1 className="animate-fade-up mt-2 text-3xl font-normal tracking-tight text-paper-900">{t("adminOrders.title")}</h1>
+          </div>
+          <span className="shrink-0 text-sm text-paper-500">{t("adminOrders.countTotal", { n: orders.length })}</span>
         </div>
         <WarehouseTransferPanel requests={transferRequests} currentUserId={user.id} />
         <OrdersClient orders={orders} categories={categories} />

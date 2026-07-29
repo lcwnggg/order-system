@@ -29,6 +29,7 @@ export default async function Home() {
   let pendingCount = 0;
   let productCount = 0;
   let lowStockCount = 0;
+  let outOfStockCount = 0;
   let storeCount = 0;
   let categoryCount = 0;
   let lowStockItems: { id: string; name: string; category: string | null; stock: number }[] = [];
@@ -64,19 +65,20 @@ export default async function Home() {
       isLowStock(p, variantsByProduct.get(p.id) ?? [])
     );
     lowStockCount = lowStock.length;
-    lowStockItems = lowStock
-      .map((p) => {
-        const vs = variantsByProduct.get(p.id) ?? [];
-        const eff = p.has_variants ? vs.reduce((s, v) => s + v.stock, 0) : p.stock;
-        return {
-          id: p.id,
-          name: p.name as string,
-          category: p.category_id ? catNameById.get(p.category_id) ?? null : null,
-          stock: eff,
-        };
-      })
-      .sort((a, b) => a.stock - b.stock)
-      .slice(0, 6);
+    const lowStockAll = lowStock.map((p) => {
+      const vs = variantsByProduct.get(p.id) ?? [];
+      const eff = p.has_variants ? vs.reduce((s, v) => s + v.stock, 0) : p.stock;
+      return {
+        id: p.id,
+        name: p.name as string,
+        category: p.category_id ? catNameById.get(p.category_id) ?? null : null,
+        stock: eff,
+      };
+    });
+    // 「缺货」要数全部告急商品，不能数下面那张只取前 6 条的表——
+    // 超过 6 个零库存时，概览上的数字会被截断成 6，比真实情况好看
+    outOfStockCount = lowStockAll.filter((i) => i.stock === 0).length;
+    lowStockItems = lowStockAll.sort((a, b) => a.stock - b.stock).slice(0, 6);
 
     [transferRequests, groupStores] = await Promise.all([
       getTransferBoard(supabase),
@@ -176,7 +178,7 @@ export default async function Home() {
                   <p className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-paper-400"><span className="h-1.5 w-1.5 rounded-full bg-mint-500" />{t("dashboard.stockHealth")}</p>
                 </div>
                 <div>
-                  <p className="text-lg font-semibold text-ember-600">{lowStockItems.filter((i) => i.stock === 0).length}</p>
+                  <p className="text-lg font-semibold text-ember-600">{outOfStockCount}</p>
                   <p className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-paper-400"><span className="h-1.5 w-1.5 rounded-full bg-ember-500" />{t("dashboard.outOfStock")}</p>
                 </div>
               </div>

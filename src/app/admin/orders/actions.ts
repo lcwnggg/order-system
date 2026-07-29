@@ -25,16 +25,21 @@ async function requireWarehouse() {
 export async function updateOrderStatus(
   orderId: string,
   newStatus: "preparing" | "done"
-): Promise<void> {
+): Promise<{ error?: string }> {
+  const t = await getT();
   const supabase = await requireWarehouse();
-  if (!supabase) return;
+  if (!supabase) return { error: t("common.noPermission") };
 
-  await supabase
+  // 失败必须回传：以前这里吞掉错误直接 return，界面上按钮转一圈就恢复原样，
+  // 看起来像成功了，实际订单状态没变（RLS 拦截、约束冲突等都会这样）。
+  const { error } = await supabase
     .from("orders")
     .update({ status: newStatus })
     .eq("id", orderId);
+  if (error) return { error: translateDbError(error.message, t) };
 
   revalidatePath("/admin/orders");
+  return {};
 }
 
 export async function deleteOrder(orderId: string): Promise<{ error?: string }> {

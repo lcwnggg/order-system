@@ -135,7 +135,10 @@ function PanelCard({ req, currentUserId }: { req: TransferRequest; currentUserId
               </>
             )}
             {" · "}
-            {timeAgo(req.createdAt)}
+            {/* 「5 分钟前」按当前时刻算：这个面板默认展开，会先在服务端渲染一遍，
+                请求正好跨过分钟边界时服务端和浏览器算出的文案不一样。这里明确
+                告诉 React 这处文本以客户端为准，不要当成水合错误 */}
+            <span suppressHydrationWarning>{timeAgo(req.createdAt)}</span>
           </p>
         </div>
         <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_PILL[req.status]}`}>

@@ -388,6 +388,8 @@ const zh: Dictionary = {
   "categories.productCountDot": "· {n} 件商品",
   "categories.childProductCount": "{n} 件商品",
   "categories.confirmDelete": "确定删除分类「{name}」吗？",
+  "categories.confirmDeleteWithProducts":
+    "确定删除分类「{name}」吗？\n\n该分类下还有 {n} 个商品。商品不会被删除，只是变成「未分类」。",
   "categories.confirmRemoveProduct": "将「{name}」移出分类？",
   "categories.noDirectProducts": "暂无直接归属商品",
   "categories.noProducts": "暂无商品",

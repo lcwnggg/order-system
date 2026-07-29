@@ -401,6 +401,8 @@ const es = {
   "categories.productCountDot": "· {n} productos",
   "categories.childProductCount": "{n} productos",
   "categories.confirmDelete": "¿Eliminar la categoría «{name}»?",
+  "categories.confirmDeleteWithProducts":
+    "¿Eliminar la categoría «{name}»?\n\nHay {n} producto(s) dentro. No se borrarán: se quedarán sin categoría.",
   "categories.confirmRemoveProduct": "¿Quitar «{name}» de la categoría?",
   "categories.noDirectProducts": "No hay productos asignados directamente",
   "categories.noProducts": "No hay productos",

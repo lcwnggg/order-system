@@ -24,6 +24,9 @@
 .DS_Store
 *.pem
 
+# volcado del código para revisiones (se regenera, no va al repo)
+PROJECT_BUNDLE_FOR_ANALYSIS.md
+
 # debug
 npm-debug.log*
 yarn-debug.log*

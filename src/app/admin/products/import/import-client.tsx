@@ -54,8 +54,11 @@ function rowHasError(rv: RowValidation) {
 }
 
 function matchCategoryId(raw: string, candidates: CategoryRow[]): string {
-  if (raw.trim() === "") return "";
-  const hit = candidates.find((c) => c.name === raw);
+  const name = raw.trim();
+  if (name === "") return "";
+  // 比较前两边都 trim：CSV 里「Cargadores 」这种尾随空格很常见，
+  // 严格相等会让整列分类都匹配不上，用户只能一行行手动改
+  const hit = candidates.find((c) => c.name.trim() === name);
   return hit ? hit.id : "";
 }
 

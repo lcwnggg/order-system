@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { updateOrderStatus, deleteOrder } from "./actions";
 import { useI18n } from "@/lib/i18n/client";
+import { formatDateTime } from "@/lib/i18n/datetime";
 import type { TranslationKey } from "@/lib/i18n/dictionaries";
 import type { Translate } from "@/lib/i18n/translate";
 
@@ -57,22 +58,25 @@ function itemLabel(item: OrderItem): string {
   return item.variantColor ? `${item.product.name} · ${item.variantColor}` : item.product.name;
 }
 
-function formatDateTime(iso: string): string {
-  const d = new Date(iso);
-  const y = d.getFullYear();
-  const mo = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  const h = String(d.getHours()).padStart(2, "0");
-  const mi = String(d.getMinutes()).padStart(2, "0");
-  return `${y}-${mo}-${day} ${h}:${mi}`;
+// 打印单是手工拼的 HTML 字符串，商品名/门店名/分类名都来自数据库。
+// 不转义的话，一个叫「Cable USB <tipo C>」的商品会把后面的标签结构冲掉，
+// 打印出来直接少一块内容（也顺带堵住把标记塞进打印页的可能）。
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 export default function OrdersClient({ orders, categories }: { orders: Order[]; categories: CategoryItem[] }) {
-  const { tag, t } = useI18n();
+  const { locale, tag, t } = useI18n();
   const [filter, setFilter] = useState<FilterValue>("all");
   const [summaryView, setSummaryView] = useState<SummaryView>("product");
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   const filtered = useMemo(
@@ -116,7 +120,9 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
         g.products.set(label, (g.products.get(label) ?? 0) + item.quantity);
       }
     }
-    return Array.from(groups.values()).map((g) => ({
+    // key 用 store_id 而不是店名：两家门店重名时用店名当 React key 会撞车
+    return Array.from(groups.entries()).map(([storeId, g]) => ({
+      storeId,
       storeLabel: g.storeLabel,
       orderCount: g.orderCount,
       products: Array.from(g.products.entries()).sort((a, b) => b[1] - a[1]),
@@ -181,15 +187,15 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
       .map((p) => {
         const { parent, child } = catLabel(p.categoryId);
         const storeDetail = [...p.stores.entries()]
-          .map(([s, q]) => `<span class="store-tag">${s}×${q}</span>`)
+          .map(([s, q]) => `<span class="store-tag">${escapeHtml(s)}×${q}</span>`)
           .join(" ");
         let header = "";
         if (parent !== lastParent) {
           lastParent = parent;
-          header = `<tr class="cat-row"><td colspan="2">${parent}</td></tr>`;
+          header = `<tr class="cat-row"><td colspan="2">${escapeHtml(parent)}</td></tr>`;
         }
         return `${header}<tr>
-<td><div class="pname">${p.name}</div>${child ? `<div class="cname">${parent} › ${child}</div>` : ""}<div class="stores">${storeDetail}</div></td>
+<td><div class="pname">${escapeHtml(p.name)}</div>${child ? `<div class="cname">${escapeHtml(parent)} › ${escapeHtml(child)}</div>` : ""}<div class="stores">${storeDetail}</div></td>
 <td class="qty">${p.total}</td></tr>`;
       })
       .join("");
@@ -231,18 +237,22 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
 
   function handleUpdateStatus(orderId: string, newStatus: "preparing" | "done") {
     setPendingId(orderId);
+    setActionError(null);
     startTransition(async () => {
-      await updateOrderStatus(orderId, newStatus);
+      const res = await updateOrderStatus(orderId, newStatus);
       setPendingId(null);
+      if (res.error) setActionError(res.error);
     });
   }
 
   function handleDelete(orderId: string) {
     if (!window.confirm(t("adminOrders.confirmDelete"))) return;
     setDeletingId(orderId);
+    setActionError(null);
     startTransition(async () => {
-      await deleteOrder(orderId);
+      const res = await deleteOrder(orderId);
       setDeletingId(null);
+      if (res.error) setActionError(res.error);
     });
   }
 
@@ -260,6 +270,19 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
 
   return (
     <div className="space-y-6">
+      {actionError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+          {actionError}
+          <button
+            type="button"
+            onClick={() => setActionError(null)}
+            className="ml-3 text-red-400 hover:text-red-600"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* ── 待备货汇总 ── */}
       <div className="rounded-xl border border-ember-200 bg-ember-50 overflow-hidden">
         {/* 汇总标题 + 视图切换 */}
@@ -330,7 +353,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {storeGroups.map((group) => (
                 <div
-                  key={group.storeLabel}
+                  key={group.storeId}
                   className="rounded-lg bg-white p-3 ring-1 ring-ember-200"
                 >
                   <p className="mb-2 text-xs font-semibold text-paper-800">
@@ -412,7 +435,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                       </span>
                     </div>
                     <p className="mt-0.5 truncate text-xs text-paper-500">
-                      {formatDateTime(order.created_at)} · {t("adminOrders.itemCount", { n: order.items.length })} · #{order.id.slice(0, 8)}
+                      {formatDateTime(order.created_at, locale)} · {t("adminOrders.itemCount", { n: order.items.length })} · #{order.id.slice(0, 8)}
                     </p>
                   </div>
                   <span className="shrink-0 text-base font-bold text-paper-900">€{total.toFixed(2)}</span>
