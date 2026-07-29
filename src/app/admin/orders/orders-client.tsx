@@ -2,6 +2,9 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { updateOrderStatus, deleteOrder } from "./actions";
+import { useI18n } from "@/lib/i18n/client";
+import type { TranslationKey } from "@/lib/i18n/dictionaries";
+import type { Translate } from "@/lib/i18n/translate";
 
 type Product = { id: string; name: string; price: number; category_id: string | null };
 type CategoryItem = { id: string; name: string; parent_id: string | null };
@@ -20,11 +23,11 @@ export type Order = {
 type FilterValue = "all" | "pending" | "preparing" | "done" | "cancelled";
 type SummaryView = "product" | "store";
 
-const STATUS_LABEL: Record<string, string> = {
-  pending: "待处理",
-  preparing: "备货中",
-  done: "已完成",
-  cancelled: "已取消",
+const STATUS_KEY: Record<string, TranslationKey> = {
+  pending: "orderStatus.pending",
+  preparing: "orderStatus.preparing",
+  done: "orderStatus.done",
+  cancelled: "orderStatus.cancelled",
 };
 
 const STATUS_COLOR: Record<string, string> = {
@@ -41,8 +44,12 @@ const STATUS_DOT: Record<string, string> = {
   cancelled: "bg-paper-400",
 };
 
-function displayStore(order: Order): string {
-  return order.storeName ?? order.storeEmail ?? `门店 ${order.store_id.slice(0, 8)}…`;
+function displayStore(order: Order, t: Translate): string {
+  return (
+    order.storeName ??
+    order.storeEmail ??
+    t("adminOrders.storeFallback", { id: order.store_id.slice(0, 8) })
+  );
 }
 
 // 商品名（带颜色变体），用于明细展示与按商品聚合
@@ -61,6 +68,7 @@ function formatDateTime(iso: string): string {
 }
 
 export default function OrdersClient({ orders, categories }: { orders: Order[]; categories: CategoryItem[] }) {
+  const { tag, t } = useI18n();
   const [filter, setFilter] = useState<FilterValue>("all");
   const [summaryView, setSummaryView] = useState<SummaryView>("product");
   const [pendingId, setPendingId] = useState<string | null>(null);
@@ -96,7 +104,7 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
       const key = order.store_id;
       if (!groups.has(key)) {
         groups.set(key, {
-          storeLabel: displayStore(order),
+          storeLabel: displayStore(order, t),
           orderCount: 0,
           products: new Map(),
         });
@@ -113,10 +121,10 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
       orderCount: g.orderCount,
       products: Array.from(g.products.entries()).sort((a, b) => b[1] - a[1]),
     }));
-  }, [pendingOrders]);
+  }, [pendingOrders, t]);
 
   function handlePrint() {
-    const dateStr = new Date().toLocaleDateString("zh-CN", {
+    const dateStr = new Date().toLocaleDateString(tag, {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -128,7 +136,7 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
       { name: string; total: number; categoryId: string | null; stores: Map<string, number> }
     >();
     for (const order of pendingOrders) {
-      const storeName = displayStore(order);
+      const storeName = displayStore(order, t);
       for (const item of order.items) {
         const key = item.variantColor ? `${item.product.id}-${item.variantColor}` : item.product.id;
         if (!productMap.has(key)) {
@@ -147,23 +155,24 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
 
     // Category label helper
     function catLabel(catId: string | null): { parent: string; child: string } {
-      if (!catId) return { parent: "未分类", child: "" };
+      const none = t("common.uncategorized");
+      if (!catId) return { parent: none, child: "" };
       const cat = categories.find((c) => c.id === catId);
-      if (!cat) return { parent: "未分类", child: "" };
+      if (!cat) return { parent: none, child: "" };
       if (!cat.parent_id) return { parent: cat.name, child: "" };
       const par = categories.find((c) => c.id === cat.parent_id);
-      return { parent: par?.name ?? "未分类", child: cat.name };
+      return { parent: par?.name ?? none, child: cat.name };
     }
 
     // Sort by parent category → child category → product name
     const rows = [...productMap.values()].sort((a, b) => {
       const la = catLabel(a.categoryId);
       const lb = catLabel(b.categoryId);
-      const pc = la.parent.localeCompare(lb.parent, "zh-CN");
+      const pc = la.parent.localeCompare(lb.parent, tag);
       if (pc !== 0) return pc;
-      const cc = la.child.localeCompare(lb.child, "zh-CN");
+      const cc = la.child.localeCompare(lb.child, tag);
       if (cc !== 0) return cc;
-      return a.name.localeCompare(b.name, "zh-CN");
+      return a.name.localeCompare(b.name, tag);
     });
 
     // Build HTML rows, with category section headers
@@ -185,8 +194,8 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
       })
       .join("");
 
-    const html = `<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8">
-<title>备货单 ${dateStr}</title>
+    const html = `<!DOCTYPE html><html lang="${tag}"><head><meta charset="utf-8">
+<title>${t("print.title")} ${dateStr}</title>
 <style>
 body{font-family:sans-serif;margin:2cm;color:#111;font-size:14px}
 h1{font-size:20px;margin-bottom:4px}
@@ -204,9 +213,11 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
 .cat-row td{padding:10px 4px 3px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:1px solid #d1d5db}
 @media print{body{margin:1cm}}
 </style></head><body>
-<h1>备货单</h1>
-<div class="sub">生成时间：${dateStr}　·　${pendingOrders.length} 笔待处理订单　·　${rows.length} 种商品</div>
-<table><thead><tr><th>商品（门店需求明细）</th><th class="qty">合计</th></tr></thead>
+<h1>${t("print.title")}</h1>
+<div class="sub">${t("print.generated", { date: dateStr })} · ${t("print.pendingOrders", {
+      n: pendingOrders.length,
+    })} · ${t("print.productKinds", { n: rows.length })}</div>
+<table><thead><tr><th>${t("print.thProduct")}</th><th class="qty">${t("print.thTotal")}</th></tr></thead>
 <tbody>${tableRows}</tbody></table>
 </body></html>`;
 
@@ -227,7 +238,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
   }
 
   function handleDelete(orderId: string) {
-    if (!window.confirm("确定删除这笔订单吗？删除后不可恢复（不影响库存）。")) return;
+    if (!window.confirm(t("adminOrders.confirmDelete"))) return;
     setDeletingId(orderId);
     startTransition(async () => {
       await deleteOrder(orderId);
@@ -240,11 +251,11 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
   }
 
   const filterTabs: { value: FilterValue; label: string }[] = [
-    { value: "all", label: "全部" },
-    { value: "pending", label: "待处理" },
-    { value: "preparing", label: "备货中" },
-    { value: "done", label: "已完成" },
-    { value: "cancelled", label: "已取消" },
+    { value: "all", label: t("common.all") },
+    { value: "pending", label: t("orderStatus.pending") },
+    { value: "preparing", label: t("orderStatus.preparing") },
+    { value: "done", label: t("orderStatus.done") },
+    { value: "cancelled", label: t("orderStatus.cancelled") },
   ];
 
   return (
@@ -254,9 +265,9 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
         {/* 汇总标题 + 视图切换 */}
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-4 pb-3">
           <h2 className="text-sm font-semibold text-ember-800">
-            待备货汇总
+            {t("adminOrders.summaryTitle")}
             <span className="ml-2 font-normal text-ember-600">
-              （{pendingOrders.length} 个待处理订单）
+              {t("adminOrders.summaryCount", { n: pendingOrders.length })}
             </span>
           </h2>
           <div className="flex items-center gap-2">
@@ -266,7 +277,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                 onClick={handlePrint}
                 className="rounded-lg border border-ember-200 bg-white px-3 py-1.5 text-xs font-medium text-ember-700 transition-colors hover:bg-ember-50"
               >
-                打印备货单
+                {t("adminOrders.print")}
               </button>
             )}
             <div className="flex gap-1 rounded-lg border border-ember-200 bg-white p-0.5">
@@ -279,7 +290,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                     : "text-ember-700 hover:bg-ember-50"
                 }`}
               >
-                按商品汇总
+                {t("adminOrders.byProduct")}
               </button>
               <button
                 type="button"
@@ -290,7 +301,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                     : "text-ember-700 hover:bg-ember-50"
                 }`}
               >
-                按门店分组
+                {t("adminOrders.byStore")}
               </button>
             </div>
           </div>
@@ -298,7 +309,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
 
         <div className="px-5 pb-4">
           {pendingOrders.length === 0 ? (
-            <p className="text-sm text-ember-600">暂无待处理订单</p>
+            <p className="text-sm text-ember-600">{t("adminOrders.noPending")}</p>
           ) : summaryView === "product" ? (
             /* 按商品汇总 */
             <div className="flex flex-wrap gap-2">
@@ -325,7 +336,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                   <p className="mb-2 text-xs font-semibold text-paper-800">
                     {group.storeLabel}
                     <span className="ml-1.5 font-normal text-paper-500">
-                      {group.orderCount} 笔订单
+                      {t("adminOrders.storeOrderCount", { n: group.orderCount })}
                     </span>
                   </p>
                   <ul className="space-y-1">
@@ -370,7 +381,9 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
       {filtered.length === 0 ? (
         <div className="rounded-xl border border-dashed border-paper-300 bg-white py-16 text-center">
           <p className="text-sm text-paper-500">
-            {filter === "all" ? "暂无订单" : `暂无${STATUS_LABEL[filter]}订单`}
+            {filter === "all"
+              ? t("adminOrders.emptyAll")
+              : t("adminOrders.emptyFiltered", { status: t(STATUS_KEY[filter]) })}
           </p>
         </div>
       ) : (
@@ -386,20 +399,20 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                 {/* 头部：门店 + 状态 + 元信息 + 金额 */}
                 <div className="flex items-start gap-3 px-5 py-4">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-paper-100 text-sm font-semibold text-paper-700">
-                    {displayStore(order).charAt(0)}
+                    {displayStore(order, t).charAt(0)}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-semibold text-paper-900">{displayStore(order)}</span>
+                      <span className="text-sm font-semibold text-paper-900">{displayStore(order, t)}</span>
                       <span
                         className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[order.status]}`}
                       >
                         <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[order.status]}`} />
-                        {STATUS_LABEL[order.status]}
+                        {t(STATUS_KEY[order.status])}
                       </span>
                     </div>
                     <p className="mt-0.5 truncate text-xs text-paper-500">
-                      {formatDateTime(order.created_at)} · {order.items.length} 件商品 · #{order.id.slice(0, 8)}
+                      {formatDateTime(order.created_at)} · {t("adminOrders.itemCount", { n: order.items.length })} · #{order.id.slice(0, 8)}
                     </p>
                   </div>
                   <span className="shrink-0 text-base font-bold text-paper-900">€{total.toFixed(2)}</span>
@@ -407,7 +420,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
 
                 {order.note && (
                   <div className="border-t border-paper-100 bg-ember-50/60 px-5 py-2 text-xs text-ember-800">
-                    备注：{order.note}
+                    {t("adminOrders.note")}{order.note}
                   </div>
                 )}
 
@@ -443,7 +456,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                       className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50"
                     >
                       <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
-                      {isThisPending ? "处理中…" : "开始备货"}
+                      {isThisPending ? t("common.processing") : t("adminOrders.startPreparing")}
                     </button>
                   )}
                   {order.status === "preparing" && (
@@ -454,7 +467,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                       className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-green-700 disabled:opacity-50"
                     >
                       <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                      {isThisPending ? "处理中…" : "标记完成"}
+                      {isThisPending ? t("common.processing") : t("adminOrders.markDone")}
                     </button>
                   )}
                   {(order.status === "done" || order.status === "cancelled") && (
@@ -464,7 +477,7 @@ td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padd
                       onClick={() => handleDelete(order.id)}
                       className="rounded-lg border border-paper-200 px-3.5 py-1.5 text-xs font-medium text-paper-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                     >
-                      {deletingId === order.id ? "删除中…" : "删除"}
+                      {deletingId === order.id ? t("common.deleting") : t("common.delete")}
                     </button>
                   )}
                 </div>

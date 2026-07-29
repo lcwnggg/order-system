@@ -4,6 +4,8 @@ import { useState, useTransition, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { updateProduct, upsertVariants, type ActionResult } from "./actions";
 import BarcodeField from "./barcode-scanner";
+import { useT } from "@/lib/i18n/client";
+import type { Translate } from "@/lib/i18n/translate";
 
 type Product = {
   id: string;
@@ -45,7 +47,7 @@ type VariantDraft = {
 
 type UploadPhase = "idle" | "compressing" | "uploading" | "done" | "error";
 
-function compressToJpeg(file: File, maxWidth = 1200, quality = 0.8): Promise<Blob> {
+function compressToJpeg(file: File, t: Translate, maxWidth = 1200, quality = 0.8): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
@@ -56,15 +58,15 @@ function compressToJpeg(file: File, maxWidth = 1200, quality = 0.8): Promise<Blo
       canvas.width = Math.round(img.width * scale);
       canvas.height = Math.round(img.height * scale);
       const ctx = canvas.getContext("2d");
-      if (!ctx) return reject(new Error("Canvas 不可用"));
+      if (!ctx) return reject(new Error(t("common.canvasUnavailable")));
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error("压缩失败"))),
+        (blob) => (blob ? resolve(blob) : reject(new Error(t("common.compressFailed")))),
         "image/jpeg",
         quality
       );
     };
-    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("图片加载失败")); };
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error(t("common.imageLoadFailed"))); };
     img.src = objectUrl;
   });
 }
@@ -82,6 +84,7 @@ export default function ProductEditModal({
   onClose: () => void;
   onSaved?: () => void;
 }) {
+  const t = useT();
   const parentCategories = useMemo(
     () => categories.filter((c) => !c.parent_id),
     [categories]
@@ -135,7 +138,7 @@ export default function ProductEditModal({
     if (!file) { setNewImageUrl(undefined); setPreview(null); setPhase("idle"); return; }
     try {
       setPhase("compressing"); setUploadError(null);
-      const blob = await compressToJpeg(file);
+      const blob = await compressToJpeg(file, t);
       setPreview(URL.createObjectURL(blob));
       setPhase("uploading");
       const supabase = createClient();
@@ -149,7 +152,7 @@ export default function ProductEditModal({
       setPhase("done");
     } catch (err) {
       setPhase("error");
-      setUploadError(err instanceof Error ? err.message : "上传失败");
+      setUploadError(err instanceof Error ? err.message : t("common.uploadFailed"));
     }
   }
 
@@ -227,14 +230,14 @@ export default function ProductEditModal({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={displayImage}
-          alt="放大预览"
+          alt={t("edit.zoomAlt")}
           className="max-h-full max-w-full rounded-lg object-contain shadow-2xl"
         />
         <button
           type="button"
           onClick={() => setZoomOpen(false)}
           className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-paper-700 shadow hover:bg-white"
-          aria-label="关闭"
+          aria-label={t("common.close")}
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -248,7 +251,7 @@ export default function ProductEditModal({
     >
       <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
         <div className="flex shrink-0 items-center justify-between border-b border-paper-100 px-6 py-4">
-          <h2 className="text-base font-semibold text-paper-900">编辑商品</h2>
+          <h2 className="text-base font-semibold text-paper-900">{t("edit.title")}</h2>
           <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-paper-500 transition-colors hover:bg-paper-100 hover:text-paper-600">
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -261,7 +264,7 @@ export default function ProductEditModal({
             {/* 名称 */}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-paper-700">
-                商品名称 <span className="text-red-500">*</span>
+                {t("form.productName")} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -273,12 +276,12 @@ export default function ProductEditModal({
 
             {/* 品牌 */}
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-paper-700">品牌</label>
+              <label className="mb-1.5 block text-sm font-medium text-paper-700">{t("form.brand")}</label>
               <input
                 type="text"
                 value={editBrand}
                 onChange={(e) => setEditBrand(e.target.value)}
-                placeholder="如 Xiaomi、Temco（可选）"
+                placeholder={t("form.brandPlaceholder")}
                 className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
               />
             </div>
@@ -289,7 +292,7 @@ export default function ProductEditModal({
             {/* 价格 */}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-paper-700">
-                价格（€）<span className="text-red-500">*</span>
+                {t("form.price")} <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -319,13 +322,13 @@ export default function ProductEditModal({
                 >
                   <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${editHasVariants ? "translate-x-6" : "translate-x-1"}`} />
                 </button>
-                <span className="text-sm font-medium text-paper-700">分颜色/规格</span>
+                <span className="text-sm font-medium text-paper-700">{t("edit.hasVariants")}</span>
               </div>
 
               {!editHasVariants ? (
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-paper-700">
-                    库存数量 <span className="text-red-500">*</span>
+                    {t("form.stock")} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -338,7 +341,7 @@ export default function ProductEditModal({
                 </div>
               ) : (
                 <div className="rounded-lg border border-paper-200 bg-paper-100 p-3">
-                  <p className="mb-2 text-xs font-medium text-paper-500">颜色变体（各颜色独立库存）</p>
+                  <p className="mb-2 text-xs font-medium text-paper-500">{t("edit.variantsHint")}</p>
                   <div className="space-y-2">
                     {visibleEditVariants.map((v) => {
                       const realIdx = editVariants.indexOf(v);
@@ -346,7 +349,7 @@ export default function ProductEditModal({
                         <div key={realIdx} className="flex items-center gap-2">
                           <input
                             type="text"
-                            placeholder='如"黑色"'
+                            placeholder={t("edit.colorPlaceholder")}
                             value={v.color}
                             onChange={(e) => updateVariantRow(realIdx, "color", e.target.value)}
                             className="flex-1 rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
@@ -355,7 +358,7 @@ export default function ProductEditModal({
                             type="number"
                             min="0"
                             step="1"
-                            placeholder="库存"
+                            placeholder={t("form.stockShort")}
                             value={v.stock}
                             onChange={(e) => updateVariantRow(realIdx, "stock", e.target.value)}
                             className="w-20 rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
@@ -376,7 +379,7 @@ export default function ProductEditModal({
                     })}
                   </div>
                   <button type="button" onClick={addVariantRow} className="mt-2 text-xs font-medium text-paper-500 hover:text-paper-900">
-                    + 添加颜色
+                    {t("form.addColor")}
                   </button>
                 </div>
               )}
@@ -384,12 +387,12 @@ export default function ProductEditModal({
 
             {/* 描述 */}
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-paper-700">商品描述</label>
+              <label className="mb-1.5 block text-sm font-medium text-paper-700">{t("form.description")}</label>
               <textarea
                 rows={2}
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
-                placeholder="可选"
+                placeholder={t("edit.descriptionPlaceholder")}
                 className="w-full resize-none rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
               />
             </div>
@@ -397,14 +400,14 @@ export default function ProductEditModal({
             {/* 分类 */}
             {parentCategories.length > 0 && (
               <div>
-                <label className="mb-1.5 block text-sm font-medium text-paper-700">商品分类</label>
+                <label className="mb-1.5 block text-sm font-medium text-paper-700">{t("form.category")}</label>
                 <div className="grid grid-cols-2 gap-3">
                   <select
                     value={editParentCatId}
                     onChange={(e) => { setEditParentCatId(e.target.value); setEditChildCatId(""); }}
                     className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
                   >
-                    <option value="">不选大类</option>
+                    <option value="">{t("form.noParent")}</option>
                     {parentCategories.map((p) => (
                       <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
@@ -415,7 +418,7 @@ export default function ProductEditModal({
                       onChange={(e) => setEditChildCatId(e.target.value)}
                       className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
                     >
-                      <option value="">不选小类</option>
+                      <option value="">{t("form.noChild")}</option>
                       {childrenOf(editParentCatId).map((c) => (
                         <option key={c.id} value={c.id}>{c.name}</option>
                       ))}
@@ -428,8 +431,8 @@ export default function ProductEditModal({
             {/* 图片 */}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-paper-700">
-                商品图片
-                <span className="ml-1.5 font-normal text-paper-500">（不选则保留原图）</span>
+                {t("form.productImage")}
+                <span className="ml-1.5 font-normal text-paper-500">{t("edit.imageKeepHint")}</span>
               </label>
               <div className="flex items-start gap-3">
                 {displayImage && (
@@ -437,15 +440,15 @@ export default function ProductEditModal({
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={displayImage}
-                      alt="图片预览"
+                      alt={t("edit.imagePreviewAlt")}
                       onClick={() => setZoomOpen(true)}
-                      title="点击放大查看"
+                      title={t("edit.clickToZoom")}
                       className="h-16 w-16 cursor-zoom-in rounded-lg object-cover ring-1 ring-paper-300 transition hover:ring-paper-400"
                     />
                     <button
                       type="button"
                       onClick={handleDeleteImage}
-                      title="删除图片"
+                      title={t("form.deleteImage")}
                       className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow hover:bg-red-600"
                     >
                       <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -461,17 +464,17 @@ export default function ProductEditModal({
                     onChange={handleFileChange}
                     className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-600 outline-none file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-paper-100 file:px-2.5 file:py-1 file:text-xs file:font-medium file:text-paper-700 hover:file:bg-paper-200"
                   />
-                  {phase === "compressing" && <p className="mt-1 text-xs text-paper-500">正在压缩…</p>}
-                  {phase === "uploading" && <p className="mt-1 text-xs text-paper-500">正在上传…</p>}
-                  {phase === "done" && <p className="mt-1 text-xs text-green-600">上传成功</p>}
+                  {phase === "compressing" && <p className="mt-1 text-xs text-paper-500">{t("edit.compressing")}</p>}
+                  {phase === "uploading" && <p className="mt-1 text-xs text-paper-500">{t("edit.uploading")}</p>}
+                  {phase === "done" && <p className="mt-1 text-xs text-green-600">{t("edit.uploaded")}</p>}
                   {phase === "error" && <p className="mt-1 text-xs text-red-500">{uploadError}</p>}
                 </div>
               </div>
               {!displayImage && newImageUrl !== null && (
-                <p className="mt-1 text-xs text-paper-500">无图片 · 上传后可删除/更换</p>
+                <p className="mt-1 text-xs text-paper-500">{t("edit.noImageHint")}</p>
               )}
               {newImageUrl === null && (
-                <p className="mt-1 text-xs text-amber-600">图片将在保存后删除</p>
+                <p className="mt-1 text-xs text-amber-600">{t("edit.imageWillDelete")}</p>
               )}
             </div>
 
@@ -487,7 +490,7 @@ export default function ProductEditModal({
             onClick={onClose}
             className="rounded-lg border border-paper-200 px-4 py-2 text-sm font-medium text-paper-700 transition-colors hover:bg-paper-100"
           >
-            取消
+            {t("common.cancel")}
           </button>
           <button
             type="button"
@@ -495,7 +498,7 @@ export default function ProductEditModal({
             onClick={handleSave}
             className="rounded-lg bg-paper-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-paper-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSaving ? "保存中…" : uploading ? "图片上传中…" : "保存"}
+            {isSaving ? t("common.saving") : uploading ? t("form.uploadingImage") : t("common.save")}
           </button>
         </div>
       </div>

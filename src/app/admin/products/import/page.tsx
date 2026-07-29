@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/app/app-shell";
+import { getI18n } from "@/lib/i18n/server";
 import ImportClient from "./import-client";
 
 export default async function BulkImportPage() {
+  const { t } = await getI18n();
   const supabase = await createClient();
   const {
     data: { user },
@@ -34,10 +36,8 @@ export default async function BulkImportPage() {
   return (
     <AppShell email={user.email}>
         <div className="mb-6">
-          <h1 className="text-xl font-semibold text-paper-900">批量导入商品</h1>
-          <p className="mt-1 text-sm text-paper-500">
-            从 CSV / Excel 文件批量导入商品，导入前可在页面上逐格核对与修改。
-          </p>
+          <h1 className="text-xl font-semibold text-paper-900">{t("import.pageTitle")}</h1>
+          <p className="mt-1 text-sm text-paper-500">{t("import.pageSubtitle")}</p>
         </div>
 
         <ImportClient

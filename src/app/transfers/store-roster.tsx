@@ -3,16 +3,8 @@
 import { useMemo, useState, useTransition } from "react";
 import type { GroupStore, TransferRequest } from "@/lib/transfers";
 import { claimTransferRequest, declineTransferRequest } from "./actions";
-
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "刚刚";
-  if (m < 60) return `${m} 分钟前`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h} 小时前`;
-  return `${Math.floor(h / 24)} 天前`;
-}
+import { useT } from "@/lib/i18n/client";
+import { useTimeAgo } from "./time-ago";
 
 function ItemThumb({ req, size = "h-9 w-9" }: { req: TransferRequest; size?: string }) {
   if (req.photoUrl) {
@@ -71,6 +63,7 @@ export function StoreRoster({
   currentUserId: string;
   canDecline?: boolean;
 }) {
+  const t = useT();
   // 门店 → 该店发出的、仍待认领的请求
   const byStore = useMemo(() => {
     const m = new Map<string, TransferRequest[]>();
@@ -98,7 +91,7 @@ export function StoreRoster({
   if (roster.length === 0) {
     return (
       <div className="glass-flat rounded-2xl py-12 text-center">
-        <p className="text-sm text-paper-500">还没有其他门店 🌱</p>
+        <p className="text-sm text-paper-500">{t("roster.noStores")}</p>
       </div>
     );
   }
@@ -131,13 +124,15 @@ function StoreNode({
   isMe: boolean;
   canDecline: boolean;
 }) {
+  const t = useT();
+  const timeAgo = useTimeAgo();
   const [open, setOpen] = useState(false);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   const active = reqs.length > 0;
-  const name = store.name ?? "某门店";
+  const name = store.name ?? t("transfers.someStore");
   // 自己的店不能认领自己的货；别家店可 ✓（仓库不显示 ✗，见 canDecline）
   const actionable = active && !isMe;
 
@@ -164,7 +159,7 @@ function StoreNode({
           type="button"
           onClick={() => setOpen((o) => !o)}
           className="animate-bubble-pop absolute -top-11 left-1/2 z-10 -translate-x-1/2 cursor-pointer"
-          aria-label={`${name} 在找货`}
+          aria-label={t("roster.searchingAria", { name })}
         >
           <span className="animate-bubble-bob block">
             <span
@@ -172,7 +167,7 @@ function StoreNode({
                 isMe ? "bg-accent-500 text-white" : "bg-white text-paper-800 ring-1 ring-accent-200"
               }`}
             >
-              {reqs.length > 1 ? `${reqs.length} 件求货` : reqs[0].itemText}
+              {reqs.length > 1 ? t("roster.bubbleMulti", { n: reqs.length }) : reqs[0].itemText}
               {/* 小尾巴 */}
               <span
                 className={`absolute left-1/2 top-full h-2 w-2 -translate-x-1/2 -translate-y-1 rotate-45 ${
@@ -207,14 +202,14 @@ function StoreNode({
 
       {/* 店名 */}
       <span className={`mt-1 max-w-[76px] truncate text-center text-[11px] ${isMe ? "font-semibold text-accent-600" : "text-paper-600"}`}>
-        {isMe ? `${name}（你）` : name}
+        {isMe ? t("roster.you", { name }) : name}
       </span>
 
       {/* 展开：该店所有待认领请求 + ✓/✗ */}
       {open && active && (
         <div className="absolute top-[92px] left-1/2 z-20 w-56 -translate-x-1/2 rounded-2xl glass-strong p-3 shadow-[0_20px_40px_-16px_rgba(46,52,84,.5)]">
           <p className="mb-2 text-[11px] font-medium text-paper-500">
-            {isMe ? "你在找（可到下方撤销）" : `${name} 在找`}
+            {isMe ? t("roster.youSearching") : t("roster.storeSearching", { name })}
           </p>
           <div className="space-y-2">
             {reqs.map((req) => (
@@ -224,7 +219,7 @@ function StoreNode({
                   <div className="min-w-0 flex-1">
                     <p className="line-clamp-2 text-xs font-medium text-paper-900">{req.itemText}</p>
                     <p className="mt-0.5 text-[10.5px] text-paper-400">
-                      {req.quantity ? `需 ${req.quantity} 件 · ` : ""}
+                      {req.quantity ? t("roster.needQty", { n: req.quantity }) : ""}
                       {timeAgo(req.createdAt)}
                     </p>
                   </div>
@@ -239,7 +234,7 @@ function StoreNode({
                       className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-mint-500 px-2 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-mint-600 disabled:opacity-50"
                     >
                       <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                      我有
+                      {t("roster.iHave")}
                     </button>
                     {canDecline && (
                       <button
@@ -249,7 +244,7 @@ function StoreNode({
                         className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-paper-200 bg-white/70 px-2 py-1.5 text-[11px] font-medium text-paper-500 transition-colors hover:text-paper-700 disabled:opacity-50"
                       >
                         <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
-                        我没有
+                        {t("roster.iDontHave")}
                       </button>
                     )}
                   </div>

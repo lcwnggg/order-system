@@ -2,10 +2,12 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/app/app-shell";
 import { getTransferBoard, getGroupStores } from "@/lib/transfers";
+import { getI18n } from "@/lib/i18n/server";
 import TransfersClient from "./transfers-client";
 import TransferAlerts from "./transfer-alerts";
 
 export default async function TransfersPage() {
+  const { t } = await getI18n();
   const supabase = await createClient();
   const {
     data: { user },
@@ -33,10 +35,10 @@ export default async function TransfersPage() {
       <div className="mb-2 flex items-start justify-between gap-3">
         <div>
           <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.22em] text-paper-500">
-            门店 — 互相调货
+            {t("transfers.eyebrow")}
           </p>
-          <h1 className="animate-fade-up mt-2 text-3xl font-normal tracking-tight text-paper-900">门店互调</h1>
-          <p className="mt-1.5 text-sm text-paper-500">缺货、仓库也没有？问问其他门店谁有。</p>
+          <h1 className="animate-fade-up mt-2 text-3xl font-normal tracking-tight text-paper-900">{t("transfers.title")}</h1>
+          <p className="mt-1.5 text-sm text-paper-500">{t("transfers.subtitle")}</p>
         </div>
         <TransferAlerts currentUserId={user.id} />
       </div>

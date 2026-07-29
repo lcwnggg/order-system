@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { isValidBarcodeFormat } from "@/lib/barcode";
+import { useT } from "@/lib/i18n/client";
+import type { Translate } from "@/lib/i18n/translate";
 
 // ─────────────────────────────────────────────────────────────
 // 手机摄像头扫码录入条码。
@@ -45,18 +47,20 @@ async function buildHints() {
   return hints;
 }
 
-function mapCameraError(err: unknown): string {
+function mapCameraError(err: unknown, t: Translate): string {
   const name = err instanceof Error ? err.name : "";
   if (name === "NotAllowedError" || name === "SecurityError") {
-    return "无法使用摄像头：权限被拒绝。请在浏览器设置里允许本站访问摄像头后重试。";
+    return t("camera.denied");
   }
   if (name === "NotFoundError" || name === "OverconstrainedError") {
-    return "没有找到可用的摄像头。";
+    return t("camera.notFound");
   }
   if (name === "NotReadableError") {
-    return "摄像头被其他应用占用，请关闭后重试。";
+    return t("camera.inUse");
   }
-  return err instanceof Error && err.message ? `摄像头启动失败：${err.message}` : "摄像头启动失败。";
+  return err instanceof Error && err.message
+    ? t("camera.startFailedWith", { message: err.message })
+    : t("camera.startFailed");
 }
 
 // 全屏扫码遮罩：挂载即开始扫码，识别到条码回调 onDetected。
@@ -67,6 +71,7 @@ export function ScannerOverlay({
   onDetected: (text: string) => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [starting, setStarting] = useState(true);
@@ -120,7 +125,7 @@ export function ScannerOverlay({
           if (track && capabilities?.torch) setTorchSupported(true);
         }
       } catch (err) {
-        setError(mapCameraError(err));
+        setError(mapCameraError(err, t));
         setStarting(false);
       }
     })();
@@ -153,7 +158,7 @@ export function ScannerOverlay({
     <div className="fixed inset-0 z-[70] flex flex-col bg-black">
       {/* 顶部栏 */}
       <div className="flex shrink-0 items-center justify-between px-4 py-3">
-        <span className="text-sm font-medium text-white/90">扫描条码</span>
+        <span className="text-sm font-medium text-white/90">{t("scanner.title")}</span>
         <div className="flex items-center gap-2">
           {torchSupported && (
             <button
@@ -162,8 +167,8 @@ export function ScannerOverlay({
               className={`flex h-9 w-9 items-center justify-center rounded-full transition-colors ${
                 torchOn ? "bg-amber-400 text-black" : "bg-white/15 text-white hover:bg-white/25"
               }`}
-              aria-label="切换手电筒"
-              title="光线不足时可打开手电筒"
+              aria-label={t("scanner.toggleTorch")}
+              title={t("scanner.torchHint")}
             >
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -175,7 +180,7 @@ export function ScannerOverlay({
             type="button"
             onClick={onClose}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
-            aria-label="关闭扫码"
+            aria-label={t("scanner.close")}
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -202,7 +207,7 @@ export function ScannerOverlay({
 
         {starting && !error && (
           <p className="absolute inset-x-0 bottom-24 text-center text-sm text-white/80">
-            正在启动摄像头…
+            {t("scanner.starting")}
           </p>
         )}
 
@@ -215,7 +220,7 @@ export function ScannerOverlay({
                 onClick={onClose}
                 className="mt-4 rounded-lg bg-paper-700 px-4 py-2 text-sm font-medium text-white hover:bg-paper-800"
               >
-                知道了
+                {t("scanner.gotIt")}
               </button>
             </div>
           </div>
@@ -225,14 +230,14 @@ export function ScannerOverlay({
       {/* 底部提示 */}
       {!error && (
         <div className="shrink-0 px-6 py-5 text-center">
-          <p className="text-sm text-white/80">将条码对准框内，识别成功会自动填入</p>
+          <p className="text-sm text-white/80">{t("scanner.aimHint")}</p>
         </div>
       )}
     </div>
   );
 }
 
-// 条码输入框 + 扫码按钮（西班牙语 label，供仓库端商品创建/编辑复用）
+// 条码输入框 + 扫码按钮（供仓库端商品创建/编辑复用）
 export default function BarcodeField({
   value,
   onChange,
@@ -244,6 +249,7 @@ export default function BarcodeField({
   name?: string;
   inputId?: string;
 }) {
+  const t = useT();
   const [scanning, setScanning] = useState(false);
   const [desktopHint, setDesktopHint] = useState(false);
 
@@ -266,7 +272,7 @@ export default function BarcodeField({
   return (
     <div>
       <label htmlFor={inputId} className="mb-1.5 block text-sm font-medium text-paper-700">
-        Código de barras
+        {t("barcode.label")}
       </label>
       <div className="flex items-stretch gap-2">
         <input
@@ -277,7 +283,7 @@ export default function BarcodeField({
           autoComplete="off"
           value={value}
           onChange={(e) => { onChange(e.target.value); setDesktopHint(false); }}
-          placeholder="opcional"
+          placeholder={t("barcode.placeholder")}
           className={`min-w-0 flex-1 rounded-lg border px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:ring-2 ${
             invalid
               ? "border-red-300 bg-red-50 focus:border-red-400 focus:ring-red-100"
@@ -293,19 +299,15 @@ export default function BarcodeField({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M4 5a1 1 0 011-1h1m12 0h1a1 1 0 011 1v1m0 12v1a1 1 0 01-1 1h-1M6 20H5a1 1 0 01-1-1v-1M4 12h16M8 8v8m4-8v8m4-8v8" />
           </svg>
-          扫码
+          {t("barcode.scan")}
         </button>
       </div>
 
       {invalid && (
-        <p className="mt-1.5 text-xs text-red-500">
-          条码格式看起来不对（只允许数字、字母、连字符）
-        </p>
+        <p className="mt-1.5 text-xs text-red-500">{t("barcode.invalidFormat")}</p>
       )}
       {desktopHint && (
-        <p className="mt-1.5 text-xs text-paper-500">
-          请在手机上打开此页面使用扫码，桌面端请手动输入。
-        </p>
+        <p className="mt-1.5 text-xs text-paper-500">{t("barcode.desktopHint")}</p>
       )}
 
       {scanning && (

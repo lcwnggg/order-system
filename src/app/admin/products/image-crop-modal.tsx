@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useT } from "@/lib/i18n/client";
 
 // ─────────────────────────────────────────────────────────────
 // 拍照/选图后的裁剪弹层：拖拽移动、滑杆缩放、90° 旋转，square 输出。
@@ -22,6 +23,7 @@ export default function ImageCropModal({
   onCancel: () => void;
   onConfirm: (blob: Blob) => void;
 }) {
+  const t = useT();
   const viewportRef = useRef<HTMLDivElement>(null);
   const imgElRef = useRef<HTMLImageElement>(null);
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
@@ -144,7 +146,7 @@ export default function ImageCropModal({
       canvas.width = OUTPUT_SIZE;
       canvas.height = OUTPUT_SIZE;
       const ctx = canvas.getContext("2d");
-      if (!ctx) throw new Error("Canvas 不可用");
+      if (!ctx) throw new Error(t("common.canvasUnavailable"));
 
       ctx.translate(OUTPUT_SIZE / 2 + offset.x * k, OUTPUT_SIZE / 2 + offset.y * k);
       ctx.rotate((rotation * Math.PI) / 180);
@@ -154,7 +156,7 @@ export default function ImageCropModal({
       const blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob(resolve, "image/jpeg", 0.9)
       );
-      if (!blob) throw new Error("裁剪失败");
+      if (!blob) throw new Error(t("crop.failed"));
       onConfirm(blob);
     } finally {
       setBusy(false);
@@ -164,12 +166,12 @@ export default function ImageCropModal({
   return (
     <div className="fixed inset-0 z-[70] flex flex-col bg-black/90">
       <div className="flex shrink-0 items-center justify-between px-4 py-3">
-        <span className="text-sm font-medium text-white/90">调整图片</span>
+        <span className="text-sm font-medium text-white/90">{t("crop.title")}</span>
         <button
           type="button"
           onClick={onCancel}
           className="flex h-9 w-9 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
-          aria-label="取消"
+          aria-label={t("common.cancel")}
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -192,7 +194,7 @@ export default function ImageCropModal({
             <img
               ref={imgElRef}
               src={objectUrl}
-              alt="待裁剪图片"
+              alt={t("crop.imageAlt")}
               draggable={false}
               onLoad={(e) => {
                 const el = e.currentTarget;
@@ -239,14 +241,14 @@ export default function ImageCropModal({
             value={zoom}
             onChange={(e) => setZoom(parseFloat(e.target.value))}
             className="flex-1 accent-white"
-            aria-label="缩放"
+            aria-label={t("crop.zoom")}
           />
           <button
             type="button"
             onClick={handleRotate}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white/15 text-white hover:bg-white/25"
-            aria-label="旋转 90 度"
-            title="旋转"
+            aria-label={t("crop.rotate90")}
+            title={t("crop.rotate")}
           >
             <svg className="h-4.5 w-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -262,7 +264,7 @@ export default function ImageCropModal({
           onClick={onCancel}
           className="rounded-lg bg-white/10 px-5 py-2.5 text-sm font-medium text-white hover:bg-white/20"
         >
-          取消
+          {t("common.cancel")}
         </button>
         <button
           type="button"
@@ -270,7 +272,7 @@ export default function ImageCropModal({
           disabled={busy || !natural}
           className="rounded-lg bg-white px-6 py-2.5 text-sm font-medium text-paper-900 hover:bg-paper-100 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {busy ? "处理中…" : "确定"}
+          {busy ? t("common.processing") : t("common.confirm")}
         </button>
       </div>
     </div>

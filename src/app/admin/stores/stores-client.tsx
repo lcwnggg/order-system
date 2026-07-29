@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { updateStoreName, createStoreAccount, type ActionResult } from "./actions";
+import { useT } from "@/lib/i18n/client";
 
 export type StoreUser = {
   id: string;
@@ -11,6 +12,7 @@ export type StoreUser = {
 };
 
 export default function StoresClient({ stores }: { stores: StoreUser[] }) {
+  const t = useT();
   const router = useRouter();
   const [names, setNames] = useState<Record<string, string>>(
     () => Object.fromEntries(stores.map((s) => [s.id, s.store_name ?? ""]))
@@ -48,7 +50,7 @@ export default function StoresClient({ stores }: { stores: StoreUser[] }) {
       if ("error" in res) {
         setCreateError(res.error);
       } else {
-        setCreateOk(`已创建门店账号：${newEmail.trim().toLowerCase()}`);
+        setCreateOk(t("stores.created", { email: newEmail.trim().toLowerCase() }));
         setNewEmail("");
         setNewPassword("");
         setNewStoreName("");
@@ -65,10 +67,10 @@ export default function StoresClient({ stores }: { stores: StoreUser[] }) {
         className="rounded-2xl glass-strong p-5"
       >
         <p className="mb-1 font-mono text-[11px] uppercase tracking-[0.18em] text-paper-500">
-          新建门店账号
+          {t("stores.createTitle")}
         </p>
         <p className="mb-4 text-sm text-paper-600">
-          为员工创建一个登录账号（邮箱 + 密码），账号即刻可用，登录后只能看到你的商品目录。
+          {t("stores.createHint")}
         </p>
         <div className="grid gap-3 sm:grid-cols-3">
           <input
@@ -77,7 +79,7 @@ export default function StoresClient({ stores }: { stores: StoreUser[] }) {
             autoComplete="off"
             value={newEmail}
             onChange={(e) => setNewEmail(e.target.value)}
-            placeholder="邮箱 name@example.com"
+            placeholder={t("stores.emailPlaceholder")}
             className="rounded-lg border border-paper-200 bg-white px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-400 focus:ring-2 focus:ring-paper-200"
           />
           <input
@@ -87,14 +89,14 @@ export default function StoresClient({ stores }: { stores: StoreUser[] }) {
             autoComplete="off"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="初始密码（至少 6 位）"
+            placeholder={t("stores.passwordPlaceholder")}
             className="rounded-lg border border-paper-200 bg-white px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-400 focus:ring-2 focus:ring-paper-200"
           />
           <input
             type="text"
             value={newStoreName}
             onChange={(e) => setNewStoreName(e.target.value)}
-            placeholder="店名（选填）"
+            placeholder={t("stores.namePlaceholder")}
             className="rounded-lg border border-paper-200 bg-white px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-400 focus:ring-2 focus:ring-paper-200"
           />
         </div>
@@ -104,7 +106,7 @@ export default function StoresClient({ stores }: { stores: StoreUser[] }) {
             disabled={creating}
             className="rounded-full bg-paper-800 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-paper-700 disabled:opacity-50"
           >
-            {creating ? "创建中…" : "创建账号"}
+            {creating ? t("stores.creating") : t("stores.create")}
           </button>
           {createError && <span className="text-xs text-ember-600">{createError}</span>}
           {createOk && <span className="text-xs text-paper-600">{createOk}</span>}
@@ -114,16 +116,16 @@ export default function StoresClient({ stores }: { stores: StoreUser[] }) {
       {/* ── 门店列表 ── */}
       {stores.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-paper-300 bg-paper-25 py-16 text-center">
-          <p className="text-sm text-paper-500">还没有门店账号，用上面的表单创建第一个。</p>
+          <p className="text-sm text-paper-500">{t("stores.empty")}</p>
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl glass-strong">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-paper-100 bg-paper-100 text-left">
-                <th className="px-5 py-3 font-medium text-paper-500">邮箱</th>
-                <th className="px-5 py-3 font-medium text-paper-500">店名</th>
-                <th className="px-5 py-3 font-medium text-paper-500">操作</th>
+                <th className="px-5 py-3 font-medium text-paper-500">{t("stores.thEmail")}</th>
+                <th className="px-5 py-3 font-medium text-paper-500">{t("stores.thName")}</th>
+                <th className="px-5 py-3 font-medium text-paper-500">{t("stores.thActions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-paper-100">
@@ -141,7 +143,7 @@ export default function StoresClient({ stores }: { stores: StoreUser[] }) {
                           setNames((prev) => ({ ...prev, [store.id]: e.target.value }))
                         }
                         onKeyDown={(e) => e.key === "Enter" && handleSave(store.id)}
-                        placeholder="输入店名…"
+                        placeholder={t("stores.namePlaceholderRow")}
                         className="w-full max-w-xs rounded-lg border border-paper-200 px-3 py-1.5 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-400 focus:ring-2 focus:ring-paper-200"
                       />
                     </td>
@@ -153,10 +155,10 @@ export default function StoresClient({ stores }: { stores: StoreUser[] }) {
                           onClick={() => handleSave(store.id)}
                           className="rounded-lg bg-paper-700 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-paper-800 disabled:opacity-50"
                         >
-                          {isSaving ? "保存中…" : "保存"}
+                          {isSaving ? t("common.saving") : t("common.save")}
                         </button>
                         {result && "success" in result && (
-                          <span className="text-xs text-paper-600">已保存</span>
+                          <span className="text-xs text-paper-600">{t("common.saved")}</span>
                         )}
                         {result && "error" in result && (
                           <span className="text-xs text-ember-600">{result.error}</span>

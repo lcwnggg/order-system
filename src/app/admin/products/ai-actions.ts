@@ -2,6 +2,7 @@
 
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
+import { getT } from "@/lib/i18n/server";
 
 // ─────────────────────────────────────────────────────────────
 // AI 自动识别：把商品照片发给 Claude，读出名称/品牌/分类/描述/条码候选。
@@ -26,24 +27,26 @@ const MODEL = "claude-haiku-4-5";
 export async function suggestProductFromImages(
   imageUrls: string[]
 ): Promise<AiSuggestResult> {
+  const t = await getT();
+
   // 权限：仅仓库角色
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "无权限" };
+  if (!user) return { error: t("common.noPermission") };
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .single();
-  if (profile?.role !== "warehouse") return { error: "无权限" };
+  if (profile?.role !== "warehouse") return { error: t("common.noPermission") };
 
   if (!process.env.ANTHROPIC_API_KEY) {
-    return { error: "尚未配置 AI 识别（缺少 ANTHROPIC_API_KEY 环境变量）" };
+    return { error: t("ai.notConfigured") };
   }
   const urls = imageUrls.filter((u) => u && u.startsWith("http")).slice(0, 4);
-  if (urls.length === 0) return { error: "没有可识别的图片" };
+  if (urls.length === 0) return { error: t("ai.noImages") };
 
   // 已有分类，供模型从中挑选（不新建分类）
   const { data: cats } = await supabase
@@ -92,7 +95,7 @@ export async function suggestProductFromImages(
 
     const textBlock = response.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") {
-      return { error: "AI 未返回可用内容，请重试" };
+      return { error: t("ai.noContent") };
     }
 
     // 防御式解析：去掉可能的 ``` 代码围栏再 JSON.parse
@@ -115,7 +118,8 @@ export async function suggestProductFromImages(
     return { suggestion };
   } catch (err) {
     return {
-      error: err instanceof Error ? `AI 识别失败：${err.message}` : "AI 识别失败",
+      error:
+        err instanceof Error ? t("ai.errorWith", { message: err.message }) : t("ai.error"),
     };
   }
 }

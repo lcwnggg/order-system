@@ -5,6 +5,8 @@ import Link from "next/link";
 import * as XLSX from "xlsx";
 import { bulkImportProducts, type BulkImportMode, type BulkImportRow } from "../actions";
 import { isValidBarcodeFormat } from "@/lib/barcode";
+import { useT } from "@/lib/i18n/client";
+import type { Translate } from "@/lib/i18n/translate";
 
 type CategoryRow = { id: string; name: string; parent_id: string | null };
 type ExistingProduct = {
@@ -61,7 +63,8 @@ function matchCategoryId(raw: string, candidates: CategoryRow[]): string {
 // 还是文件内多行同名）一律标记为“重复”，统一走跳过/覆盖/全部新建。
 function validateRows(
   rows: ImportRow[],
-  existingProducts: ExistingProduct[]
+  existingProducts: ExistingProduct[],
+  t: Translate
 ): Map<string, RowValidation> {
   const result = new Map<string, RowValidation>();
 
@@ -72,25 +75,27 @@ function validateRows(
 
   for (const row of rows) {
     const cellErrors: Partial<Record<CellKey, string>> = {};
-    if (row.nombre.trim() === "") cellErrors.nombre = "商品名称不能为空";
+    if (row.nombre.trim() === "") cellErrors.nombre = t("importErr.nameRequired");
 
     if (row.categoriaRaw.trim() !== "" && !row.categoriaId) {
-      cellErrors.categoria = "分类不存在，请重新选择";
+      cellErrors.categoria = t("importErr.categoryMissing");
     }
     if (row.subcategoriaRaw.trim() !== "" && !row.subcategoriaId) {
-      cellErrors.subcategoria = row.categoriaId ? "子分类不存在，请重新选择" : "请先选择分类";
+      cellErrors.subcategoria = row.categoriaId
+        ? t("importErr.subcategoryMissing")
+        : t("importErr.selectCategoryFirst");
     }
 
     const precioNum = Number(row.precio);
     if (row.precio.trim() === "" || isNaN(precioNum) || precioNum <= 0) {
-      cellErrors.precio = "价格须为大于 0 的数字";
+      cellErrors.precio = t("importErr.price");
     }
     if (!/^\d+$/.test(row.stock.trim())) {
-      cellErrors.stock = "库存须为非负整数";
+      cellErrors.stock = t("importErr.stock");
     }
     // 条码：空的允许；填了就检查格式（只允许数字/字母/连字符）
     if (!isValidBarcodeFormat(row.codigoBarras)) {
-      cellErrors.codigo_barras = "条码格式无效";
+      cellErrors.codigo_barras = t("importErr.barcode");
     }
 
     const norm = normalize(row.nombre);
@@ -127,7 +132,7 @@ function buildSubmission(
   });
 }
 
-function downloadTemplate() {
+function downloadTemplate(templateName: string) {
   const header = EXPECTED_HEADERS.join(",");
   const sampleRows = [
     "Cargador USB-C 20W,Anker,Cargadores,,,15.99,50,8412345678905",
@@ -138,7 +143,7 @@ function downloadTemplate() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "商品导入模板.csv";
+  a.download = templateName;
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -152,6 +157,7 @@ export default function ImportClient({
   categories: CategoryRow[];
   existingProducts: ExistingProduct[];
 }) {
+  const t = useT();
   const parentCategories = useMemo(() => categories.filter((c) => !c.parent_id), [categories]);
   function childrenOf(parentId: string) {
     return categories.filter((c) => c.parent_id === parentId);
@@ -168,8 +174,8 @@ export default function ImportClient({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const validationMap = useMemo(
-    () => (rows ? validateRows(rows, existingProducts) : new Map<string, RowValidation>()),
-    [rows, existingProducts]
+    () => (rows ? validateRows(rows, existingProducts, t) : new Map<string, RowValidation>()),
+    [rows, existingProducts, t]
   );
 
   const hasDuplicates = useMemo(
@@ -195,13 +201,13 @@ export default function ImportClient({
       const wb = XLSX.read(new Uint8Array(buf), { type: "array" });
       const sheetName = wb.SheetNames[0];
       if (!sheetName) {
-        setFileError("文件中没有工作表");
+        setFileError(t("import.fileNoSheet"));
         return;
       }
       const ws = wb.Sheets[sheetName];
       const grid = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, raw: true, defval: "" });
       if (grid.length === 0) {
-        setFileError("文件为空");
+        setFileError(t("import.fileEmpty"));
         return;
       }
 
@@ -209,10 +215,12 @@ export default function ImportClient({
       const missing = EXPECTED_HEADERS.filter((h) => !headerRow.includes(h));
       const extra = headerRow.filter((h) => h !== "" && !(EXPECTED_HEADERS as readonly string[]).includes(h));
       if (missing.length > 0 || extra.length > 0) {
+        const sep = t("common.listSeparator");
         setFileError(
-          `表头与模板不符。${missing.length ? `缺少列：${missing.join("、")}。` : ""}${
-            extra.length ? `多余列：${extra.join("、")}。` : ""
-          }请使用「下载 CSV 模板」生成的表头，不要增删或改名列。`
+          t("import.headerMismatch", {
+            missing: missing.length ? t("import.headerMissing", { cols: missing.join(sep) }) : "",
+            extra: extra.length ? t("import.headerExtra", { cols: extra.join(sep) }) : "",
+          })
         );
         return;
       }
@@ -221,7 +229,7 @@ export default function ImportClient({
       const dataRows = grid.slice(1).filter((r) => r.some((cell) => String(cell ?? "").trim() !== ""));
 
       if (dataRows.length === 0) {
-        setFileError("文件中没有数据行");
+        setFileError(t("import.noDataRows"));
         return;
       }
 
@@ -248,7 +256,9 @@ export default function ImportClient({
 
       setRows(newRows);
     } catch (err) {
-      setFileError(err instanceof Error ? `解析文件失败：${err.message}` : "解析文件失败");
+      setFileError(
+        err instanceof Error ? t("import.parseFailedWith", { message: err.message }) : t("import.parseFailed")
+      );
     }
   }
 
@@ -301,11 +311,13 @@ export default function ImportClient({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
         </div>
-        <h2 className="text-lg font-semibold text-paper-900">导入完成</h2>
+        <h2 className="text-lg font-semibold text-paper-900">{t("import.doneTitle")}</h2>
         <p className="mt-2 text-sm text-paper-600">
-          成功导入 <span className="font-semibold text-green-600">{importResult.imported}</span> 条，
-          跳过重复 <span className="font-semibold text-amber-600">{importResult.skipped}</span> 条，
-          失败 <span className="font-semibold text-red-600">{importResult.failed}</span> 条
+          <span className="font-semibold text-green-600">{importResult.imported}</span> {t("import.doneImported")}
+          {" · "}
+          <span className="font-semibold text-amber-600">{importResult.skipped}</span> {t("import.doneSkipped")}
+          {" · "}
+          <span className="font-semibold text-red-600">{importResult.failed}</span> {t("import.doneFailed")}
         </p>
         {importResult.errors.length > 0 && (
           <div className="mx-auto mt-4 max-w-lg rounded-lg border border-red-100 bg-red-50 p-3 text-left text-xs text-red-600">
@@ -320,13 +332,13 @@ export default function ImportClient({
             onClick={resetAll}
             className="rounded-lg border border-paper-200 px-4 py-2 text-sm font-medium text-paper-700 transition-colors hover:bg-paper-100"
           >
-            继续导入
+            {t("import.continue")}
           </button>
           <Link
             href="/admin/products"
             className="rounded-lg bg-paper-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-paper-800"
           >
-            返回商品列表
+            {t("import.backToProducts")}
           </Link>
         </div>
       </div>
@@ -338,25 +350,21 @@ export default function ImportClient({
       {/* 说明 + 模板下载 */}
       <div className="flex items-center justify-between rounded-xl glass-strong p-5">
         <div>
-          <p className="text-sm font-medium text-paper-900">1. 下载模板，按格式填写商品数据</p>
-          <p className="mt-1 text-xs text-paper-500">
-            列固定为 nombre、marca、categoria、subcategoria、color、precio、stock、codigo_barras。当前版本批量导入只创建无变体的普通商品：
-            color 列会保留在预览表中供参考，但不会写入、也不会自动创建颜色变体；如需分颜色库存，请导入后到商品编辑页手动添加。
-            codigo_barras（条码）为可选，填写则会写入商品；留空即可。
-          </p>
+          <p className="text-sm font-medium text-paper-900">{t("import.step1")}</p>
+          <p className="mt-1 text-xs text-paper-500">{t("import.step1Hint")}</p>
         </div>
         <button
           type="button"
-          onClick={downloadTemplate}
+          onClick={() => downloadTemplate(t("import.templateFilename"))}
           className="shrink-0 rounded-lg border border-paper-200 bg-white px-4 py-2 text-sm font-medium text-paper-700 transition-colors hover:bg-paper-100"
         >
-          下载 CSV 模板
+          {t("import.downloadTemplate")}
         </button>
       </div>
 
       {/* 上传区域 */}
       <div className="rounded-xl glass-strong p-5">
-        <p className="mb-3 text-sm font-medium text-paper-900">2. 上传文件（.csv / .xlsx）</p>
+        <p className="mb-3 text-sm font-medium text-paper-900">{t("import.step2")}</p>
         <input
           ref={fileInputRef}
           type="file"
@@ -367,7 +375,7 @@ export default function ImportClient({
           }}
           className="block w-full text-sm text-paper-600 file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-paper-700 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-paper-800"
         />
-        {fileName && <p className="mt-2 text-xs text-paper-500">已选择文件：{fileName}</p>}
+        {fileName && <p className="mt-2 text-xs text-paper-500">{t("import.fileSelected", { name: fileName })}</p>}
         {fileError && (
           <p className="mt-3 rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600">{fileError}</p>
         )}
@@ -378,10 +386,10 @@ export default function ImportClient({
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-paper-900">
-              3. 核对数据（共 {rows.length} 行）
+              {t("import.step3", { n: rows.length })}
               {" · "}
               <span className={rows.every((r) => !rowHasError(validationMap.get(r.key)!)) ? "text-green-600" : "text-red-600"}>
-                {rows.filter((r) => rowHasError(validationMap.get(r.key)!)).length} 行有错误
+                {t("import.errorRows", { n: rows.filter((r) => rowHasError(validationMap.get(r.key)!)).length })}
               </span>
             </p>
             <button
@@ -389,21 +397,21 @@ export default function ImportClient({
               onClick={resetAll}
               className="text-xs font-medium text-paper-500 hover:text-paper-900"
             >
-              重新选择文件
+              {t("import.reselect")}
             </button>
           </div>
 
           {hasDuplicates && (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
               <p className="mb-2 text-sm font-medium text-amber-900">
-                检测到重名商品（与已有商品同名，或文件内多行同名），请选择处理方式：
+                {t("import.duplicatesTitle")}
               </p>
               <div className="flex flex-wrap gap-4">
                 {(
                   [
-                    ["skip", "跳过重复项"],
-                    ["overwrite", "覆盖已有商品（更新价格、库存、品牌等字段）"],
-                    ["new", "全部作为新商品导入"],
+                    ["skip", t("import.modeSkip")],
+                    ["overwrite", t("import.modeOverwrite")],
+                    ["new", t("import.modeNew")],
                   ] as [BulkImportMode, string][]
                 ).map(([value, label]) => (
                   <label key={value} className="flex items-center gap-1.5 text-sm text-amber-900">
@@ -429,11 +437,11 @@ export default function ImportClient({
                   <th className="px-3 py-2 text-xs font-medium text-paper-500">marca</th>
                   <th className="px-3 py-2 text-xs font-medium text-paper-500">categoria</th>
                   <th className="px-3 py-2 text-xs font-medium text-paper-500">subcategoria</th>
-                  <th className="px-3 py-2 text-xs font-medium text-paper-500">color（仅参考，不导入）</th>
+                  <th className="px-3 py-2 text-xs font-medium text-paper-500">{t("import.thColorNote")}</th>
                   <th className="px-3 py-2 text-xs font-medium text-paper-500">precio</th>
                   <th className="px-3 py-2 text-xs font-medium text-paper-500">stock</th>
                   <th className="px-3 py-2 text-xs font-medium text-paper-500">codigo_barras</th>
-                  <th className="px-3 py-2 text-xs font-medium text-paper-500">状态</th>
+                  <th className="px-3 py-2 text-xs font-medium text-paper-500">{t("import.thStatus")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-paper-100">
@@ -470,7 +478,9 @@ export default function ImportClient({
                           className={inputCls(rv.cellErrors.categoria)}
                         >
                           <option value="">
-                            {row.categoriaRaw.trim() ? `未匹配：${row.categoriaRaw}` : "未分类"}
+                            {row.categoriaRaw.trim()
+                              ? t("import.unmatched", { name: row.categoriaRaw })
+                              : t("common.uncategorized")}
                           </option>
                           {parentCategories.map((c) => (
                             <option key={c.id} value={c.id}>
@@ -490,7 +500,9 @@ export default function ImportClient({
                           className={`${inputCls(rv.cellErrors.subcategoria)} disabled:opacity-50`}
                         >
                           <option value="">
-                            {row.subcategoriaRaw.trim() ? `未匹配：${row.subcategoriaRaw}` : "无"}
+                            {row.subcategoriaRaw.trim()
+                              ? t("import.unmatched", { name: row.subcategoriaRaw })
+                              : t("import.none")}
                           </option>
                           {row.categoriaId &&
                             childrenOf(row.categoriaId).map((c) => (
@@ -507,7 +519,7 @@ export default function ImportClient({
                         <input
                           value={row.color}
                           onChange={(e) => updateField(row.key, "color", e.target.value)}
-                          placeholder="（可留空）"
+                          placeholder={t("import.blankAllowed")}
                           className={inputCls()}
                         />
                       </td>
@@ -535,7 +547,7 @@ export default function ImportClient({
                         <input
                           value={row.codigoBarras}
                           onChange={(e) => updateField(row.key, "codigoBarras", e.target.value)}
-                          placeholder="（可留空）"
+                          placeholder={t("import.blankAllowed")}
                           className={inputCls(rv.cellErrors.codigo_barras)}
                         />
                         {rv.cellErrors.codigo_barras && (
@@ -546,17 +558,17 @@ export default function ImportClient({
                         <div className="flex flex-col gap-1">
                           {hasErr && (
                             <span className="inline-flex w-fit items-center rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-medium text-red-700">
-                              错误
+                              {t("import.badgeError")}
                             </span>
                           )}
                           {rv.isDuplicate && (
                             <span className="inline-flex w-fit items-center rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700">
-                              重复
+                              {t("import.badgeDuplicate")}
                             </span>
                           )}
                           {!hasErr && !rv.isDuplicate && (
                             <span className="inline-flex w-fit items-center rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700">
-                              正常
+                              {t("import.badgeOk")}
                             </span>
                           )}
                         </div>
@@ -579,7 +591,7 @@ export default function ImportClient({
               onClick={handleConfirmImport}
               className="rounded-lg bg-paper-700 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-paper-800 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {isImporting ? "导入中…" : "确认导入"}
+              {isImporting ? t("import.importing") : t("import.confirm")}
             </button>
           </div>
         </div>

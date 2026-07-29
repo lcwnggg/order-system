@@ -1,9 +1,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/app/app-shell";
+import { getI18n } from "@/lib/i18n/server";
 import StoresClient, { type StoreUser } from "./stores-client";
 
 export default async function AdminStoresPage() {
+  const { t } = await getI18n();
   const supabase = await createClient();
   const {
     data: { user },
@@ -31,7 +33,7 @@ export default async function AdminStoresPage() {
       .eq("role", "store");
     stores = (profileStores ?? []).map((p) => ({
       id: p.id as string,
-      email: "（请先执行建表 SQL 以显示邮箱）",
+      email: t("stores.emailFallback"),
       store_name: p.store_name as string | null,
     }));
   } else {
@@ -41,11 +43,9 @@ export default async function AdminStoresPage() {
   return (
     <AppShell email={user.email}>
         <div className="mb-6">
-          <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.22em] text-paper-500">仓库 — 门店</p>
-          <h1 className="animate-fade-up mt-2 text-3xl font-normal tracking-tight text-paper-900">门店管理</h1>
-          <p className="mt-1 text-sm text-paper-500">
-            为每家门店设置易识别的店名，订单管理页将优先显示店名。
-          </p>
+          <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.22em] text-paper-500">{t("stores.eyebrow")}</p>
+          <h1 className="animate-fade-up mt-2 text-3xl font-normal tracking-tight text-paper-900">{t("stores.title")}</h1>
+          <p className="mt-1 text-sm text-paper-500">{t("stores.subtitle")}</p>
         </div>
         <StoresClient stores={stores} />
       </AppShell>

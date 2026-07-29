@@ -13,6 +13,7 @@ import {
 import type { ProductVariant } from "@/app/admin/products/actions";
 import ProductEditModal from "@/app/admin/products/product-edit-modal";
 import { getTotalStock, isLowStock } from "@/lib/stock";
+import { useT } from "@/lib/i18n/client";
 
 export type Category = {
   id: string;
@@ -47,6 +48,7 @@ export default function CategoriesClient({
   products: ProductSummary[];
   variants: ProductVariant[];
 }) {
+  const t = useT();
   const router = useRouter();
   const [, startTransition] = useTransition();
 
@@ -72,7 +74,7 @@ export default function CategoriesClient({
             : "bg-green-50 text-green-600"
         }`}
       >
-        {total === 0 ? "售罄" : total}
+        {total === 0 ? t("common.soldOut") : total}
       </span>
     );
   }
@@ -165,7 +167,7 @@ export default function CategoriesClient({
   }
 
   function handleDelete(id: string, name: string) {
-    if (!window.confirm(`确定删除分类「${name}」吗？`)) return;
+    if (!window.confirm(t("categories.confirmDelete", { name }))) return;
     setDeletingId(id);
     startTransition(async () => {
       const result = await deleteCategory(id);
@@ -198,7 +200,7 @@ export default function CategoriesClient({
   }
 
   function handleRemoveProduct(productId: string, productName: string) {
-    if (!window.confirm(`将「${productName}」移出分类？`)) return;
+    if (!window.confirm(t("categories.confirmRemoveProduct", { name: productName }))) return;
     setRemovingProductId(productId);
     startTransition(async () => {
       await removeProductFromCategory(productId);
@@ -248,14 +250,14 @@ export default function CategoriesClient({
         <div className="grid gap-4 sm:grid-cols-2">
           {/* 新增大类 */}
           <div className="rounded-xl glass-strong p-5">
-            <h3 className="mb-3 text-sm font-semibold text-paper-900">添加大类</h3>
+            <h3 className="mb-3 text-sm font-semibold text-paper-900">{t("categories.addParent")}</h3>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={newParentName}
                 onChange={(e) => setNewParentName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAddParent()}
-                placeholder="大类名称"
+                placeholder={t("categories.parentNamePlaceholder")}
                 className={inputCls}
               />
               <button
@@ -264,7 +266,7 @@ export default function CategoriesClient({
                 onClick={handleAddParent}
                 className={btnPrimaryCls}
               >
-                {addingParent ? "…" : "添加"}
+                {addingParent ? "…" : t("common.add")}
               </button>
             </div>
             {addParentResult && "error" in addParentResult && (
@@ -274,14 +276,14 @@ export default function CategoriesClient({
 
           {/* 新增小类 */}
           <div className="rounded-xl glass-strong p-5">
-            <h3 className="mb-3 text-sm font-semibold text-paper-900">在大类下添加小类</h3>
+            <h3 className="mb-3 text-sm font-semibold text-paper-900">{t("categories.addChild")}</h3>
             <div className="space-y-2">
               <select
                 value={newChildParentId}
                 onChange={(e) => setNewChildParentId(e.target.value)}
                 className={inputCls}
               >
-                <option value="">选择所属大类…</option>
+                <option value="">{t("categories.selectParent")}</option>
                 {categoryTree.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -294,7 +296,7 @@ export default function CategoriesClient({
                   value={newChildName}
                   onChange={(e) => setNewChildName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleAddChild()}
-                  placeholder="小类名称"
+                  placeholder={t("categories.childNamePlaceholder")}
                   className={inputCls}
                 />
                 <button
@@ -303,7 +305,7 @@ export default function CategoriesClient({
                   onClick={handleAddChild}
                   className={btnPrimaryCls}
                 >
-                  {addingChild ? "…" : "添加"}
+                  {addingChild ? "…" : t("common.add")}
                 </button>
               </div>
             </div>
@@ -316,7 +318,7 @@ export default function CategoriesClient({
         {/* ── 分类列表 ── */}
         {categoryTree.length === 0 ? (
           <div className="rounded-xl border border-dashed border-paper-300 bg-white py-14 text-center">
-            <p className="text-sm text-paper-500">暂无分类，请通过上方表单添加</p>
+            <p className="text-sm text-paper-500">{t("categories.empty")}</p>
           </div>
         ) : (
           <div className="space-y-3">
@@ -329,7 +331,7 @@ export default function CategoriesClient({
                 >
                   {/* 大类行 */}
                   <div className="flex items-center gap-3 border-b border-paper-100 bg-paper-100 px-5 py-3">
-                    <span className="text-xs text-paper-500">大类</span>
+                    <span className="text-xs text-paper-500">{t("categories.parentTag")}</span>
                     {editingId === parent.id ? (
                       <div className="flex flex-1 items-center gap-2">
                         <input
@@ -348,23 +350,23 @@ export default function CategoriesClient({
                           onClick={() => handleRename(parent.id)}
                           className="text-xs font-medium text-paper-900 hover:underline disabled:opacity-50"
                         >
-                          {renamingId === parent.id ? "保存中…" : "保存"}
+                          {renamingId === parent.id ? t("common.saving") : t("common.save")}
                         </button>
                         <button
                           type="button"
                           onClick={() => setEditingId(null)}
                           className="text-xs text-paper-500 hover:text-paper-600"
                         >
-                          取消
+                          {t("common.cancel")}
                         </button>
                       </div>
                     ) : (
                       <span className="flex-1 text-sm font-semibold text-paper-900">
                         {parent.name}
                         <span className="ml-2 font-normal text-paper-500">
-                          {parent.children.length} 个小类
+                          {t("categories.childCount", { n: parent.children.length })}
                           {parentProductCount > 0 && (
-                            <span className="ml-1">· {parentProductCount} 件商品</span>
+                            <span className="ml-1">{t("categories.productCountDot", { n: parentProductCount })}</span>
                           )}
                         </span>
                       </span>
@@ -377,7 +379,7 @@ export default function CategoriesClient({
                             onClick={() => setExpandedParentId(expandedParentId === parent.id ? null : parent.id)}
                             className={`${btnOutlineCls} min-w-[52px]`}
                           >
-                            {expandedParentId === parent.id ? "收起" : "展开"}
+                            {expandedParentId === parent.id ? t("common.collapse") : t("common.expand")}
                           </button>
                         )}
                         <button
@@ -385,7 +387,7 @@ export default function CategoriesClient({
                           onClick={() => startRename(parent)}
                           className={btnOutlineCls}
                         >
-                          改名
+                          {t("common.rename")}
                         </button>
                         <button
                           type="button"
@@ -393,7 +395,7 @@ export default function CategoriesClient({
                           onClick={() => handleDelete(parent.id, parent.name)}
                           className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 disabled:opacity-40"
                         >
-                          {deletingId === parent.id ? "…" : "删除"}
+                          {deletingId === parent.id ? "…" : t("common.delete")}
                         </button>
                       </div>
                     )}
@@ -415,7 +417,7 @@ export default function CategoriesClient({
                   {expandedParentId === parent.id && (
                     <div className="border-t border-paper-100 bg-paper-100/60 px-8 py-3">
                       {productsInCategory(parent.id).length === 0 ? (
-                        <p className="py-2 text-xs text-paper-500">暂无直接归属商品</p>
+                        <p className="py-2 text-xs text-paper-500">{t("categories.noDirectProducts")}</p>
                       ) : (
                         <ul className="mb-3 space-y-1">
                           {productsInCategory(parent.id).map((p) => (
@@ -435,7 +437,7 @@ export default function CategoriesClient({
                                 onClick={() => handleRemoveProduct(p.id, p.name)}
                                 className="shrink-0 rounded px-2 py-0.5 text-xs text-paper-500 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-40"
                               >
-                                {removingProductId === p.id ? "…" : "移出分类"}
+                                {removingProductId === p.id ? "…" : t("categories.removeFromCategory")}
                               </button>
                             </li>
                           ))}
@@ -446,7 +448,7 @@ export default function CategoriesClient({
                         onClick={() => openAddModal(parent.id, parent.name)}
                         className="rounded-lg border border-dashed border-paper-300 px-3 py-1.5 text-xs font-medium text-paper-500 transition-colors hover:border-paper-400 hover:bg-white hover:text-paper-700"
                       >
-                        + 添加商品到此大类
+                        {t("categories.addToParent")}
                       </button>
                     </div>
                   )}
@@ -480,21 +482,21 @@ export default function CategoriesClient({
                                     onClick={() => handleRename(child.id)}
                                     className="text-xs font-medium text-paper-900 hover:underline disabled:opacity-50"
                                   >
-                                    {renamingId === child.id ? "保存中…" : "保存"}
+                                    {renamingId === child.id ? t("common.saving") : t("common.save")}
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => setEditingId(null)}
                                     className="text-xs text-paper-500 hover:text-paper-600"
                                   >
-                                    取消
+                                    {t("common.cancel")}
                                   </button>
                                 </div>
                               ) : (
                                 <span className="flex-1 text-sm text-paper-700">
                                   {child.name}
                                   <span className="ml-2 text-xs text-paper-500">
-                                    {childProducts.length} 件商品
+                                    {t("categories.childProductCount", { n: childProducts.length })}
                                   </span>
                                 </span>
                               )}
@@ -512,14 +514,14 @@ export default function CategoriesClient({
                                     }
                                     className={`${btnOutlineCls} min-w-[52px]`}
                                   >
-                                    {isExpanded ? "收起" : "展开"}
+                                    {isExpanded ? t("common.collapse") : t("common.expand")}
                                   </button>
                                   <button
                                     type="button"
                                     onClick={() => startRename(child)}
                                     className={btnOutlineCls}
                                   >
-                                    改名
+                                    {t("common.rename")}
                                   </button>
                                   <button
                                     type="button"
@@ -527,7 +529,7 @@ export default function CategoriesClient({
                                     onClick={() => handleDelete(child.id, child.name)}
                                     className="rounded-lg px-3 py-1.5 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 disabled:opacity-40"
                                   >
-                                    {deletingId === child.id ? "…" : "删除"}
+                                    {deletingId === child.id ? "…" : t("common.delete")}
                                   </button>
                                 </div>
                               )}
@@ -537,7 +539,7 @@ export default function CategoriesClient({
                             {isExpanded && (
                               <div className="border-t border-paper-100 bg-paper-100/60 px-8 py-3">
                                 {childProducts.length === 0 ? (
-                                  <p className="py-2 text-xs text-paper-500">暂无商品</p>
+                                  <p className="py-2 text-xs text-paper-500">{t("categories.noProducts")}</p>
                                 ) : (
                                   <ul className="mb-3 space-y-1">
                                     {childProducts.map((p) => (
@@ -560,7 +562,7 @@ export default function CategoriesClient({
                                           onClick={() => handleRemoveProduct(p.id, p.name)}
                                           className="shrink-0 rounded px-2 py-0.5 text-xs text-paper-500 transition-colors hover:bg-red-50 hover:text-red-500 disabled:opacity-40"
                                         >
-                                          {removingProductId === p.id ? "…" : "移出分类"}
+                                          {removingProductId === p.id ? "…" : t("categories.removeFromCategory")}
                                         </button>
                                       </li>
                                     ))}
@@ -571,7 +573,7 @@ export default function CategoriesClient({
                                   onClick={() => openAddModal(child.id, child.name)}
                                   className="rounded-lg border border-dashed border-paper-300 px-3 py-1.5 text-xs font-medium text-paper-500 transition-colors hover:border-paper-400 hover:bg-white hover:text-paper-700"
                                 >
-                                  + 添加商品到此分类
+                                  {t("categories.addToChild")}
                                 </button>
                               </div>
                             )}
@@ -613,10 +615,10 @@ export default function CategoriesClient({
             <div className="flex items-center justify-between border-b border-paper-100 px-5 py-4">
               <div>
                 <h3 className="text-sm font-semibold text-paper-900">
-                  添加商品到「{addModalCatName}」
+                  {t("categories.modalTitle", { name: addModalCatName })}
                 </h3>
                 <p className="mt-0.5 text-xs text-paper-500">
-                  选择要归入此分类的商品（已在此分类的商品不在列表中）
+                  {t("categories.modalSubtitle")}
                 </p>
               </div>
               <button
@@ -631,7 +633,7 @@ export default function CategoriesClient({
             <div className="overflow-y-auto flex-1 px-5 py-3">
               {modalProducts.length === 0 ? (
                 <p className="py-6 text-center text-sm text-paper-500">
-                  所有商品已在此分类中
+                  {t("categories.modalAllIn")}
                 </p>
               ) : (
                 <>
@@ -643,11 +645,11 @@ export default function CategoriesClient({
                         onChange={toggleSelectAll}
                         className="h-3.5 w-3.5 rounded"
                       />
-                      全选（{modalProducts.length} 件）
+                      {t("categories.selectAll", { n: modalProducts.length })}
                     </label>
                     {modalSelected.size > 0 && (
                       <span className="text-xs text-paper-500">
-                        已选 {modalSelected.size} 件
+                        {t("categories.selectedCount", { n: modalSelected.size })}
                       </span>
                     )}
                   </div>
@@ -663,7 +665,7 @@ export default function CategoriesClient({
                           />
                           <span className="text-sm text-paper-800">{p.name}</span>
                           {p.category_id && (
-                            <span className="ml-auto text-xs text-paper-500">已有分类</span>
+                            <span className="ml-auto text-xs text-paper-500">{t("categories.hasCategory")}</span>
                           )}
                         </label>
                       </li>
@@ -683,7 +685,7 @@ export default function CategoriesClient({
                   onClick={closeModal}
                   className={btnOutlineCls}
                 >
-                  取消
+                  {t("common.cancel")}
                 </button>
                 <button
                   type="button"
@@ -691,7 +693,7 @@ export default function CategoriesClient({
                   onClick={handleAssign}
                   className={btnPrimaryCls}
                 >
-                  {assigning ? "保存中…" : `确认添加（${modalSelected.size}）`}
+                  {assigning ? t("common.saving") : t("categories.confirmAdd", { n: modalSelected.size })}
                 </button>
               </div>
             </div>

@@ -3,9 +3,11 @@
 import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { suggestProductFromImages, type AiSuggestion } from "./ai-actions";
+import { useT } from "@/lib/i18n/client";
+import type { Translate } from "@/lib/i18n/translate";
 
 // 复用与表单一致的压缩逻辑（浏览器端）
-function compressToJpeg(file: File, maxWidth = 1200, quality = 0.8): Promise<Blob> {
+function compressToJpeg(file: File, t: Translate, maxWidth = 1200, quality = 0.8): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
@@ -16,15 +18,15 @@ function compressToJpeg(file: File, maxWidth = 1200, quality = 0.8): Promise<Blo
       canvas.width = Math.round(img.width * scale);
       canvas.height = Math.round(img.height * scale);
       const ctx = canvas.getContext("2d");
-      if (!ctx) return reject(new Error("Canvas 不可用"));
+      if (!ctx) return reject(new Error(t("common.canvasUnavailable")));
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error("压缩失败"))),
+        (blob) => (blob ? resolve(blob) : reject(new Error(t("common.compressFailed")))),
         "image/jpeg",
         quality
       );
     };
-    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error("图片加载失败")); };
+    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error(t("common.imageLoadFailed"))); };
     img.src = objectUrl;
   });
 }
@@ -42,6 +44,7 @@ export default function AiRecognizePanel({
   // 识别结果，父表单用它自动填字段
   onSuggestion: (s: AiSuggestion) => void;
 }) {
+  const t = useT();
   const [phase, setPhase] = useState<Phase>("idle");
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -56,7 +59,7 @@ export default function AiRecognizePanel({
       const supabase = createClient();
       const urls: string[] = [];
       for (const file of list) {
-        const blob = await compressToJpeg(file);
+        const blob = await compressToJpeg(file, t);
         const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
         const { error: upErr } = await supabase.storage
           .from("product-images")
@@ -79,7 +82,7 @@ export default function AiRecognizePanel({
       onSuggestion(result.suggestion);
       setPhase("done");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "识别失败");
+      setError(err instanceof Error ? err.message : t("ai.failed"));
       setPhase("error");
     } finally {
       if (inputRef.current) inputRef.current.value = "";
@@ -99,14 +102,11 @@ export default function AiRecognizePanel({
           </svg>
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-paper-900">AI 自动识别（可选）</p>
+          <p className="text-sm font-semibold text-paper-900">{t("ai.title")}</p>
           <p className="mt-1 text-xs leading-relaxed text-paper-600">
-            拍 1–2 张商品照片，AI 会自动帮你填好下面的名称、品牌、分类和描述。
+            {t("ai.body")}
             <br />
-            <span className="text-paper-500">
-              📸 小贴士：光线充足、白色背景、正面拍清品牌和名称最准；可再拍一张背面帮助识别更多信息。
-              第一张照片会自动用作商品图，无需再传一次。
-            </span>
+            <span className="text-paper-500">{t("ai.tip")}</span>
           </p>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -122,7 +122,7 @@ export default function AiRecognizePanel({
                   d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              {busy ? "处理中…" : "拍照 / 选择照片"}
+              {busy ? t("common.processing") : t("ai.takePhoto")}
               <input
                 ref={inputRef}
                 type="file"
@@ -134,10 +134,10 @@ export default function AiRecognizePanel({
               />
             </label>
 
-            {phase === "uploading" && <span className="text-xs text-paper-500">正在上传照片…</span>}
-            {phase === "recognizing" && <span className="text-xs text-paper-500">AI 正在识别…</span>}
+            {phase === "uploading" && <span className="text-xs text-paper-500">{t("ai.uploadingPhotos")}</span>}
+            {phase === "recognizing" && <span className="text-xs text-paper-500">{t("ai.recognizing")}</span>}
             {phase === "done" && (
-              <span className="text-xs font-medium text-green-600">已识别，已自动填入下方字段，请核对</span>
+              <span className="text-xs font-medium text-green-600">{t("ai.done")}</span>
             )}
           </div>
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useT } from "@/lib/i18n/client";
 
 // 用 Web Audio 生成一声轻提示音，免依赖、免音频文件。
 // 浏览器要求「用户手势」后才能出声，所以点铃铛时会解锁 AudioContext。
@@ -49,8 +50,14 @@ type NewRow = { status?: string; requester_store_id?: string; item_text?: string
  * 播放提示音 + 弹系统通知（需一次「允许通知」）。App 开着（含后台标签页）时有效。
  */
 export default function TransferAlerts({ currentUserId }: { currentUserId: string }) {
+  const t = useT();
   const [enabled, setEnabled] = useState(false);
   const enabledRef = useRef(false);
+  // 实时回调闭包只在挂载时建立一次，用 ref 拿到最新的 t，避免语言切换后通知还是旧语言
+  const tRef = useRef(t);
+  useEffect(() => {
+    tRef.current = t;
+  }, [t]);
 
   // 把最新的 enabled 同步到 ref，供实时回调 / 手势监听读取（避免重订阅）
   useEffect(() => {
@@ -86,8 +93,8 @@ export default function TransferAlerts({ currentUserId }: { currentUserId: strin
           beep();
           if (typeof Notification !== "undefined" && Notification.permission === "granted") {
             try {
-              new Notification("门店互调 · 有人在找货", {
-                body: row.item_text ?? "点开看看哪家店有",
+              new Notification(tRef.current("alerts.notifTitle"), {
+                body: row.item_text ?? tRef.current("alerts.notifBody"),
                 tag: "transfer-request",
               });
             } catch {
@@ -140,7 +147,7 @@ export default function TransferAlerts({ currentUserId }: { currentUserId: strin
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M13.73 21a2 2 0 01-3.46 0M18.63 13A17.888 17.888 0 0118 8m-6-4a2 2 0 00-2 2c0 .28.02.55.05.82M5 5l14 14" />
         )}
       </svg>
-      {enabled ? "提示已开" : "开启提示音"}
+      {enabled ? t("alerts.on") : t("alerts.off")}
     </button>
   );
 }

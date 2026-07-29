@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/app/app-shell";
+import { getI18n } from "@/lib/i18n/server";
 import CategoriesClient, { type Category, type CategoryTree, type ProductSummary } from "./categories-client";
 import type { ProductVariant } from "@/app/admin/products/actions";
 
 export default async function AdminCategoriesPage() {
+  const { t } = await getI18n();
   const supabase = await createClient();
   const {
     data: { user },
@@ -50,11 +52,9 @@ export default async function AdminCategoriesPage() {
   return (
     <AppShell email={user.email}>
         <div className="mb-6">
-          <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.22em] text-paper-500">仓库 — 分类</p>
-          <h1 className="animate-fade-up mt-2 text-3xl font-normal tracking-tight text-paper-900">分类管理</h1>
-          <p className="mt-1 text-sm text-paper-500">
-            管理两级商品分类目录（大类 › 小类），商品可归属到任意小类。
-          </p>
+          <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.22em] text-paper-500">{t("categories.eyebrow")}</p>
+          <h1 className="animate-fade-up mt-2 text-3xl font-normal tracking-tight text-paper-900">{t("categories.title")}</h1>
+          <p className="mt-1 text-sm text-paper-500">{t("categories.subtitle")}</p>
         </div>
         <CategoriesClient categoryTree={categoryTree} products={products} variants={variants} />
       </AppShell>

@@ -2,9 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/app/app-shell";
+import { getI18n } from "@/lib/i18n/server";
 import { getTotalStock, isLowStock } from "@/lib/stock";
 
 export default async function StockAlertPage() {
+  const { t } = await getI18n();
   const supabase = await createClient();
   const {
     data: { user },
@@ -53,24 +55,22 @@ export default async function StockAlertPage() {
   return (
     <AppShell email={user.email}>
         <div className="mb-6">
-          <h1 className="text-xl font-semibold text-paper-900">库存告急商品</h1>
-          <p className="mt-1 text-sm text-paper-500">
-            以下商品库存 ≤ 5 件，共 {list.length} 件，请及时补货。
-          </p>
+          <h1 className="text-xl font-semibold text-paper-900">{t("stockAlert.title")}</h1>
+          <p className="mt-1 text-sm text-paper-500">{t("stockAlert.subtitle", { n: list.length })}</p>
         </div>
 
         {list.length === 0 ? (
           <div className="rounded-xl border border-dashed border-paper-300 bg-white py-20 text-center">
-            <p className="text-sm text-paper-500">暂无库存告急商品</p>
+            <p className="text-sm text-paper-500">{t("stockAlert.empty")}</p>
           </div>
         ) : (
           <div className="overflow-hidden rounded-2xl glass-strong">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-paper-100 bg-paper-100 text-left">
-                  <th className="px-5 py-3 font-medium text-paper-500">商品名称</th>
-                  <th className="px-5 py-3 font-medium text-paper-500">状态</th>
-                  <th className="px-5 py-3 text-right font-medium text-paper-500">当前库存</th>
+                  <th className="px-5 py-3 font-medium text-paper-500">{t("stockAlert.thName")}</th>
+                  <th className="px-5 py-3 font-medium text-paper-500">{t("stockAlert.thStatus")}</th>
+                  <th className="px-5 py-3 text-right font-medium text-paper-500">{t("stockAlert.thCurrentStock")}</th>
                   <th className="px-5 py-3 font-medium text-paper-500"></th>
                 </tr>
               </thead>
@@ -100,14 +100,14 @@ export default async function StockAlertPage() {
                             : "bg-paper-100 text-paper-500"
                         }`}
                       >
-                        {product.is_active ? "上架" : "下架"}
+                        {product.is_active ? t("list.active") : t("list.inactive")}
                       </span>
                     </td>
                     <td className="px-5 py-3 text-right">
                       {product.has_variants ? (
                         <div className="flex flex-wrap items-center justify-end gap-1">
                           {product.variants.length === 0 ? (
-                            <span className="text-xs text-paper-500">暂无变体</span>
+                            <span className="text-xs text-paper-500">{t("list.noVariants")}</span>
                           ) : (
                             product.variants.map((v) => (
                               <span
@@ -121,7 +121,7 @@ export default async function StockAlertPage() {
                                 }`}
                               >
                                 <span className="text-paper-500">{v.color}</span>
-                                {v.stock === 0 ? "售罄" : v.stock}
+                                {v.stock === 0 ? t("common.soldOut") : v.stock}
                               </span>
                             ))
                           )}
@@ -135,7 +135,7 @@ export default async function StockAlertPage() {
                           >
                             {product.stock}
                           </span>
-                          <span className="ml-1 text-xs text-paper-500">件</span>
+                          <span className="ml-1 text-xs text-paper-500">{t("common.units")}</span>
                         </>
                       )}
                     </td>
@@ -144,7 +144,7 @@ export default async function StockAlertPage() {
                         href="/admin/products"
                         className="text-xs font-medium text-paper-500 hover:text-paper-900 hover:underline"
                       >
-                        去补货 →
+                        {t("stockAlert.restock")}
                       </Link>
                     </td>
                   </tr>

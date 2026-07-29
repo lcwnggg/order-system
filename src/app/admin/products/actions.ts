@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isValidBarcodeFormat, normalizeBarcode } from "@/lib/barcode";
+import { getT } from "@/lib/i18n/server";
 
 export type ActionResult = { error: string } | { success: true };
 
@@ -43,8 +44,9 @@ export async function addProduct(
   _prevState: ActionResult | null,
   formData: FormData
 ): Promise<ActionResult> {
+  const t = await getT();
   const supabase = await requireWarehouse();
-  if (!supabase) return { error: "无权限" };
+  if (!supabase) return { error: t("common.noPermission") };
 
   const name = (formData.get("name") as string)?.trim();
   const description = (formData.get("description") as string)?.trim();
@@ -57,20 +59,20 @@ export async function addProduct(
   const barcode = normalizeBarcode(formData.get("barcode") as string);
   const variantsJson = (formData.get("variants") as string) || "[]";
 
-  if (!name) return { error: "商品名称不能为空" };
-  if (isNaN(price) || price < 0) return { error: "请输入有效价格" };
-  if (!has_variants && (isNaN(stock) || stock < 0)) return { error: "请输入有效库存数量" };
-  if (!isValidBarcodeFormat(barcode)) return { error: "条码格式无效（只允许数字、字母、连字符）" };
+  if (!name) return { error: t("err.productNameRequired") };
+  if (isNaN(price) || price < 0) return { error: t("err.invalidPrice") };
+  if (!has_variants && (isNaN(stock) || stock < 0)) return { error: t("err.invalidStock") };
+  if (!isValidBarcodeFormat(barcode)) return { error: t("err.barcodeInvalid") };
 
   let variants: { color: string; stock: number }[] = [];
   if (has_variants) {
     try {
       variants = JSON.parse(variantsJson);
     } catch {
-      return { error: "颜色变体数据格式错误" };
+      return { error: t("err.variantJson") };
     }
-    if (variants.length === 0) return { error: "开启颜色变体时至少添加一种颜色" };
-    if (variants.some((v) => !v.color?.trim())) return { error: "颜色名称不能为空" };
+    if (variants.length === 0) return { error: t("err.variantAtLeastOne") };
+    if (variants.some((v) => !v.color?.trim())) return { error: t("err.colorNameRequired") };
   }
 
   const { data: product, error: insertErr } = await supabase
@@ -111,15 +113,16 @@ export async function updateProduct(
     barcode?: string | null;
   }
 ): Promise<ActionResult> {
+  const t = await getT();
   const supabase = await requireWarehouse();
-  if (!supabase) return { error: "无权限" };
+  if (!supabase) return { error: t("common.noPermission") };
 
   const { name, description, price, stock, newImageUrl, category_id, has_variants, brand, barcode } = fields;
-  if (!name) return { error: "商品名称不能为空" };
-  if (isNaN(price) || price < 0) return { error: "请输入有效价格" };
-  if (has_variants !== true && (isNaN(stock) || stock < 0)) return { error: "请输入有效库存数量" };
+  if (!name) return { error: t("err.productNameRequired") };
+  if (isNaN(price) || price < 0) return { error: t("err.invalidPrice") };
+  if (has_variants !== true && (isNaN(stock) || stock < 0)) return { error: t("err.invalidStock") };
   if (barcode !== undefined && !isValidBarcodeFormat(barcode)) {
-    return { error: "条码格式无效（只允许数字、字母、连字符）" };
+    return { error: t("err.barcodeInvalid") };
   }
 
   const updateData: Record<string, unknown> = {
@@ -146,8 +149,9 @@ export async function upsertVariants(
   productId: string,
   variants: VariantInput[]
 ): Promise<ActionResult> {
+  const t = await getT();
   const supabase = await requireWarehouse();
-  if (!supabase) return { error: "无权限" };
+  if (!supabase) return { error: t("common.noPermission") };
 
   for (const v of variants) {
     if (v._delete && v.id) {
@@ -176,9 +180,10 @@ export async function upsertVariants(
 }
 
 export async function adjustVariantStock(variantId: string, delta: number): Promise<ActionResult> {
+  const t = await getT();
   const supabase = await requireWarehouse();
-  if (!supabase) return { error: "无权限" };
-  if (!Number.isInteger(delta) || delta <= 0) return { error: "增加数量必须是正整数" };
+  if (!supabase) return { error: t("common.noPermission") };
+  if (!Number.isInteger(delta) || delta <= 0) return { error: t("err.deltaPositiveInt") };
 
   // 原子自增，避免读-改-写竞态（两人同时 +N 会丢更新）
   const { error } = await supabase.rpc("adjust_variant_stock", {
@@ -193,8 +198,9 @@ export async function adjustVariantStock(variantId: string, delta: number): Prom
 }
 
 export async function toggleProductActive(id: string, isActive: boolean): Promise<ActionResult> {
+  const t = await getT();
   const supabase = await requireWarehouse();
-  if (!supabase) return { error: "无权限" };
+  if (!supabase) return { error: t("common.noPermission") };
 
   const { error } = await supabase.from("products").update({ is_active: isActive }).eq("id", id);
   if (error) return { error: error.message };
@@ -205,8 +211,9 @@ export async function toggleProductActive(id: string, isActive: boolean): Promis
 }
 
 export async function deleteProduct(id: string): Promise<ActionResult> {
+  const t = await getT();
   const supabase = await requireWarehouse();
-  if (!supabase) return { error: "无权限" };
+  if (!supabase) return { error: t("common.noPermission") };
 
   // 保护历史：被历史订单引用过的商品禁止硬删除（会破坏订单明细/金额）。
   // 这类商品应「下架」（is_active=false）而不是删除。仅从未被下单过的商品可真正删除。
@@ -216,9 +223,7 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
     .eq("product_id", id);
   if (countErr) return { error: countErr.message };
   if ((count ?? 0) > 0) {
-    return {
-      error: "该商品已存在于历史订单，不能删除（会破坏订单记录）。请改用「下架」隐藏它。",
-    };
+    return { error: t("err.productInOrders") };
   }
 
   const { error } = await supabase.from("products").delete().eq("id", id);
@@ -229,9 +234,10 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
 }
 
 export async function adjustStock(id: string, delta: number): Promise<ActionResult> {
+  const t = await getT();
   const supabase = await requireWarehouse();
-  if (!supabase) return { error: "无权限" };
-  if (!Number.isInteger(delta) || delta <= 0) return { error: "增加数量必须是正整数" };
+  if (!supabase) return { error: t("common.noPermission") };
+  if (!Number.isInteger(delta) || delta <= 0) return { error: t("err.deltaPositiveInt") };
 
   // 原子自增，避免读-改-写竞态（两人同时 +N 会丢更新）
   const { error } = await supabase.rpc("adjust_product_stock", {
@@ -270,9 +276,10 @@ export async function bulkImportProducts(
   rows: BulkImportRow[],
   mode: BulkImportMode
 ): Promise<BulkImportResult> {
+  const t = await getT();
   const supabase = await requireWarehouse();
-  if (!supabase) return { error: "无权限" };
-  if (rows.length === 0) return { error: "没有可导入的商品" };
+  if (!supabase) return { error: t("common.noPermission") };
+  if (rows.length === 0) return { error: t("err.nothingToImport") };
 
   let imported = 0;
   let skipped = 0;
@@ -327,7 +334,7 @@ export async function bulkImportProducts(
 
     if (insErr) {
       failed += toInsertNew.length;
-      errors.push(`批量新增商品失败：${insErr.message}`);
+      errors.push(t("err.bulkInsertFailed", { message: insErr.message }));
     } else {
       imported += toInsertNew.length;
     }

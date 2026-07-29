@@ -2,9 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/actions/auth";
+import LanguageSwitcher from "@/app/language-switcher";
+import { getI18n } from "@/lib/i18n/server";
 import ShopClient from "./shop-client";
 
 export default async function ShopPage() {
+  const { t } = await getI18n();
   const supabase = await createClient();
   const {
     data: { user },
@@ -62,25 +65,26 @@ export default async function ShopPage() {
               href="/"
               className="text-sm text-paper-500 transition-colors hover:text-paper-900"
             >
-              ← 返回首页
+              {t("shop.backHome")}
             </Link>
             <span className="text-paper-400">/</span>
-            <span className="text-sm font-semibold text-paper-900">门店下单</span>
+            <span className="text-sm font-semibold text-paper-900">{t("shop.title")}</span>
           </div>
           <div className="flex shrink-0 items-center gap-3">
             <Link
               href="/shop/orders"
               className="rounded-lg border border-white/50 bg-white/40 px-3 py-1.5 text-sm text-paper-700 transition-colors hover:bg-white/70"
             >
-              我的订单
+              {t("nav.myOrders")}
             </Link>
             <span className="hidden text-sm text-paper-500 sm:block">{user.email}</span>
+            <LanguageSwitcher className="text-paper-600" />
             <form action={signOut}>
               <button
                 type="submit"
                 className="rounded-lg border border-white/50 bg-white/40 px-3 py-1.5 text-sm text-paper-700 transition-colors hover:bg-white/70"
               >
-                退出登录
+                {t("auth.signOut")}
               </button>
             </form>
           </div>
@@ -92,21 +96,21 @@ export default async function ShopPage() {
         <div className="glass-strong relative flex items-center justify-between gap-4 overflow-hidden rounded-[24px] px-6 py-7 sm:px-8">
           <div className="relative z-10">
             <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.24em] text-paper-500">
-              B2B 订货目录 — {products?.length ?? 0} 件商品
+              {t("shop.heroEyebrow", { n: products?.length ?? 0 })}
             </p>
             <h1 className="animate-fade-up mt-3 text-3xl font-semibold tracking-tight text-paper-900 sm:text-4xl">
-              挑选商品，一键下单。
+              {t("shop.heroTitle")}
             </h1>
             <div className="animate-fade-up mt-4 flex flex-wrap gap-2 [animation-delay:150ms]">
               <span className="rounded-full bg-white/55 px-3 py-1.5 text-xs font-medium text-paper-600">
-                <span className="font-mono tabular-nums text-paper-900">{products?.length ?? 0}</span> 件商品
+                <span className="font-mono tabular-nums text-paper-900">{products?.length ?? 0}</span> {t("shop.chipProducts")}
               </span>
               <span className="rounded-full bg-white/55 px-3 py-1.5 text-xs font-medium text-paper-600">
-                <span className="font-mono tabular-nums text-paper-900">{parentCatCount}</span> 个分类
+                <span className="font-mono tabular-nums text-paper-900">{parentCatCount}</span> {t("shop.chipCategories")}
               </span>
               {lastOrderItems.length > 0 && (
                 <span className="rounded-full bg-accent-50 px-3 py-1.5 text-xs font-medium text-accent-600">
-                  可「再来一单」· {lastOrderItems.length} 件
+                  {t("shop.chipRepeat", { n: lastOrderItems.length })}
                 </span>
               )}
             </div>

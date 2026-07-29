@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getT } from "@/lib/i18n/server";
 
 export type ActionResult = { error: string } | { success: true };
 
@@ -27,8 +28,9 @@ export async function updateStoreName(
   storeId: string,
   storeName: string
 ): Promise<ActionResult> {
+  const t = await getT();
   const supabase = await requireWarehouse();
-  if (!supabase) return { error: "无权限" };
+  if (!supabase) return { error: t("common.noPermission") };
 
   const name = storeName.trim();
 
@@ -51,28 +53,29 @@ export async function createStoreAccount(
   password: string,
   storeName: string
 ): Promise<ActionResult> {
+  const t = await getT();
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { error: "未登录" };
+  if (!user) return { error: t("common.notLoggedIn") };
 
   const { data: profile } = await supabase
     .from("profiles")
     .select("role")
     .eq("id", user.id)
     .single();
-  if (profile?.role !== "warehouse") return { error: "无权限" };
+  if (profile?.role !== "warehouse") return { error: t("common.noPermission") };
 
   const cleanEmail = email.trim().toLowerCase();
-  if (!cleanEmail || !cleanEmail.includes("@")) return { error: "邮箱格式不正确" };
-  if (password.length < 6) return { error: "密码至少需要 6 位" };
+  if (!cleanEmail || !cleanEmail.includes("@")) return { error: t("err.emailInvalid") };
+  if (password.length < 6) return { error: t("err.passwordTooShort") };
 
   let admin;
   try {
     admin = createAdminClient();
   } catch {
-    return { error: "服务端未配置 SUPABASE_SERVICE_ROLE_KEY，暂时无法创建账号" };
+    return { error: t("err.noServiceRole") };
   }
 
   // handle_new_user 触发器会读取 user_metadata 里的 warehouse_id / store_name
@@ -90,7 +93,7 @@ export async function createStoreAccount(
   if (error) {
     const msg = error.message.toLowerCase();
     if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
-      return { error: "该邮箱已被注册" };
+      return { error: t("err.emailTaken") };
     }
     return { error: error.message };
   }

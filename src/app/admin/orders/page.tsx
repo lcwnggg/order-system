@@ -2,10 +2,12 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/app/app-shell";
 import { getTransferBoard } from "@/lib/transfers";
+import { getI18n } from "@/lib/i18n/server";
 import OrdersClient, { type Order, type OrderItem } from "./orders-client";
 import WarehouseTransferPanel from "./warehouse-transfer-panel";
 
 export default async function AdminOrdersPage() {
+  const { t } = await getI18n();
   const supabase = await createClient();
   const {
     data: { user },
@@ -112,9 +114,9 @@ export default async function AdminOrdersPage() {
   return (
     <AppShell email={user.email}>
         <div className="mb-6 flex items-center justify-between">
-          <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.22em] text-paper-500">仓库 — 订单</p>
-          <h1 className="animate-fade-up mt-2 text-3xl font-normal tracking-tight text-paper-900">订单管理</h1>
-          <span className="text-sm text-paper-500">共 {orders.length} 笔订单</span>
+          <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.22em] text-paper-500">{t("adminOrders.eyebrow")}</p>
+          <h1 className="animate-fade-up mt-2 text-3xl font-normal tracking-tight text-paper-900">{t("adminOrders.title")}</h1>
+          <span className="text-sm text-paper-500">{t("adminOrders.countTotal", { n: orders.length })}</span>
         </div>
         <WarehouseTransferPanel requests={transferRequests} currentUserId={user.id} />
         <OrdersClient orders={orders} categories={categories} />

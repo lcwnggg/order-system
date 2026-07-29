@@ -8,8 +8,15 @@ import BarcodeField from "./barcode-scanner";
 import AiRecognizePanel from "./ai-recognize";
 import type { AiSuggestion } from "./ai-actions";
 import ImageCropModal from "./image-crop-modal";
+import { useT } from "@/lib/i18n/client";
+import type { Translate } from "@/lib/i18n/translate";
 
-function compressToJpeg(file: File | Blob, maxWidth = 1200, quality = 0.8): Promise<Blob> {
+function compressToJpeg(
+  file: File | Blob,
+  t: Translate,
+  maxWidth = 1200,
+  quality = 0.8
+): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
@@ -20,17 +27,17 @@ function compressToJpeg(file: File | Blob, maxWidth = 1200, quality = 0.8): Prom
       canvas.width = Math.round(img.width * scale);
       canvas.height = Math.round(img.height * scale);
       const ctx = canvas.getContext("2d");
-      if (!ctx) return reject(new Error("Canvas 不可用"));
+      if (!ctx) return reject(new Error(t("common.canvasUnavailable")));
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error("压缩失败"))),
+        (blob) => (blob ? resolve(blob) : reject(new Error(t("common.compressFailed")))),
         "image/jpeg",
         quality
       );
     };
     img.onerror = () => {
       URL.revokeObjectURL(objectUrl);
-      reject(new Error("图片加载失败"));
+      reject(new Error(t("common.imageLoadFailed")));
     };
     img.src = objectUrl;
   });
@@ -64,6 +71,7 @@ function readSavedCategory(categories: Category[]): { parentId: string; childId:
 }
 
 export default function ProductForm({ categories = [] }: { categories?: Category[] }) {
+  const t = useT();
   const parentCategories = categories.filter((c) => !c.parent_id);
   function childrenOf(parentId: string) {
     return categories.filter((c) => c.parent_id === parentId);
@@ -157,7 +165,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
       setUploadError(null);
       setImageUrl(null);
       setPreview(null);
-      const compressed = await compressToJpeg(blob);
+      const compressed = await compressToJpeg(blob, t);
       setPreview(URL.createObjectURL(compressed));
       setPhase("uploading");
       const supabase = createClient();
@@ -171,7 +179,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
       setPhase("done");
     } catch (err) {
       setPhase("error");
-      setUploadError(err instanceof Error ? err.message : "上传失败");
+      setUploadError(err instanceof Error ? err.message : t("common.uploadFailed"));
     }
   }
 
@@ -256,7 +264,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
 
   return (
     <div className="rounded-2xl glass-strong p-6">
-      <h2 className="mb-5 text-base font-semibold text-paper-900">添加商品</h2>
+      <h2 className="mb-5 text-base font-semibold text-paper-900">{t("form.addProduct")}</h2>
 
       <form ref={formRef} action={action} className="space-y-4">
         {imageUrl && <input type="hidden" name="image_url" value={imageUrl} />}
@@ -271,29 +279,29 @@ export default function ProductForm({ categories = [] }: { categories?: Category
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-paper-700">
-              商品名称 <span className="text-red-500">*</span>
+              {t("form.productName")} <span className="text-red-500">*</span>
             </label>
             <input
               name="name"
               type="text"
               required
-              placeholder="请输入商品名称"
+              placeholder={t("form.productNamePlaceholder")}
               className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-paper-700">品牌</label>
+            <label className="mb-1.5 block text-sm font-medium text-paper-700">{t("form.brand")}</label>
             <input
               name="brand"
               type="text"
-              placeholder="如 Xiaomi、Temco（可选）"
+              placeholder={t("form.brandPlaceholder")}
               className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
             />
           </div>
         </div>
         <div>
           <label className="mb-1.5 block text-sm font-medium text-paper-700">
-            价格（€）<span className="text-red-500">*</span>
+            {t("form.price")} <span className="text-red-500">*</span>
           </label>
           <input
             name="price"
@@ -311,11 +319,11 @@ export default function ProductForm({ categories = [] }: { categories?: Category
 
         {/* 描述 */}
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-paper-700">商品描述</label>
+          <label className="mb-1.5 block text-sm font-medium text-paper-700">{t("form.description")}</label>
           <textarea
             name="description"
             rows={3}
-            placeholder="请输入商品描述（可选）"
+            placeholder={t("form.descriptionPlaceholder")}
             className="w-full resize-none rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
           />
         </div>
@@ -323,14 +331,14 @@ export default function ProductForm({ categories = [] }: { categories?: Category
         {/* 分类 */}
         {parentCategories.length > 0 && (
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-paper-700">商品分类</label>
+            <label className="mb-1.5 block text-sm font-medium text-paper-700">{t("form.category")}</label>
             <div className="grid gap-3 sm:grid-cols-2">
               <select
                 value={selectedParentCatId}
                 onChange={(e) => { setSelectedParentCatId(e.target.value); setSelectedChildCatId(""); }}
                 className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
               >
-                <option value="">不选大类</option>
+                <option value="">{t("form.noParent")}</option>
                 {parentCategories.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
@@ -341,7 +349,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
                   onChange={(e) => setSelectedChildCatId(e.target.value)}
                   className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
                 >
-                  <option value="">不选小类</option>
+                  <option value="">{t("form.noChild")}</option>
                   {childrenOf(selectedParentCatId).map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
@@ -372,13 +380,13 @@ export default function ProductForm({ categories = [] }: { categories?: Category
                 }`}
               />
             </button>
-            <span className="text-sm font-medium text-paper-700">这个商品分颜色/规格吗？</span>
+            <span className="text-sm font-medium text-paper-700">{t("form.hasVariantsQuestion")}</span>
           </div>
 
           {!hasVariants ? (
             <div>
               <label className="mb-1.5 block text-sm font-medium text-paper-700">
-                库存数量 <span className="text-red-500">*</span>
+                {t("form.stock")} <span className="text-red-500">*</span>
               </label>
               <input
                 name="stock"
@@ -394,13 +402,13 @@ export default function ProductForm({ categories = [] }: { categories?: Category
             <div>
               <input type="hidden" name="stock" value="0" />
               <div className="rounded-lg border border-paper-200 bg-paper-100 p-3">
-                <p className="mb-2 text-xs font-medium text-paper-500">颜色变体（各颜色独立库存，价格统一）</p>
+                <p className="mb-2 text-xs font-medium text-paper-500">{t("form.variantsHint")}</p>
                 <div className="space-y-2">
                   {variants.map((v, idx) => (
                     <div key={idx} className="flex items-center gap-2">
                       <input
                         type="text"
-                        placeholder={`颜色名称，如"黑色"`}
+                        placeholder={t("form.colorPlaceholder")}
                         value={v.color}
                         onChange={(e) => updateVariantRow(idx, "color", e.target.value)}
                         className="flex-1 rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
@@ -409,7 +417,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
                         type="number"
                         min="0"
                         step="1"
-                        placeholder="库存"
+                        placeholder={t("form.stockShort")}
                         value={v.stock}
                         onChange={(e) => updateVariantRow(idx, "stock", e.target.value)}
                         className="w-20 rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
@@ -419,7 +427,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
                           type="button"
                           onClick={() => removeVariantRow(idx)}
                           className="flex-shrink-0 rounded-lg p-1.5 text-paper-500 hover:bg-paper-200 hover:text-red-500"
-                          aria-label="删除此颜色"
+                          aria-label={t("form.removeColor")}
                         >
                           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -434,7 +442,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
                   onClick={addVariantRow}
                   className="mt-2 text-xs font-medium text-paper-500 hover:text-paper-900"
                 >
-                  + 添加颜色
+                  {t("form.addColor")}
                 </button>
               </div>
             </div>
@@ -443,7 +451,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
 
         {/* 图片上传 */}
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-paper-700">商品图片</label>
+          <label className="mb-1.5 block text-sm font-medium text-paper-700">{t("form.productImage")}</label>
           <input
             ref={fileInputRef}
             type="file"
@@ -451,18 +459,18 @@ export default function ProductForm({ categories = [] }: { categories?: Category
             onChange={handleFileChange}
             className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-600 outline-none file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-paper-100 file:px-2.5 file:py-1 file:text-xs file:font-medium file:text-paper-700 hover:file:bg-paper-200"
           />
-          {phase === "compressing" && <p className="mt-1.5 text-xs text-paper-500">正在压缩图片…</p>}
-          {phase === "uploading" && <p className="mt-1.5 text-xs text-paper-500">正在上传至存储…</p>}
+          {phase === "compressing" && <p className="mt-1.5 text-xs text-paper-500">{t("form.compressing")}</p>}
+          {phase === "uploading" && <p className="mt-1.5 text-xs text-paper-500">{t("form.uploadingStorage")}</p>}
           {phase === "error" && <p className="mt-1.5 text-xs text-red-500">{uploadError}</p>}
         </div>
 
         {preview && (
           <div className="flex items-center gap-3 rounded-lg border border-paper-100 bg-paper-100 p-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={preview} alt="预览" className="h-16 w-16 rounded-lg object-cover" />
+            <img src={preview} alt={t("form.previewAlt")} className="h-16 w-16 rounded-lg object-cover" />
             <div className="flex-1 text-xs">
-              {phase === "done" && <p className="font-medium text-green-600">图片上传成功</p>}
-              {uploading && <p className="text-paper-500">处理中…</p>}
+              {phase === "done" && <p className="font-medium text-green-600">{t("form.imageUploaded")}</p>}
+              {uploading && <p className="text-paper-500">{t("common.processing")}</p>}
             </div>
             {phase === "done" && originalFile && (
               <button
@@ -470,7 +478,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
                 onClick={handleRecrop}
                 className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-paper-700 hover:bg-paper-200"
               >
-                裁剪
+                {t("form.crop")}
               </button>
             )}
             {phase === "done" && (
@@ -479,7 +487,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
                 onClick={handleDeleteImage}
                 className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50"
               >
-                删除图片
+                {t("form.deleteImage")}
               </button>
             )}
           </div>
@@ -493,7 +501,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
           <p className="rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600">{state.error}</p>
         )}
         {state && "success" in state && (
-          <p className="rounded-lg bg-green-50 px-4 py-2.5 text-sm text-green-600">商品已成功添加</p>
+          <p className="rounded-lg bg-green-50 px-4 py-2.5 text-sm text-green-600">{t("form.productAdded")}</p>
         )}
 
         <div className="pt-1">
@@ -502,7 +510,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
             disabled={pending || uploading}
             className="rounded-lg bg-paper-700 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-paper-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {uploading ? "图片上传中…" : pending ? "提交中…" : "添加商品"}
+            {uploading ? t("form.uploadingImage") : pending ? t("common.submitting") : t("form.addProduct")}
           </button>
         </div>
       </form>

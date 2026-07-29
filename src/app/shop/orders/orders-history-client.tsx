@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { cancelOrder } from "../actions";
+import { useI18n } from "@/lib/i18n/client";
+import type { TranslationKey } from "@/lib/i18n/dictionaries";
 
 type StoreOrderItem = {
   id: string;
@@ -24,11 +26,11 @@ export type StoreOrder = {
 
 const CART_KEY = "shopCart";
 
-const STATUS_LABEL: Record<StoreOrder["status"], string> = {
-  pending: "待处理",
-  preparing: "备货中",
-  done: "已完成",
-  cancelled: "已取消",
+const STATUS_KEY: Record<StoreOrder["status"], TranslationKey> = {
+  pending: "orderStatus.pending",
+  preparing: "orderStatus.preparing",
+  done: "orderStatus.done",
+  cancelled: "orderStatus.cancelled",
 };
 
 const STATUS_COLOR: Record<StoreOrder["status"], string> = {
@@ -45,6 +47,7 @@ function formatDateTime(iso: string): string {
 }
 
 export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }) {
+  const { t } = useI18n();
   const router = useRouter();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,7 +69,7 @@ export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }
   }
 
   function handleCancel(orderId: string) {
-    if (!window.confirm("确定取消这笔订单吗？取消后库存会自动退回。")) return;
+    if (!window.confirm(t("myOrders.confirmCancel"))) return;
     setError(null);
     setPendingId(orderId);
     startTransition(async () => {
@@ -92,12 +95,12 @@ export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
           </svg>
         </div>
-        <p className="text-sm text-paper-500">还没有订单</p>
+        <p className="text-sm text-paper-500">{t("myOrders.empty")}</p>
         <a
           href="/shop"
           className="mt-4 inline-block rounded-xl bg-paper-700 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-paper-800"
         >
-          去下单
+          {t("myOrders.goOrder")}
         </a>
       </div>
     );
@@ -106,8 +109,8 @@ export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }
   return (
     <div className="space-y-4">
       <div className="mb-2 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-paper-900">我的订单</h1>
-        <span className="text-sm text-paper-500">共 {orders.length} 笔</span>
+        <h1 className="text-xl font-semibold text-paper-900">{t("nav.myOrders")}</h1>
+        <span className="text-sm text-paper-500">{t("myOrders.countTotal", { n: orders.length })}</span>
       </div>
 
       {error && (
@@ -128,7 +131,7 @@ export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }
                 <span
                   className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[order.status]}`}
                 >
-                  {STATUS_LABEL[order.status]}
+                  {t(STATUS_KEY[order.status])}
                 </span>
               </div>
               <span className="text-xs text-paper-500">#{order.id.slice(0, 8)}</span>
@@ -136,7 +139,7 @@ export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }
 
             {order.note && (
               <div className="border-b border-paper-100 bg-ember-50/60 px-5 py-2 text-xs text-ember-800">
-                备注：{order.note}
+                {t("myOrders.note")}{order.note}
               </div>
             )}
 
@@ -166,7 +169,7 @@ export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }
                     onClick={() => handleCancel(order.id)}
                     className="rounded-lg border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50"
                   >
-                    {isThisPending ? "取消中…" : "取消订单"}
+                    {isThisPending ? t("myOrders.cancelling") : t("myOrders.cancel")}
                   </button>
                 )}
                 <button
@@ -174,7 +177,7 @@ export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }
                   onClick={() => handleReorder(order)}
                   className="rounded-lg bg-paper-700 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-paper-800"
                 >
-                  重新下单
+                  {t("myOrders.reorder")}
                 </button>
               </div>
             </div>

@@ -2,11 +2,14 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { isLowStock } from "@/lib/stock";
 import { getTransferBoard, getGroupStores } from "@/lib/transfers";
+import { getI18n } from "@/lib/i18n/server";
+import { LOCALE_TIME_ZONES } from "@/lib/i18n/config";
 import StoreHero from "./store-hero";
 import AppShell from "./app-shell";
 import WarehouseRosterCard from "./transfers/warehouse-roster-card";
 
 export default async function Home() {
+  const { locale, tag, t } = await getI18n();
   const supabase = await createClient();
   const {
     data: { user },
@@ -81,12 +84,12 @@ export default async function Home() {
     ]);
   }
 
-  const dateStr = new Date().toLocaleDateString("zh-CN", {
+  const dateStr = new Date().toLocaleDateString(tag, {
     year: "numeric",
     month: "long",
     day: "numeric",
     weekday: "long",
-    timeZone: "Asia/Shanghai",
+    timeZone: LOCALE_TIME_ZONES[locale],
   });
 
   // ── Warehouse 仪表盘：液态玻璃 app-shell（sidebar + 概览 + 库存告急表） ──
@@ -95,9 +98,9 @@ export default async function Home() {
       <AppShell email={user?.email} displayName={profile?.store_name}>
             <div className="flex items-start justify-between gap-4">
               <div>
-                <h1 className="text-2xl font-semibold tracking-tight text-paper-900">欢迎回来</h1>
+                <h1 className="text-2xl font-semibold tracking-tight text-paper-900">{t("dashboard.welcome")}</h1>
                 <p className="mt-1.5 font-mono text-[10.5px] uppercase tracking-[0.16em] text-paper-400">
-                  仓库控制台 · {dateStr}
+                  {t("dashboard.console")} · {dateStr}
                 </p>
               </div>
             </div>
@@ -112,8 +115,8 @@ export default async function Home() {
                   <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" /></svg>
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-ember-700">你有 {pendingCount} 笔订单待备货</p>
-                  <p className="text-xs text-ember-600">点击进入订单管理 →</p>
+                  <p className="text-sm font-semibold text-ember-700">{t("dashboard.pendingBanner", { n: pendingCount })}</p>
+                  <p className="text-xs text-ember-600">{t("dashboard.pendingBannerCta")}</p>
                 </div>
               </Link>
             )}
@@ -125,26 +128,26 @@ export default async function Home() {
             <div className="glass-strong rounded-[22px] p-5 sm:p-6">
               <div className="flex items-start justify-between">
                 <div>
-                  <h2 className="text-[15px] font-semibold text-paper-900">库存概览</h2>
-                  <p className="text-xs text-paper-400">全部门店 · 实时</p>
+                  <h2 className="text-[15px] font-semibold text-paper-900">{t("dashboard.stockOverview")}</h2>
+                  <p className="text-xs text-paper-400">{t("dashboard.allStoresRealtime")}</p>
                 </div>
               </div>
               <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-4">
                 <Link href="/admin/products" className="group">
                   <p className="text-3xl font-semibold tracking-tight text-paper-900">{productCount}</p>
-                  <p className="mt-1 text-xs text-paper-400 group-hover:text-paper-600">商品总数</p>
+                  <p className="mt-1 text-xs text-paper-400 group-hover:text-paper-600">{t("dashboard.totalProducts")}</p>
                 </Link>
                 <Link href="/admin/stock-alert" className="group">
                   <p className={`text-3xl font-semibold tracking-tight ${lowStockCount > 0 ? "text-ember-600" : "text-paper-400"}`}>{lowStockCount}</p>
-                  <p className="mt-1 text-xs text-paper-400 group-hover:text-paper-600">库存告急 ≤5</p>
+                  <p className="mt-1 text-xs text-paper-400 group-hover:text-paper-600">{t("dashboard.lowStockLabel")}</p>
                 </Link>
                 <Link href="/admin/categories" className="group">
                   <p className="text-3xl font-semibold tracking-tight text-paper-900">{categoryCount}</p>
-                  <p className="mt-1 text-xs text-paper-400 group-hover:text-paper-600">商品大类</p>
+                  <p className="mt-1 text-xs text-paper-400 group-hover:text-paper-600">{t("dashboard.categoriesCount")}</p>
                 </Link>
                 <Link href="/admin/orders" className="group">
                   <p className={`text-3xl font-semibold tracking-tight ${pendingCount > 0 ? "text-accent-600" : "text-paper-400"}`}>{pendingCount}</p>
-                  <p className="mt-1 text-xs text-paper-400 group-hover:text-paper-600">待处理订单</p>
+                  <p className="mt-1 text-xs text-paper-400 group-hover:text-paper-600">{t("dashboard.pendingOrders")}</p>
                 </Link>
               </div>
               {/* 趋势曲线（示意） */}
@@ -164,17 +167,17 @@ export default async function Home() {
               <div className="mt-2 grid grid-cols-3 gap-3 border-t border-paper-900/10 pt-4">
                 <div>
                   <p className="text-lg font-semibold text-paper-900">{storeCount}</p>
-                  <p className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-paper-400"><span className="h-1.5 w-1.5 rounded-full bg-accent-500" />门店数</p>
+                  <p className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-paper-400"><span className="h-1.5 w-1.5 rounded-full bg-accent-500" />{t("dashboard.storeCount")}</p>
                 </div>
                 <div>
                   <p className="text-lg font-semibold text-mint-600">
                     {productCount > 0 ? Math.round(((productCount - lowStockCount) / productCount) * 100) : 0}%
                   </p>
-                  <p className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-paper-400"><span className="h-1.5 w-1.5 rounded-full bg-mint-500" />库存健康</p>
+                  <p className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-paper-400"><span className="h-1.5 w-1.5 rounded-full bg-mint-500" />{t("dashboard.stockHealth")}</p>
                 </div>
                 <div>
                   <p className="text-lg font-semibold text-ember-600">{lowStockItems.filter((i) => i.stock === 0).length}</p>
-                  <p className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-paper-400"><span className="h-1.5 w-1.5 rounded-full bg-ember-500" />已断货</p>
+                  <p className="mt-0.5 flex items-center gap-1.5 text-[11.5px] text-paper-400"><span className="h-1.5 w-1.5 rounded-full bg-ember-500" />{t("dashboard.outOfStock")}</p>
                 </div>
               </div>
             </div>
@@ -183,26 +186,26 @@ export default async function Home() {
             <div className="glass-strong rounded-[22px] p-5 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-[15px] font-semibold text-paper-900">库存告急商品</h2>
-                  <p className="text-xs text-paper-400">按变体口径 · {lowStockCount} 项需处理</p>
+                  <h2 className="text-[15px] font-semibold text-paper-900">{t("dashboard.lowStockTitle")}</h2>
+                  <p className="text-xs text-paper-400">{t("dashboard.lowStockSubtitle", { n: lowStockCount })}</p>
                 </div>
                 <Link href="/admin/stock-alert" className="rounded-lg bg-accent-50 px-3 py-1.5 text-xs font-medium text-accent-600 transition-colors hover:bg-accent-100">
-                  查看全部
+                  {t("dashboard.viewAll")}
                 </Link>
               </div>
 
               {lowStockItems.length === 0 ? (
-                <p className="py-10 text-center text-sm text-paper-500">🎉 暂无库存告急商品</p>
+                <p className="py-10 text-center text-sm text-paper-500">{t("dashboard.noLowStock")}</p>
               ) : (
                 <div className="mt-4 overflow-x-auto">
                   <table className="w-full border-collapse text-sm">
                     <thead>
                       <tr className="text-left text-[11.5px] font-medium text-paper-400">
-                        <th className="pb-2.5 pr-3">商品</th>
-                        <th className="pb-2.5 pr-3">分类</th>
-                        <th className="pb-2.5 pr-3">库存风险</th>
-                        <th className="pb-2.5 pr-3 text-right tabular-nums">剩余</th>
-                        <th className="pb-2.5 text-right">状态</th>
+                        <th className="pb-2.5 pr-3">{t("dashboard.thProduct")}</th>
+                        <th className="pb-2.5 pr-3">{t("dashboard.thCategory")}</th>
+                        <th className="pb-2.5 pr-3">{t("dashboard.thRisk")}</th>
+                        <th className="pb-2.5 pr-3 text-right tabular-nums">{t("dashboard.thRemaining")}</th>
+                        <th className="pb-2.5 text-right">{t("dashboard.thStatus")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -218,7 +221,7 @@ export default async function Home() {
                               </div>
                             </td>
                             <td className="py-2.5 pr-3">
-                              <span className="rounded-lg bg-accent-50 px-2 py-1 text-[11px] text-accent-600">{item.category ?? "未分类"}</span>
+                              <span className="rounded-lg bg-accent-50 px-2 py-1 text-[11px] text-accent-600">{item.category ?? t("common.uncategorized")}</span>
                             </td>
                             <td className="py-2.5 pr-3">
                               <span className="inline-flex gap-[3px]">
@@ -230,7 +233,7 @@ export default async function Home() {
                             <td className="py-2.5 pr-3 text-right font-mono tabular-nums text-paper-900">{item.stock}</td>
                             <td className="py-2.5 text-right">
                               <span className={`rounded-lg px-2.5 py-1 text-[11.5px] font-medium ${out ? "bg-ember-50 text-ember-600" : "bg-[#f7efe0] text-[#b07d2c]"}`}>
-                                {out ? "断货" : "告急"}
+                                {out ? t("dashboard.badgeOut") : t("dashboard.badgeLow")}
                               </span>
                             </td>
                           </tr>
@@ -263,19 +266,19 @@ export default async function Home() {
       <div className="app-grain" />
       <main className="mx-auto flex min-h-screen max-w-3xl flex-col items-center justify-center px-6 py-24 text-center">
         <p className="animate-fade-in font-mono text-[11px] uppercase tracking-[0.24em] text-paper-500">
-          供应商 × 分店 — 订货平台
+          {t("landing.eyebrow")}
         </p>
         <h1 className="animate-fade-up mt-6 text-6xl font-semibold leading-[1.05] tracking-tight text-paper-900 sm:text-7xl">
-          我的小店。
+          {t("landing.title")}
         </h1>
         <p className="animate-fade-up mt-6 max-w-md text-base leading-relaxed text-paper-600 [animation-delay:150ms]">
-          连接仓库与门店的订货管理平台。请登录以继续。
+          {t("landing.subtitle")}
         </p>
         <Link
           href="/login"
           className="animate-fade-up mt-10 rounded-full bg-paper-800 px-9 py-4 text-base font-medium text-white transition-colors duration-300 [animation-delay:280ms] hover:bg-paper-700"
         >
-          立即登录
+          {t("landing.cta")}
         </Link>
       </main>
     </div>

@@ -12,6 +12,7 @@ import type { Category } from "@/app/admin/categories/categories-client";
 import ProductEditModal from "./product-edit-modal";
 import { getTotalStock, isLowStock as isLowStockOf } from "@/lib/stock";
 import ScanButton from "@/app/scan-button";
+import { useT } from "@/lib/i18n/client";
 
 export type Product = {
   id: string;
@@ -41,6 +42,8 @@ export default function ProductList({
   categories: Category[];
   variants: ProductVariant[];
 }) {
+  const t = useT();
+
   // ── 分类辅助 ──
   const parentCategories = useMemo(
     () => categories.filter((c) => !c.parent_id),
@@ -48,9 +51,9 @@ export default function ProductList({
   );
 
   function categoryLabel(categoryId: string | null) {
-    if (!categoryId) return "未分类";
+    if (!categoryId) return t("common.uncategorized");
     const cat = categories.find((c) => c.id === categoryId);
-    if (!cat) return "未分类";
+    if (!cat) return t("common.uncategorized");
     if (!cat.parent_id) return cat.name;
     const parent = categories.find((c) => c.id === cat.parent_id);
     return parent ? `${parent.name} › ${cat.name}` : cat.name;
@@ -157,7 +160,7 @@ export default function ProductList({
       }
     }
     if (map.has(null)) {
-      groups.push({ catId: null, catName: "未分类", items: map.get(null)! });
+      groups.push({ catId: null, catName: t("common.uncategorized"), items: map.get(null)! });
     }
     return groups;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -280,7 +283,7 @@ export default function ProductList({
 
   // ── 删除商品 ──
   function handleDelete(product: Product) {
-    if (!window.confirm(`确定删除「${product.name}」吗？此操作无法撤销。`)) return;
+    if (!window.confirm(t("list.confirmDelete", { name: product.name }))) return;
     setDeletingId(product.id);
     setDeleteError(null);
     startTransition(async () => {
@@ -300,7 +303,7 @@ export default function ProductList({
       <tr
         key={product.id}
         onClick={() => openEdit(product)}
-        title="点击编辑商品"
+        title={t("list.clickToEdit")}
         className={`group cursor-pointer hover:bg-paper-100/80 ${!product.is_active ? "opacity-50" : ""}`}
       >
         {/* 图片 */}
@@ -337,7 +340,7 @@ export default function ProductList({
               {categoryLabel(product.category_id)}
             </span>
             {product.has_variants && pvs.length > 0 && (
-              <span className="text-xs text-blue-500">{pvs.length}色</span>
+              <span className="text-xs text-blue-500">{t("list.colorsCount", { n: pvs.length })}</span>
             )}
           </div>
         </td>
@@ -357,7 +360,7 @@ export default function ProductList({
           {product.has_variants ? (
             <div className="space-y-1">
               {pvs.length === 0 ? (
-                <span className="text-xs text-paper-500">暂无变体</span>
+                <span className="text-xs text-paper-500">{t("list.noVariants")}</span>
               ) : (
                 pvs.map((variant) => (
                   <div key={variant.id} className="flex items-center gap-1 flex-nowrap">
@@ -367,7 +370,7 @@ export default function ProductList({
                         : variant.stock <= 5 ? "bg-amber-50 text-amber-600"
                         : "bg-green-50 text-green-600"
                     }`}>
-                      {variant.stock === 0 ? "售罄" : variant.stock}
+                      {variant.stock === 0 ? t("common.soldOut") : variant.stock}
                     </span>
                     <button
                       type="button"
@@ -391,7 +394,7 @@ export default function ProductList({
                       onClick={() => handleAdjustVariant(variant.id, null)}
                       className="shrink-0 rounded px-1.5 py-0.5 text-xs font-medium bg-paper-100 text-paper-600 hover:bg-paper-200 disabled:opacity-40 transition-colors"
                     >
-                      {adjustingVariantId === variant.id ? "…" : "加"}
+                      {adjustingVariantId === variant.id ? "…" : t("list.addStock")}
                     </button>
                   </div>
                 ))
@@ -404,7 +407,7 @@ export default function ProductList({
                   : product.stock <= 5 ? "bg-amber-50 text-amber-600"
                   : "bg-green-50 text-green-600"
               }`}>
-                {product.stock === 0 ? "售罄" : product.stock}
+                {product.stock === 0 ? t("common.soldOut") : product.stock}
               </span>
               <button
                 type="button"
@@ -428,7 +431,7 @@ export default function ProductList({
                 onClick={() => handleAdjust(product.id, null)}
                 className="shrink-0 rounded px-1.5 py-0.5 text-xs font-medium bg-paper-100 text-paper-600 hover:bg-paper-200 disabled:opacity-40 transition-colors"
               >
-                {adjustingId === product.id ? "…" : "加"}
+                {adjustingId === product.id ? "…" : t("list.addStock")}
               </button>
               {adjustErrors[product.id] && (
                 <span className="text-xs text-red-500">{adjustErrors[product.id]}</span>
@@ -449,7 +452,7 @@ export default function ProductList({
                 : "bg-paper-100 text-paper-500 hover:bg-paper-200"
             }`}
           >
-            {isToggling ? "…" : product.is_active ? "上架 ↓" : "下架 ↑"}
+            {isToggling ? "…" : product.is_active ? t("list.activeArrow") : t("list.inactiveArrow")}
           </button>
         </td>
 
@@ -462,7 +465,7 @@ export default function ProductList({
               onClick={() => handleDelete(product)}
               className="rounded px-2.5 py-1 text-xs font-medium text-red-500 transition-colors hover:bg-red-50 disabled:opacity-40"
             >
-              {isDeleting ? "…" : "删除"}
+              {isDeleting ? "…" : t("common.delete")}
             </button>
           </div>
         </td>
@@ -505,7 +508,7 @@ export default function ProductList({
                 {categoryLabel(product.category_id)}
               </span>
               {product.has_variants && pvs.length > 0 && (
-                <span className="text-xs text-blue-500">{pvs.length}色</span>
+                <span className="text-xs text-blue-500">{t("list.colorsCount", { n: pvs.length })}</span>
               )}
             </div>
             <p className="mt-1 text-sm font-bold text-paper-900">€{Number(product.price).toFixed(2)}</p>
@@ -529,7 +532,7 @@ export default function ProductList({
                 : "bg-paper-100 text-paper-500 hover:bg-paper-200"
             }`}
           >
-            {isToggling ? "…" : product.is_active ? "上架" : "下架"}
+            {isToggling ? "…" : product.is_active ? t("list.active") : t("list.inactive")}
           </button>
         </div>
 
@@ -538,7 +541,7 @@ export default function ProductList({
           {product.has_variants ? (
             <div className="space-y-1.5">
               {pvs.length === 0 ? (
-                <span className="text-xs text-paper-500">暂无变体</span>
+                <span className="text-xs text-paper-500">{t("list.noVariants")}</span>
               ) : (
                 pvs.map((variant) => (
                   <div key={variant.id} className="flex items-center gap-1.5">
@@ -548,7 +551,7 @@ export default function ProductList({
                         : variant.stock <= 5 ? "bg-amber-50 text-amber-600"
                         : "bg-green-50 text-green-600"
                     }`}>
-                      {variant.stock === 0 ? "售罄" : variant.stock}
+                      {variant.stock === 0 ? t("common.soldOut") : variant.stock}
                     </span>
                     <button type="button" disabled={adjustingVariantId === variant.id}
                       onClick={() => handleAdjustVariant(variant.id, 1)}
@@ -563,7 +566,7 @@ export default function ProductList({
                       disabled={adjustingVariantId === variant.id || !adjustQty[variant.id]}
                       onClick={() => handleAdjustVariant(variant.id, null)}
                       className="rounded px-2 py-1 text-xs font-medium bg-paper-100 text-paper-600 hover:bg-paper-200 disabled:opacity-40 transition-colors">
-                      {adjustingVariantId === variant.id ? "…" : "加"}
+                      {adjustingVariantId === variant.id ? "…" : t("list.addStock")}
                     </button>
                   </div>
                 ))
@@ -571,13 +574,13 @@ export default function ProductList({
             </div>
           ) : (
             <div className="flex items-center gap-1.5">
-              <span className="shrink-0 text-xs text-paper-500">库存</span>
+              <span className="shrink-0 text-xs text-paper-500">{t("list.thStock")}</span>
               <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-xs font-medium leading-none ${
                 product.stock === 0 ? "bg-red-50 text-red-600"
                   : product.stock <= 5 ? "bg-amber-50 text-amber-600"
                   : "bg-green-50 text-green-600"
               }`}>
-                {product.stock === 0 ? "售罄" : product.stock}
+                {product.stock === 0 ? t("common.soldOut") : product.stock}
               </span>
               <button type="button" disabled={adjustingId === product.id}
                 onClick={() => handleAdjust(product.id, 1)}
@@ -592,7 +595,7 @@ export default function ProductList({
                 disabled={adjustingId === product.id || !adjustQty[product.id]}
                 onClick={() => handleAdjust(product.id, null)}
                 className="rounded px-2 py-1 text-xs font-medium bg-paper-100 text-paper-600 hover:bg-paper-200 disabled:opacity-40 transition-colors">
-                {adjustingId === product.id ? "…" : "加"}
+                {adjustingId === product.id ? "…" : t("list.addStock")}
               </button>
               {adjustErrors[product.id] && (
                 <span className="text-xs text-red-500">{adjustErrors[product.id]}</span>
@@ -605,11 +608,11 @@ export default function ProductList({
         <div className="flex divide-x divide-paper-100 border-t border-paper-100">
           <button type="button" onClick={() => openEdit(product)}
             className="flex-1 py-2.5 text-sm font-medium text-paper-700 transition-colors hover:bg-paper-100">
-            编辑
+            {t("common.edit")}
           </button>
           <button type="button" disabled={isDeleting} onClick={() => handleDelete(product)}
             className="flex-1 py-2.5 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 disabled:opacity-40">
-            {isDeleting ? "…" : "删除"}
+            {isDeleting ? "…" : t("common.delete")}
           </button>
         </div>
       </div>
@@ -620,18 +623,18 @@ export default function ProductList({
   const TABLE_HEADER = (
     <thead>
       <tr className="border-b border-paper-100 bg-paper-100/80 text-left">
-        <th className="px-3 py-2 text-xs font-medium text-paper-500 w-12">图</th>
-        <th className="px-3 py-2 text-xs font-medium text-paper-500">商品 / 品牌 / 分类</th>
-        <th className="px-3 py-2 text-xs font-medium text-paper-500 whitespace-nowrap">价格</th>
-        <th className="px-3 py-2 text-xs font-medium text-paper-500 whitespace-nowrap">条码</th>
-        <th className="px-3 py-2 text-xs font-medium text-paper-500">库存</th>
-        <th className="px-3 py-2 text-xs font-medium text-paper-500">状态</th>
+        <th className="px-3 py-2 text-xs font-medium text-paper-500 w-12">{t("list.thImage")}</th>
+        <th className="px-3 py-2 text-xs font-medium text-paper-500">{t("list.thProduct")}</th>
+        <th className="px-3 py-2 text-xs font-medium text-paper-500 whitespace-nowrap">{t("list.thPrice")}</th>
+        <th className="px-3 py-2 text-xs font-medium text-paper-500 whitespace-nowrap">{t("list.thBarcode")}</th>
+        <th className="px-3 py-2 text-xs font-medium text-paper-500">{t("list.thStock")}</th>
+        <th className="px-3 py-2 text-xs font-medium text-paper-500">{t("list.thStatus")}</th>
         <th className="px-3 py-2 w-20"></th>
       </tr>
     </thead>
   );
 
-  function renderTable(items: Product[], emptyMsg = "无匹配商品") {
+  function renderTable(items: Product[], emptyMsg: string) {
     if (items.length === 0) {
       return (
         <div className="rounded-xl border border-dashed border-paper-200 bg-white py-10 text-center">
@@ -664,7 +667,7 @@ export default function ProductList({
     <>
       {deleteError && (
         <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
-          删除失败：{deleteError}
+          {t("list.deleteFailed", { message: deleteError })}
           <button type="button" onClick={() => setDeleteError(null)} className="ml-3 text-red-400 hover:text-red-600">×</button>
         </div>
       )}
@@ -677,12 +680,12 @@ export default function ProductList({
       >
         <div className="h-full w-56 overflow-y-auto border-r border-paper-200 bg-paper-25 p-5 pt-8">
           <div className="mb-6">
-            <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-paper-400">分类</p>
+            <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-paper-400">{t("list.sidebarCategories")}</p>
             <nav className="space-y-0.5">
               <SidebarItem
                 active={filterCategory === ""}
                 onClick={() => setFilterCategory("")}
-                label="全部"
+                label={t("common.all")}
                 count={products.length}
               />
               {parentCategories.map((c) => (
@@ -697,18 +700,18 @@ export default function ProductList({
               <SidebarItem
                 active={filterCategory === "__uncategorized__"}
                 onClick={() => setFilterCategory("__uncategorized__")}
-                label="未分类"
+                label={t("common.uncategorized")}
                 count={categoryCounts.uncategorized}
               />
             </nav>
           </div>
           <div>
-            <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-paper-400">状态</p>
+            <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-paper-400">{t("list.sidebarStatus")}</p>
             <nav className="space-y-0.5">
-              <SidebarItem active={filterStatus === "all"} onClick={() => setFilterStatus("all")} label="全部状态" count={products.length} />
-              <SidebarItem active={filterStatus === "active"} onClick={() => setFilterStatus("active")} label="上架中" count={statusCounts.active} dotClassName="bg-paper-400" />
-              <SidebarItem active={filterStatus === "inactive"} onClick={() => setFilterStatus("inactive")} label="已下架" count={statusCounts.inactive} dotClassName="bg-paper-300" />
-              <SidebarItem active={filterStatus === "low-stock"} onClick={() => setFilterStatus("low-stock")} label="库存告急" count={statusCounts.low} dotClassName="bg-ember-500" />
+              <SidebarItem active={filterStatus === "all"} onClick={() => setFilterStatus("all")} label={t("list.allStatus")} count={products.length} />
+              <SidebarItem active={filterStatus === "active"} onClick={() => setFilterStatus("active")} label={t("list.statusActive")} count={statusCounts.active} dotClassName="bg-paper-400" />
+              <SidebarItem active={filterStatus === "inactive"} onClick={() => setFilterStatus("inactive")} label={t("list.statusInactive")} count={statusCounts.inactive} dotClassName="bg-paper-300" />
+              <SidebarItem active={filterStatus === "low-stock"} onClick={() => setFilterStatus("low-stock")} label={t("list.statusLow")} count={statusCounts.low} dotClassName="bg-ember-500" />
             </nav>
           </div>
         </div>
@@ -716,7 +719,7 @@ export default function ProductList({
           type="button"
           onClick={() => setSidebarOpen((v) => !v)}
           className="flex h-12 w-8 shrink-0 items-center justify-center self-center rounded-r-lg border border-l-0 border-paper-200 bg-white text-paper-500 transition-colors hover:text-paper-800"
-          aria-label={sidebarOpen ? "收起分类筛选" : "展开分类筛选"}
+          aria-label={sidebarOpen ? t("list.collapseFilters") : t("list.expandFilters")}
         >
           <svg className={`h-4 w-4 transition-transform duration-300 ${sidebarOpen ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -738,7 +741,7 @@ export default function ProductList({
             type="text"
             value={adminSearch}
             onChange={(e) => setAdminSearch(e.target.value)}
-            placeholder="名称 / 品牌…"
+            placeholder={t("list.searchPlaceholder")}
             className="w-full rounded-lg border border-paper-200 bg-white py-1.5 pl-8 pr-7 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-400 focus:ring-2 focus:ring-paper-200"
           />
           {adminSearch && (
@@ -749,13 +752,13 @@ export default function ProductList({
         {/* 扫码查找并编辑 */}
         <ScanButton
           onScan={handleScanFind}
-          label="扫码查找"
+          label={t("list.scanFind")}
           className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-paper-300 bg-white px-3 py-1.5 text-sm font-medium text-paper-700 transition-colors hover:border-paper-400 hover:bg-paper-100"
         />
 
         {/* 按库存合计筛选：少于 N 件 */}
         <div className="flex items-center gap-1 rounded-lg border border-paper-200 bg-white px-2.5 py-1.5">
-          <span className="whitespace-nowrap text-sm text-paper-500">库存少于</span>
+          <span className="whitespace-nowrap text-sm text-paper-500">{t("list.stockLessThan")}</span>
           <input
             type="number"
             min="1"
@@ -764,7 +767,7 @@ export default function ProductList({
             placeholder="N"
             className="w-12 bg-transparent text-sm text-paper-900 placeholder-paper-500 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
-          <span className="whitespace-nowrap text-sm text-paper-500">件</span>
+          <span className="whitespace-nowrap text-sm text-paper-500">{t("common.units")}</span>
         </div>
 
         {/* 重置 */}
@@ -774,13 +777,13 @@ export default function ProductList({
             onClick={() => { setAdminSearch(""); setFilterCategory(""); setFilterStatus("all"); setStockLessThan(""); }}
             className="rounded-lg border border-paper-200 px-2.5 py-1.5 text-xs text-paper-500 hover:bg-paper-100"
           >
-            重置
+            {t("common.reset")}
           </button>
         )}
 
         {/* 计数 */}
         <span className="ml-auto shrink-0 text-xs text-paper-500">
-          {filteredProducts.length} / {products.length} 件
+          {filteredProducts.length} / {products.length} {t("common.units")}
         </span>
       </div>
 
@@ -788,7 +791,7 @@ export default function ProductList({
       {scanMiss && (
         <div className="mb-3 flex items-center gap-2 rounded-lg border border-ember-200 bg-ember-50 px-3 py-2 text-sm text-ember-700">
           <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-ember-500" />
-          <span className="min-w-0 flex-1">未找到条码 {scanMiss} 对应的商品（已填入搜索框）</span>
+          <span className="min-w-0 flex-1">{t("list.scanMiss", { code: scanMiss })}</span>
           <button type="button" onClick={() => setScanMiss(null)} className="shrink-0 text-paper-400 hover:text-paper-600">✕</button>
         </div>
       )}
@@ -806,18 +809,18 @@ export default function ProductList({
                 : "text-paper-500 hover:text-paper-700"
             }`}
           >
-            {tab === "recent" ? "最近添加" : "按分类浏览"}
+            {tab === "recent" ? t("list.tabRecent") : t("list.tabByCategory")}
           </button>
         ))}
       </div>
 
       {/* ── 内容区 ── */}
-      {activeTab === "recent" && renderTable(recentProducts, adminSearch || hasActiveFilters ? "无匹配商品" : "暂无商品")}
+      {activeTab === "recent" && renderTable(recentProducts, adminSearch || hasActiveFilters ? t("list.noMatch") : t("list.empty"))}
 
       {activeTab === "by-category" && (
         groupedProducts.length === 0 ? (
           <div className="rounded-xl border border-dashed border-paper-200 bg-white py-10 text-center">
-            <p className="text-sm text-paper-500">{hasActiveFilters ? "无匹配商品" : "暂无商品"}</p>
+            <p className="text-sm text-paper-500">{hasActiveFilters ? t("list.noMatch") : t("list.empty")}</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -836,7 +839,7 @@ export default function ProductList({
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-semibold text-paper-800">{group.catName}</span>
                       <span className="rounded-full bg-paper-100 px-2 py-0.5 text-xs font-medium text-paper-500">
-                        {group.items.length} 件
+                        {t("list.groupCount", { n: group.items.length })}
                       </span>
                     </div>
                     <svg

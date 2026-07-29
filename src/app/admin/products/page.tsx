@@ -2,12 +2,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/app/app-shell";
+import { getI18n } from "@/lib/i18n/server";
 import AddProductPanel from "./add-product-panel";
 import ProductList, { type Product } from "./product-list";
 import type { Category } from "@/app/admin/categories/categories-client";
 import type { ProductVariant } from "./actions";
 
 export default async function AdminProductsPage() {
+  const { t } = await getI18n();
   const supabase = await createClient();
   const {
     data: { user },
@@ -50,10 +52,10 @@ export default async function AdminProductsPage() {
         <div>
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-semibold text-paper-900">
-              已添加商品
+              {t("adminProducts.added")}
               {products && products.length > 0 && (
                 <span className="ml-2 text-sm font-normal text-paper-500">
-                  共 {products.length} 件
+                  {t("adminProducts.countTotal", { n: products.length })}
                 </span>
               )}
             </h2>
@@ -61,7 +63,7 @@ export default async function AdminProductsPage() {
               href="/admin/products/import"
               className="rounded-lg border border-paper-200 bg-white px-3 py-1.5 text-sm font-medium text-paper-700 transition-colors hover:bg-paper-100"
             >
-              批量导入 →
+              {t("adminProducts.bulkImport")}
             </Link>
           </div>
 

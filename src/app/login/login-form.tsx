@@ -3,20 +3,27 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import LanguageSwitcher from "@/app/language-switcher";
+import { useT } from "@/lib/i18n/client";
+import type { TranslationKey } from "@/lib/i18n/dictionaries";
+import type { Translate } from "@/lib/i18n/translate";
 
-function translateAuthError(message: string): string {
-  const map: Record<string, string> = {
-    "Invalid login credentials": "邮箱或密码不正确",
-    "Unable to validate email address: invalid format": "邮箱格式不正确",
-    "Email not confirmed": "请先查收邮件并点击确认链接",
-  };
+// Supabase 的报错是英文的，挑常见的几条翻成界面语言，其余原样透出
+const AUTH_ERROR_KEYS: Record<string, TranslationKey> = {
+  "Invalid login credentials": "login.errInvalid",
+  "Unable to validate email address: invalid format": "login.errEmailFormat",
+  "Email not confirmed": "login.errNotConfirmed",
+};
 
-  return map[message] ?? message;
+function translateAuthError(message: string, t: Translate): string {
+  const key = AUTH_ERROR_KEYS[message];
+  return key ? t(key) : message;
 }
 
 export function LoginForm() {
   const router = useRouter();
   const supabase = createClient();
+  const t = useT();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,7 +42,7 @@ export function LoginForm() {
     });
 
     if (signInError) {
-      setError(translateAuthError(signInError.message));
+      setError(translateAuthError(signInError.message, t));
       setLoading(false);
       return;
     }
@@ -53,8 +60,8 @@ export function LoginForm() {
               d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
         </div>
-        <h1 className="text-2xl font-semibold text-paper-900">我的小店</h1>
-        <p className="mt-1.5 text-sm text-paper-500">登录你的账号</p>
+        <h1 className="text-2xl font-semibold text-paper-900">{t("app.name")}</h1>
+        <p className="mt-1.5 text-sm text-paper-500">{t("login.subtitle")}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -63,7 +70,7 @@ export function LoginForm() {
             htmlFor="email"
             className="mb-1.5 block text-sm font-medium text-paper-600"
           >
-            邮箱
+            {t("login.email")}
           </label>
           <input
             id="email"
@@ -82,7 +89,7 @@ export function LoginForm() {
             htmlFor="password"
             className="mb-1.5 block text-sm font-medium text-paper-600"
           >
-            密码
+            {t("login.password")}
           </label>
           <div className="relative">
             <input
@@ -93,7 +100,7 @@ export function LoginForm() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="至少 6 位"
+              placeholder={t("login.passwordPlaceholder")}
               className="w-full rounded-lg border border-paper-200 bg-white/70 px-3 py-2.5 pr-10 text-sm text-paper-900 placeholder:text-paper-400 outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20"
             />
             <button
@@ -101,7 +108,7 @@ export function LoginForm() {
               tabIndex={-1}
               onClick={() => setShowPassword((v) => !v)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-paper-400 hover:text-paper-700"
-              aria-label={showPassword ? "隐藏密码" : "显示密码"}
+              aria-label={showPassword ? t("login.hidePassword") : t("login.showPassword")}
             >
               {showPassword ? (
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -131,9 +138,13 @@ export function LoginForm() {
           disabled={loading}
           className="w-full rounded-lg bg-paper-800 py-2.5 text-sm font-medium text-white transition-colors hover:bg-paper-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {loading ? "请稍候…" : "登录"}
+          {loading ? t("login.pending") : t("login.submit")}
         </button>
       </form>
+
+      <div className="mt-5 flex justify-center border-t border-paper-200/70 pt-4 text-paper-500">
+        <LanguageSwitcher />
+      </div>
     </div>
   );
 }

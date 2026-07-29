@@ -2,9 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/app/app-shell";
+import { getI18n } from "@/lib/i18n/server";
 import OrdersHistoryClient, { type StoreOrder } from "./orders-history-client";
 
 export default async function ShopOrdersPage() {
+  const { t } = await getI18n();
   const supabase = await createClient();
   const {
     data: { user },
@@ -79,10 +81,10 @@ export default async function ShopOrdersPage() {
     <AppShell variant="store" email={user.email}>
       <div className="flex items-center gap-3">
         <Link href="/shop" className="text-sm text-paper-500 transition-colors hover:text-paper-900">
-          ← 返回下单
+          {t("myOrders.backToShop")}
         </Link>
         <span className="text-paper-400">/</span>
-        <h1 className="text-sm font-semibold text-paper-900">我的订单</h1>
+        <h1 className="text-sm font-semibold text-paper-900">{t("nav.myOrders")}</h1>
       </div>
       <OrdersHistoryClient orders={orders} />
     </AppShell>

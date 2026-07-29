@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getT } from "@/lib/i18n/server";
 
 export type ActionResult = { error: string } | { success: true };
 
@@ -31,11 +32,12 @@ export async function addCategory(
   name: string,
   parentId: string | null
 ): Promise<ActionResult> {
+  const t = await getT();
   const supabase = await requireWarehouse();
-  if (!supabase) return { error: "无权限" };
+  if (!supabase) return { error: t("common.noPermission") };
 
   const trimmed = name.trim();
-  if (!trimmed) return { error: "分类名称不能为空" };
+  if (!trimmed) return { error: t("err.categoryNameRequired") };
 
   const { error } = await supabase
     .from("categories")
@@ -48,11 +50,12 @@ export async function addCategory(
 }
 
 export async function renameCategory(id: string, name: string): Promise<ActionResult> {
+  const t = await getT();
   const supabase = await requireWarehouse();
-  if (!supabase) return { error: "无权限" };
+  if (!supabase) return { error: t("common.noPermission") };
 
   const trimmed = name.trim();
-  if (!trimmed) return { error: "分类名称不能为空" };
+  if (!trimmed) return { error: t("err.categoryNameRequired") };
 
   const { error } = await supabase
     .from("categories")
@@ -67,8 +70,9 @@ export async function renameCategory(id: string, name: string): Promise<ActionRe
 }
 
 export async function deleteCategory(id: string): Promise<ActionResult> {
+  const t = await getT();
   const supabase = await requireWarehouse();
-  if (!supabase) return { error: "无权限" };
+  if (!supabase) return { error: t("common.noPermission") };
 
   const { count } = await supabase
     .from("categories")
@@ -76,7 +80,7 @@ export async function deleteCategory(id: string): Promise<ActionResult> {
     .eq("parent_id", id);
 
   if (count && count > 0) {
-    return { error: `请先删除该大类下的 ${count} 个小类，再删除大类` };
+    return { error: t("err.deleteChildrenFirst", { n: count }) };
   }
 
   const { error } = await supabase.from("categories").delete().eq("id", id);
@@ -90,9 +94,10 @@ export async function assignProductsToCategory(
   categoryId: string,
   productIds: string[]
 ): Promise<ActionResult> {
+  const t = await getT();
   const supabase = await requireWarehouse();
-  if (!supabase) return { error: "无权限" };
-  if (!productIds.length) return { error: "请至少选择一个商品" };
+  if (!supabase) return { error: t("common.noPermission") };
+  if (!productIds.length) return { error: t("err.selectAtLeastOneProduct") };
 
   const { error } = await supabase
     .from("products")
@@ -109,8 +114,9 @@ export async function assignProductsToCategory(
 export async function removeProductFromCategory(
   productId: string
 ): Promise<ActionResult> {
+  const t = await getT();
   const supabase = await requireWarehouse();
-  if (!supabase) return { error: "无权限" };
+  if (!supabase) return { error: t("common.noPermission") };
 
   const { error } = await supabase
     .from("products")
