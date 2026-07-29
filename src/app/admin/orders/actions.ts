@@ -42,6 +42,28 @@ export async function updateOrderStatus(
   return {};
 }
 
+/** Nombre libre que el almacén le pone al pedido. Vacío = volver al nombre de la tienda. */
+export async function renameOrder(
+  orderId: string,
+  title: string
+): Promise<{ error?: string }> {
+  const t = await getT();
+  const supabase = await requireWarehouse();
+  if (!supabase) return { error: t("common.noPermission") };
+
+  const trimmed = title.trim();
+  if (trimmed.length > 80) return { error: t("adminOrders.titleTooLong") };
+
+  const { error } = await supabase
+    .from("orders")
+    .update({ title: trimmed || null })
+    .eq("id", orderId);
+  if (error) return { error: translateDbError(error.message, t) };
+
+  revalidatePath("/admin/orders");
+  return {};
+}
+
 export async function deleteOrder(orderId: string): Promise<{ error?: string }> {
   const t = await getT();
   const supabase = await requireWarehouse();

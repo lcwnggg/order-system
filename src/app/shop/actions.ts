@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getT } from "@/lib/i18n/server";
 import { translateDbError } from "@/lib/i18n/db-errors";
+import { sendPushToUser } from "@/lib/push";
 
 type OrderItem = { productId: string; quantity: number; variantId?: string };
 type OrderResult = { success: true; orderId: string } | { error: string };
@@ -20,7 +21,7 @@ export async function submitOrder(items: OrderItem[], note?: string): Promise<Or
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, warehouse_id, store_name")
     .eq("id", user.id)
     .single();
   if (profile?.role !== "store") return { error: t("common.noPermission") };
@@ -49,9 +50,31 @@ export async function submitOrder(items: OrderItem[], note?: string): Promise<Or
     });
   }
 
+  // Aviso al móvil del almacén. Va después de que el pedido ya esté guardado y
+  // envuelto en try/catch: si el push falla (claves sin configurar, servicio
+  // caído, nadie suscrito) el pedido sigue siendo válido igualmente.
+  if (profile.warehouse_id) {
+    try {
+      const totalUnits = items.reduce((sum, i) => sum + i.quantity, 0);
+      await sendPushToUser(profile.warehouse_id as string, {
+        title: t("push.newOrderTitle"),
+        body: t("push.newOrderBody", {
+          store: (profile.store_name as string | null) ?? user.email ?? "",
+          units: totalUnits,
+          lines: items.length,
+        }),
+        url: "/admin/orders",
+        tag: `order-${orderId}`,
+      });
+    } catch {
+      /* el aviso es un extra, nunca puede hacer fracasar el pedido */
+    }
+  }
+
   revalidatePath("/shop");
   revalidatePath("/shop/orders");
   revalidatePath("/admin/products");
+  revalidatePath("/admin/orders");
 
   return { success: true, orderId: orderId as string };
 }

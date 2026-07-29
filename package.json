@@ -12,11 +12,13 @@
     "@anthropic-ai/sdk": "^0.111.0",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.110.1",
+    "@types/web-push": "^3.6.4",
     "@zxing/browser": "^0.2.1",
     "@zxing/library": "^0.23.0",
     "next": "16.2.9",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "web-push": "^3.6.7",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

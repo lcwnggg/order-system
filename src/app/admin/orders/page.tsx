@@ -5,6 +5,7 @@ import { getTransferBoard } from "@/lib/transfers";
 import { getI18n } from "@/lib/i18n/server";
 import OrdersClient, { type Order, type OrderItem } from "./orders-client";
 import WarehouseTransferPanel from "./warehouse-transfer-panel";
+import PushToggle from "./push-toggle";
 
 export default async function AdminOrdersPage() {
   const { t } = await getI18n();
@@ -28,9 +29,9 @@ export default async function AdminOrdersPage() {
     supabase
       .from("orders")
       .select(
-        `id, store_id, status, created_at, note,
+        `id, store_id, status, created_at, note, title,
          order_items ( id, quantity, variant_id, unit_price,
-           products ( id, name, price, category_id )
+           products ( id, name, price, category_id, brand, image_url )
          )`
       )
       .order("created_at", { ascending: false }),
@@ -92,13 +93,21 @@ export default async function AdminOrdersPage() {
     status: o.status as Order["status"],
     created_at: o.created_at as string,
     note: (o.note as string | null) ?? null,
+    title: (o.title as string | null) ?? null,
     items: ((o.order_items as unknown[]) ?? []).map((raw) => {
       const item = raw as {
         id: string;
         quantity: number;
         variant_id: string | null;
         unit_price: number | null;
-        products: { id: string; name: string; price: number; category_id: string | null };
+        products: {
+          id: string;
+          name: string;
+          price: number;
+          category_id: string | null;
+          brand: string | null;
+          image_url: string | null;
+        };
       };
       return {
         id: item.id,
@@ -122,6 +131,7 @@ export default async function AdminOrdersPage() {
           </div>
           <span className="shrink-0 text-sm text-paper-500">{t("adminOrders.countTotal", { n: orders.length })}</span>
         </div>
+        <PushToggle />
         <WarehouseTransferPanel requests={transferRequests} currentUserId={user.id} />
         <OrdersClient orders={orders} categories={categories} />
       </AppShell>

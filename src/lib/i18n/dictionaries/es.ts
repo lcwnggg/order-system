@@ -6,6 +6,7 @@
 const es = {
   // ── metadatos / marca ──
   "meta.title": "Mi tienda",
+  "meta.shortName": "Mi tienda",
   "meta.description": "Plataforma de pedidos almacén ↔ tiendas",
   "app.name": "Mi tienda",
   "app.logoLetter": "M",
@@ -264,6 +265,23 @@ const es = {
   "crop.rotate": "Girar",
   "crop.rotate90": "Girar 90 grados",
   "crop.failed": "No se pudo recortar la imagen",
+  "crop.modeFrame": "Encuadrar",
+  "crop.modeLasso": "Recorte libre",
+  "crop.auto": "Recorte automático",
+  "crop.removeBg": "Quitar fondo",
+  "crop.undo": "Deshacer",
+  "crop.fit": "Ajustar",
+  "crop.detecting": "Detectando el producto…",
+  "crop.autoNotFound":
+    "No se distingue el producto del fondo. Prueba con más contraste (fondo liso) o recorta a mano.",
+  "crop.autoDoneDocument": "Detectado y enderezado. ¿No te convence? Deshacer.",
+  "crop.autoDoneObject": "Recortado al producto. ¿No te convence? Deshacer.",
+  "crop.bgRemoved": "Fondo puesto en blanco. ¿No te convence? Deshacer.",
+  "crop.lassoHint": "Dibuja con el dedo (o el ratón) alrededor de lo que quieres conservar.",
+  "crop.applyLasso": "Aplicar recorte",
+  "crop.clearLasso": "Borrar trazo",
+  "crop.lassoDone": "Recortado. El resto ha quedado en blanco.",
+  "crop.lassoTooSmall": "El trazo es demasiado pequeño.",
 
   // ── reconocimiento con IA ──
   "ai.title": "Reconocimiento con IA (opcional)",
@@ -452,10 +470,41 @@ const es = {
   "adminOrders.confirmDelete":
     "¿Eliminar este pedido? No se podrá recuperar (el stock no cambia).",
   "adminOrders.storeFallback": "Tienda {id}…",
+  "adminOrders.rename": "Cambiar el nombre del pedido",
+  "adminOrders.namePlaceholder": "P. ej. Reposición del sábado",
+  "adminOrders.titleTooLong": "El nombre no puede pasar de 80 caracteres",
+  "adminOrders.expandAll": "Desplegar todos",
+  "adminOrders.collapseAll": "Plegar todos",
+  "adminOrders.viewPhoto": "Ver la foto de {name}",
   "print.title": "Hoja de preparación",
   "print.generated": "Generado: {date}",
   "print.pendingOrders": "{n} pedidos pendientes",
   "print.productKinds": "{n} referencias",
+  // ── avisos al móvil (push) ──
+  "push.title": "Avisos al móvil",
+  "push.onThisDevice": "Activados en este dispositivo: te avisaremos de cada pedido nuevo.",
+  "push.offThisDevice": "Desactivados en este dispositivo.",
+  "push.enable": "Activar",
+  "push.disable": "Desactivar",
+  "push.enabled": "Listo. Te llegará un aviso con cada pedido nuevo.",
+  "push.disabled": "Avisos desactivados en este dispositivo.",
+  "push.test": "Probar",
+  "push.testSent": "Aviso de prueba enviado. Debería llegarte en unos segundos.",
+  "push.testTitle": "Prueba de aviso",
+  "push.testBody": "Si ves esto, las notificaciones funcionan.",
+  "push.noDevices": "No hay ningún dispositivo activado todavía.",
+  "push.permissionDenied":
+    "Has bloqueado las notificaciones. Actívalas en los ajustes del navegador para este sitio.",
+  "push.notConfigured": "Faltan las claves VAPID en el servidor.",
+  "push.invalidSubscription": "La suscripción del navegador no es válida.",
+  "push.failed": "No se pudieron activar los avisos.",
+  "push.unsupported": "Este navegador no admite avisos push.",
+  "push.iosInstallHint": "En el iPhone hay que añadir la web a la pantalla de inicio.",
+  "push.iosSteps":
+    "En Safari: toca el botón de Compartir (⎋) → «Añadir a pantalla de inicio». Luego abre la app desde ese icono y vuelve aquí para activar los avisos.",
+  "push.newOrderTitle": "Pedido nuevo",
+  "push.newOrderBody": "{store} · {lines} referencias, {units} unidades",
+
   "print.thProduct": "Producto (desglose por tienda)",
   "print.thTotal": "Total",
 

@@ -19,6 +19,20 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async headers() {
+    return [
+      {
+        // El service worker no se puede cachear: si el navegador sirve una
+        // versión vieja, los avisos push dejan de llegar y no hay forma de
+        // enterarse desde fuera.
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
