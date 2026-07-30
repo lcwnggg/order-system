@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useT } from "@/lib/i18n/client";
 
 // ─────────────────────────────────────────────────────────────
@@ -14,6 +15,15 @@ import { useT } from "@/lib/i18n/client";
 // Blanco y no transparente a propósito: la salida es JPEG y ahí lo
 // transparente se vuelve negro, así que una foto de producto acabaría
 // con marco negro en la tienda.
+//
+// Se pinta con un PORTAL a <body>, y eso NO es opcional: el formulario
+// de producto es una tarjeta con `glass-strong`, es decir con
+// backdrop-filter, y un elemento con filtro pasa a ser el bloque
+// contenedor de sus hijos `position: fixed`. Colgando del formulario,
+// esta capa "a pantalla completa" se medía contra la tarjeta —en el
+// móvil, un formulario larguísimo—, así que salía más alta que la
+// pantalla, los botones quedaban fuera y arrastrar peleaba con el
+// desplazamiento de la página.
 // ─────────────────────────────────────────────────────────────
 
 /** Lado del cuadrado que se entrega, en px. */
@@ -66,6 +76,8 @@ export default function ImageCropModal({
   const [crop, setCrop] = useState<Crop>(FULL_CROP);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // El portal solo puede crearse en el navegador (en el servidor no hay <body>).
+  const [mounted, setMounted] = useState(false);
 
   const dragRef = useRef<{
     kind: DragKind;
@@ -90,6 +102,11 @@ export default function ImageCropModal({
     /* eslint-enable react-hooks/set-state-in-effect */
     return () => URL.revokeObjectURL(objectUrl);
   }, [file]);
+
+  useEffect(() => {
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
+    setMounted(true);
+  }, []);
 
   // Mientras el editor está abierto, la página de detrás no se mueve. Sin esto,
   // en el móvil un arrastre que empiece un pelín fuera de la foto desplaza el
@@ -120,7 +137,9 @@ export default function ImageCropModal({
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+    // `mounted` está en las dependencias porque hasta que el portal existe no
+    // hay nodo al que agarrarse: sin esto el escenario se quedaría en 0.
+  }, [mounted]);
 
   // Medidas de la foto tras girar (a 90°/270° se intercambian ancho y alto).
   const eff = useMemo(() => {
@@ -324,7 +343,9 @@ export default function ImageCropModal({
     w: "h-7 w-[3px] rounded-full bg-white border-0",
   };
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     // Altura en `dvh` y no `inset-0`: en el navegador del móvil, con las barras
     // a la vista, el 100 % de toda la vida es MÁS ALTO que lo que se ve, así que
     // los botones de abajo acababan tapados por la barra de Safari — y como la
@@ -482,6 +503,7 @@ export default function ImageCropModal({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
