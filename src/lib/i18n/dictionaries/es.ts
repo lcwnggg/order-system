@@ -265,8 +265,7 @@ const es = {
   "crop.rotate": "Girar",
   "crop.rotate90": "Girar 90 grados",
   "crop.selectAll": "Toda la foto",
-  "crop.hint":
-    "Arrastra las esquinas o los lados para elegir el recorte, con la forma que quieras. Lo que falte se rellena de blanco.",
+  "crop.hint": "Arrastra las esquinas o los lados. Lo que falte se rellena de blanco.",
   "crop.failed": "No se pudo recortar la imagen",
   "crop.loadFailed": "No se pudo abrir la imagen. Prueba con otra foto.",
 

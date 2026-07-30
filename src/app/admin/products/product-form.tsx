@@ -210,14 +210,16 @@ export default function ProductForm({ categories = [] }: { categories?: Category
     setVariants((prev) => prev.map((v, i) => (i === idx ? { ...v, [field]: value } : v)));
   }
 
-  // AI 识别：第一张照片作为商品图。保留原图，让用户可以对这张图裁剪构图
-  // （AI 面板那个"拍照"按钮拍出来的图会直接成为商品图，不给裁剪机会的话构图就没法调）
+  // AI 识别：第一张照片作为商品图。拍完立刻弹裁剪框——两个拍照入口都要一样，
+  // 用户不该先看到"已上传"再自己去点「裁剪」。AI 识别在后台继续跑，互不影响；
+  // 取消裁剪就保留原图。
   function handleAiImage(url: string, file: File) {
     setImageUrl(url);
     setPreview(url);
     setPhase("done");
     setUploadError(null);
     setOriginalFile(file);
+    setPendingCrop(file);
   }
 
   // AI 识别：把结果填入各字段（名称/品牌/描述为非受控输入，直接写 DOM 值）

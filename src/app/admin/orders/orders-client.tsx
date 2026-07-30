@@ -266,15 +266,19 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
       return a.name.localeCompare(b.name, tag);
     });
 
-    // Cada referencia es un bloque; van en dos columnas para no desperdiciar
-    // el ancho del A4 (una tabla a página completa dejaba media hoja en blanco).
+    // Cada referencia es un bloque y los bloques van en columnas (ver el CSS:
+    // se meten tantas como quepan a lo ancho de la hoja). Todo lo secundario
+    // —subcategoría y desglose por tienda— va en la misma línea para no gastar
+    // renglones: así no queda media hoja en blanco a la derecha.
     let lastParent = "";
     const itemsHtml = rows
       .map((p) => {
         const { parent, child } = catLabel(p.categoryId);
+        // El espacio entre etiquetas es necesario: sin él la línea no tiene por
+        // dónde cortar y el desglose se sale de la columna.
         const storeDetail = [...p.stores.entries()]
           .map(([s, q]) => `<span class="store-tag">${escapeHtml(s)}×${q}</span>`)
-          .join("");
+          .join(" ");
         let header = "";
         if (parent !== lastParent) {
           lastParent = parent;
@@ -284,11 +288,10 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
           ? `<img class="thumb" src="${escapeHtml(p.imageUrl)}" alt="">`
           : `<div class="thumb no-img"></div>`;
         const brand = p.brand ? `<span class="brand">${escapeHtml(p.brand)}</span>` : "";
+        const meta = child ? `<span class="cname">${escapeHtml(child)}</span>` : "";
         return `${header}<div class="item">
 ${thumb}
-<div class="info"><div class="pname">${escapeHtml(p.name)}${brand}</div>${
-          child ? `<div class="cname">${escapeHtml(child)}</div>` : ""
-        }<div class="stores">${storeDetail}</div></div>
+<div class="info"><span class="pname">${escapeHtml(p.name)}</span>${brand} <span class="meta">${meta}${storeDetail}</span></div>
 <div class="qty">${p.total}</div></div>`;
       })
       .join("");
@@ -296,34 +299,38 @@ ${thumb}
     const html = `<!DOCTYPE html><html lang="${tag}"><head><meta charset="utf-8">
 <title>${t("print.title")} ${dateStr}</title>
 <style>
-@page{size:A4 portrait;margin:9mm 8mm}
+@page{size:A4 portrait;margin:8mm 7mm}
 *{box-sizing:border-box}
-body{font-family:sans-serif;margin:0;color:#111;font-size:12px;
+body{font-family:sans-serif;margin:0;color:#111;font-size:11px;
   -webkit-print-color-adjust:exact;print-color-adjust:exact}
 /* Cabecera en una sola línea, pegada al primer producto */
-.head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
-  border-bottom:1.5px solid #111;padding-bottom:4px;margin-bottom:6px}
-h1{font-size:15px;margin:0;letter-spacing:-.01em}
-.sub{color:#555;font-size:10px;text-align:right}
-/* Dos columnas: se aprovecha todo el ancho de la hoja */
-.cols{column-count:2;column-gap:7mm}
+.head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+  border-bottom:1.2px solid #111;padding-bottom:3px;margin-bottom:4px}
+h1{font-size:13px;margin:0;letter-spacing:-.01em}
+.sub{color:#555;font-size:9px;text-align:right}
+/* Se meten tantas columnas como quepan (mínimo 58 mm cada una): 3 en A4
+   vertical, 4 en horizontal. Así no sobra ancho de papel sin usar. */
+.cols{columns:58mm;column-gap:5mm;column-rule:1px solid #eceef2}
 .cat{break-inside:avoid;break-after:avoid;page-break-after:avoid;
-  font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;
-  background:#f3f4f6;border-radius:3px;padding:2px 5px;margin:5px 0 2px}
+  font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#4b5563;
+  background:#eceef2;border-radius:2px;padding:1px 4px;margin:4px 0 1px}
 .cat:first-child{margin-top:0}
-.item{display:flex;align-items:flex-start;gap:6px;padding:3px 0;
+.item{display:flex;align-items:flex-start;gap:4px;padding:2px 0;
   border-bottom:1px solid #e5e7eb;break-inside:avoid;page-break-inside:avoid}
-.thumb{width:34px;height:34px;flex:0 0 34px;object-fit:cover;border-radius:4px;
+.thumb{width:26px;height:26px;flex:0 0 26px;object-fit:cover;border-radius:3px;
   border:1px solid #e5e7eb;background:#fff}
 .thumb.no-img{background:#f3f4f6}
-.info{flex:1;min-width:0}
-.pname{font-weight:600;font-size:11.5px;line-height:1.25}
-.brand{display:inline-block;margin-left:4px;font-size:9px;font-weight:600;color:#374151;
-  background:#eef2f7;border:1px solid #dfe5ec;padding:0 4px;border-radius:3px;vertical-align:1px}
-.cname{font-size:9px;color:#9ca3af;line-height:1.3}
-.stores{display:flex;flex-wrap:wrap;gap:3px;margin-top:1px}
-.store-tag{font-size:9px;color:#374151;background:#f3f4f6;padding:0 5px;border-radius:999px;line-height:1.5}
-.qty{flex:0 0 auto;font-weight:700;font-size:15px;line-height:1.1;white-space:nowrap;padding-left:4px}
+.info{flex:1;min-width:0;line-height:1.35;overflow-wrap:anywhere}
+.pname{font-weight:600;font-size:10px}
+/* Marca, subcategoría y tiendas siguen el flujo del nombre: rellenan el hueco
+   que quede a la derecha en vez de abrir un renglón nuevo cada una. */
+.brand{font-size:8px;font-weight:600;color:#374151;background:#eef2f7;
+  padding:0 3px;border-radius:2px;margin-left:3px;white-space:nowrap}
+.meta{font-size:8px;color:#6b7280;margin-left:3px}
+.cname{color:#9ca3af;margin-right:3px;white-space:nowrap}
+.store-tag{background:#f3f4f6;color:#374151;padding:0 4px;border-radius:999px;
+  margin-right:2px;white-space:nowrap}
+.qty{flex:0 0 auto;font-weight:700;font-size:13px;line-height:1.15;white-space:nowrap;padding-left:3px}
 </style></head><body>
 <div class="head">
 <h1>${t("print.title")}</h1>

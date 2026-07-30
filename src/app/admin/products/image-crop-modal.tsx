@@ -91,6 +91,19 @@ export default function ImageCropModal({
     return () => URL.revokeObjectURL(objectUrl);
   }, [file]);
 
+  // Mientras el editor está abierto, la página de detrás no se mueve. Sin esto,
+  // en el móvil un arrastre que empiece un pelín fuera de la foto desplaza el
+  // formulario (o dispara el "recargar tirando hacia abajo") en vez de recortar.
+  useEffect(() => {
+    const { overflow, overscrollBehavior } = document.body.style;
+    document.body.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "none";
+    return () => {
+      document.body.style.overflow = overflow;
+      document.body.style.overscrollBehavior = overscrollBehavior;
+    };
+  }, []);
+
   // Tamaño del escenario donde se pinta la foto.
   useEffect(() => {
     const el = stageRef.current;
@@ -312,9 +325,16 @@ export default function ImageCropModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex flex-col bg-black/90">
-      <div className="flex shrink-0 items-center justify-between px-4 py-3">
-        <span className="text-sm font-medium text-white/90">{t("crop.title")}</span>
+    // Altura en `dvh` y no `inset-0`: en el navegador del móvil, con las barras
+    // a la vista, el 100 % de toda la vida es MÁS ALTO que lo que se ve, así que
+    // los botones de abajo acababan tapados por la barra de Safari — y como la
+    // capa es fija, tampoco se podía desplazar para llegar a ellos.
+    <div
+      className="fixed inset-x-0 top-0 z-[70] flex h-[100dvh] touch-none flex-col overscroll-none bg-black/95"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      <div className="flex shrink-0 items-center justify-between px-4 py-2">
+        <span className="text-[13px] font-medium text-white/90">{t("crop.title")}</span>
         <button
           type="button"
           onClick={onCancel}
@@ -414,52 +434,53 @@ export default function ImageCropModal({
         )}
       </div>
 
-      <p className="shrink-0 px-6 pt-3 text-center text-xs text-white/60">{t("crop.hint")}</p>
-
-      <div className="flex shrink-0 items-center justify-center gap-2 px-6 pt-3">
-        <button
-          type="button"
-          onClick={handleRotate}
-          disabled={!ready || busy}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3.5 py-2 text-xs font-medium text-white hover:bg-white/25 disabled:opacity-40"
-          title={t("crop.rotate90")}
-        >
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-            />
-          </svg>
-          {t("crop.rotate")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setCrop(FULL_CROP)}
-          disabled={!ready || busy}
-          className="rounded-lg bg-white/15 px-3.5 py-2 text-xs font-medium text-white hover:bg-white/25 disabled:opacity-40"
-        >
-          {t("crop.selectAll")}
-        </button>
-      </div>
-
-      <div className="flex shrink-0 items-center justify-center gap-3 px-6 py-5">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-lg bg-white/10 px-5 py-2.5 text-sm font-medium text-white hover:bg-white/20"
-        >
-          {t("common.cancel")}
-        </button>
-        <button
-          type="button"
-          onClick={handleConfirm}
-          disabled={busy || !ready}
-          className="rounded-lg bg-white px-6 py-2.5 text-sm font-medium text-paper-900 hover:bg-paper-100 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {busy ? t("common.processing") : t("common.confirm")}
-        </button>
+      {/* Barra única: girar / toda la foto a un lado, cancelar / aceptar al otro.
+          Todo en una fila para dejarle a la foto el máximo de alto posible. */}
+      <div className="shrink-0 px-3 pb-3 pt-2">
+        <p className="mb-2 text-center text-[11px] leading-snug text-white/55">{t("crop.hint")}</p>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={handleRotate}
+            disabled={!ready || busy}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/15 text-white hover:bg-white/25 disabled:opacity-40"
+            aria-label={t("crop.rotate90")}
+            title={t("crop.rotate90")}
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCrop(FULL_CROP)}
+            disabled={!ready || busy}
+            className="h-10 shrink-0 rounded-lg bg-white/15 px-3 text-xs font-medium text-white hover:bg-white/25 disabled:opacity-40"
+          >
+            {t("crop.selectAll")}
+          </button>
+          <span className="flex-1" />
+          <button
+            type="button"
+            onClick={onCancel}
+            className="h-10 rounded-lg bg-white/10 px-4 text-sm font-medium text-white hover:bg-white/20"
+          >
+            {t("common.cancel")}
+          </button>
+          <button
+            type="button"
+            onClick={handleConfirm}
+            disabled={busy || !ready}
+            className="h-10 rounded-lg bg-white px-5 text-sm font-medium text-paper-900 hover:bg-paper-100 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {busy ? t("common.processing") : t("common.confirm")}
+          </button>
+        </div>
       </div>
     </div>
   );

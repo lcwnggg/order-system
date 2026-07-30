@@ -258,7 +258,7 @@ const zh: Dictionary = {
   "crop.rotate": "旋转",
   "crop.rotate90": "旋转 90 度",
   "crop.selectAll": "整张照片",
-  "crop.hint": "拖动四角或四边，想裁成什么形状都行。空出来的地方会填成白色。",
+  "crop.hint": "拖动四角或四边，空出来的地方填白。",
   "crop.failed": "裁剪失败",
   "crop.loadFailed": "图片打不开，换一张试试。",
 

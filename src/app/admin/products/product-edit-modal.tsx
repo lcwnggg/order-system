@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useRef, useState, useTransition, useMemo } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { updateProduct, upsertVariants, type ActionResult } from "./actions";
 import BarcodeField from "./barcode-scanner";
+import ImageCropModal from "./image-crop-modal";
 import { useT } from "@/lib/i18n/client";
 import type { Translate } from "@/lib/i18n/translate";
 
@@ -47,7 +48,7 @@ type VariantDraft = {
 
 type UploadPhase = "idle" | "compressing" | "uploading" | "done" | "error";
 
-function compressToJpeg(file: File, t: Translate, maxWidth = 1200, quality = 0.8): Promise<Blob> {
+function compressToJpeg(file: File | Blob, t: Translate, maxWidth = 1200, quality = 0.8): Promise<Blob> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     const objectUrl = URL.createObjectURL(file);
@@ -113,6 +114,9 @@ export default function ProductEditModal({
   const [preview, setPreview] = useState<string | null>(null);
   const [phase, setPhase] = useState<UploadPhase>("idle");
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // Foto elegida pendiente de recortar (se sube después de aceptar el recorte)
+  const [pendingCrop, setPendingCrop] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [saveResult, setSaveResult] = useState<ActionResult | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [zoomOpen, setZoomOpen] = useState(false); // 图片放大灯箱
@@ -133,12 +137,26 @@ export default function ProductEditModal({
   const displayImage = preview ?? (newImageUrl === null ? null : product.image_url ?? null);
   const visibleEditVariants = editVariants.filter((v) => !v._delete);
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  // Igual que al añadir un producto: la foto elegida pasa primero por el
+  // recorte y solo se sube lo que se acepte ahí.
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) { setNewImageUrl(undefined); setPreview(null); setPhase("idle"); return; }
+    setPendingCrop(file);
+  }
+
+  function handleCropCancel() {
+    setPendingCrop(null);
+    // Vaciar el input: si no, al volver a elegir la MISMA foto el navegador no
+    // dispara `change` y no pasa nada.
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function handleCropConfirm(cropped: Blob) {
+    setPendingCrop(null);
     try {
       setPhase("compressing"); setUploadError(null);
-      const blob = await compressToJpeg(file, t);
+      const blob = await compressToJpeg(cropped, t);
       setPreview(URL.createObjectURL(blob));
       setPhase("uploading");
       const supabase = createClient();
@@ -466,6 +484,7 @@ export default function ProductEditModal({
                 )}
                 <div className="min-w-0 flex-1">
                   <input
+                    ref={fileInputRef}
                     type="file"
                     accept="image/*"
                     onChange={handleFileChange}
@@ -484,6 +503,14 @@ export default function ProductEditModal({
                 <p className="mt-1 text-xs text-amber-600">{t("edit.imageWillDelete")}</p>
               )}
             </div>
+
+            {pendingCrop && (
+              <ImageCropModal
+                file={pendingCrop}
+                onCancel={handleCropCancel}
+                onConfirm={handleCropConfirm}
+              />
+            )}
 
             {saveResult && "error" in saveResult && (
               <p className="rounded-lg bg-red-50 px-4 py-2.5 text-sm text-red-600">{saveResult.error}</p>
