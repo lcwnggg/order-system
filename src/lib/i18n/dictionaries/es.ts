@@ -220,6 +220,26 @@ const es = {
   "form.deleteImage": "Eliminar la imagen",
   "form.productAdded": "Producto añadido correctamente",
   "form.uploadingImage": "Subiendo la imagen…",
+  "form.barcodeDuplicateWarning": "Ya existe un producto con este código de barras: «{name}».",
+  "form.barcodeDuplicateStock": "Stock actual: {n} uds.",
+  "form.barcodeDuplicateVariantsHint": "Tiene variantes de color: ábrelo en la lista de abajo para añadir stock.",
+  "form.barcodeDuplicateAddStock": "+ Añadir stock",
+  "form.barcodeDuplicateAdded": "Stock añadido ✓",
+
+  // ── etiquetas (marca / proveedor) ──
+  "tags.clear": "Borrar",
+  "tags.showAll": "Ver todas",
+  "tags.createNew": "Usar «{name}» (nueva)",
+
+  // ── compra: coste y proveedor (privado) ──
+  "cost.sectionTitle": "Compra",
+  "cost.onlyYou": "· solo lo ves tú",
+  "cost.costPrice": "Precio de compra (€)",
+  "cost.margin": "Ganancia €{profit} · {pct}%",
+  "cost.supplier": "Proveedor",
+  "cost.supplierPlaceholder": "¿A quién se lo compras?",
+  "cost.note": "Notas privadas",
+  "cost.notePlaceholder": "Condiciones, teléfono, fecha de la última compra…",
 
   // ── edición de producto ──
   "edit.title": "Editar producto",
@@ -228,7 +248,6 @@ const es = {
   "edit.colorPlaceholder": "P. ej. «Negro»",
   "edit.descriptionPlaceholder": "Opcional",
   "edit.imageKeepHint": "(si no eliges nada, se mantiene la actual)",
-  "edit.zoomAlt": "Vista ampliada",
   "edit.imagePreviewAlt": "Vista previa de la imagen",
   "edit.clickToZoom": "Pulsa para ampliar",
   "edit.compressing": "Comprimiendo…",
@@ -327,6 +346,7 @@ const es = {
   "err.productNameRequired": "El nombre del producto no puede estar vacío",
   "err.invalidPrice": "Introduce un precio válido",
   "err.invalidStock": "Introduce una cantidad de stock válida",
+  "err.invalidCostPrice": "Introduce un precio de compra válido",
   "err.barcodeInvalid": "Código de barras no válido (solo números, letras y guiones)",
   "err.variantJson": "El formato de las variantes de color no es válido",
   "err.variantAtLeastOne": "Añade al menos un color al activar las variantes",

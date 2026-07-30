@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/app/app-shell";
 import { getI18n } from "@/lib/i18n/server";
 import CategoriesClient, { type Category, type CategoryTree, type ProductSummary } from "./categories-client";
-import type { ProductVariant } from "@/app/admin/products/actions";
+import type { ProductCost, ProductVariant } from "@/app/admin/products/actions";
 
 export default async function AdminCategoriesPage() {
   const { t } = await getI18n();
@@ -28,7 +28,7 @@ export default async function AdminCategoriesPage() {
     .order("sort_order")
     .order("created_at");
 
-  const [{ data: productsData }, { data: variantsData }] = await Promise.all([
+  const [{ data: productsData }, { data: variantsData }, { data: costsData }] = await Promise.all([
     supabase
       .from("products")
       .select("id, name, category_id, price, stock, description, image_url, is_active, has_variants, brand, barcode, created_at")
@@ -37,6 +37,8 @@ export default async function AdminCategoriesPage() {
       .from("product_variants")
       .select("id, product_id, color, stock, sort_order")
       .order("sort_order"),
+    // Coste/proveedor: tabla con RLS de solo-almacén, y esta página ya lo es.
+    supabase.from("product_costs").select("product_id, cost_price, supplier, note"),
   ]);
 
   const flat = (allCategories ?? []) as Category[];
@@ -48,6 +50,11 @@ export default async function AdminCategoriesPage() {
 
   const products = (productsData ?? []) as ProductSummary[];
   const variants = (variantsData ?? []) as ProductVariant[];
+  const costs = (costsData ?? []) as ProductCost[];
+
+  // Las etiquetas de marca/proveedor son los valores ya usados, sin tabla propia.
+  const brandOptions = [...new Set(products.map((p) => p.brand).filter((b): b is string => !!b?.trim()))];
+  const supplierOptions = [...new Set(costs.map((c) => c.supplier).filter((s): s is string => !!s?.trim()))];
 
   return (
     <AppShell email={user.email}>
@@ -56,7 +63,14 @@ export default async function AdminCategoriesPage() {
           <h1 className="animate-fade-up mt-2 text-3xl font-normal tracking-tight text-paper-900">{t("categories.title")}</h1>
           <p className="mt-1 text-sm text-paper-500">{t("categories.subtitle")}</p>
         </div>
-        <CategoriesClient categoryTree={categoryTree} products={products} variants={variants} />
+        <CategoriesClient
+          categoryTree={categoryTree}
+          products={products}
+          variants={variants}
+          costs={costs}
+          brandOptions={brandOptions}
+          supplierOptions={supplierOptions}
+        />
       </AppShell>
   );
 }

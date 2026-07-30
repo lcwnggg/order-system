@@ -15,6 +15,58 @@ export type ProductVariant = {
   sort_order: number;
 };
 
+/**
+ * Datos privados de compra. Viven en `product_costs`, una tabla aparte cuya RLS
+ * solo deja pasar al rol `warehouse`: si estuvieran como columnas de `products`
+ * cualquier empleado podría leerlos desde el navegador con la anon key, porque
+ * RLS filtra filas, no columnas.
+ */
+export type ProductCost = {
+  product_id: string;
+  cost_price: number | null;
+  supplier: string | null;
+  note: string | null;
+};
+
+type CostInput = {
+  cost_price: number | null;
+  supplier: string | null;
+  note: string | null;
+};
+
+/** Guarda (o limpia) el coste/proveedor de un producto. Asume permisos ya comprobados. */
+async function saveCost(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  productId: string,
+  cost: CostInput
+): Promise<string | null> {
+  const isEmpty = cost.cost_price === null && !cost.supplier && !cost.note;
+  if (isEmpty) {
+    // Sin nada que apuntar, no dejamos una fila vacía rondando.
+    const { error } = await supabase.from("product_costs").delete().eq("product_id", productId);
+    return error?.message ?? null;
+  }
+  const { error } = await supabase
+    .from("product_costs")
+    .upsert(
+      { product_id: productId, cost_price: cost.cost_price, supplier: cost.supplier, note: cost.note },
+      { onConflict: "product_id" }
+    );
+  return error?.message ?? null;
+}
+
+/** Lee los campos privados de un FormData, normalizando vacíos a null. */
+function readCostFromForm(formData: FormData): CostInput | { error: "invalidCost" } {
+  const rawCost = ((formData.get("cost_price") as string) ?? "").trim();
+  const cost_price = rawCost === "" ? null : parseFloat(rawCost);
+  if (cost_price !== null && (isNaN(cost_price) || cost_price < 0)) return { error: "invalidCost" };
+  return {
+    cost_price,
+    supplier: ((formData.get("supplier") as string) ?? "").trim() || null,
+    note: ((formData.get("cost_note") as string) ?? "").trim() || null,
+  };
+}
+
 type VariantInput = {
   id?: string;
   color: string;
@@ -64,6 +116,9 @@ export async function addProduct(
   if (!has_variants && (isNaN(stock) || stock < 0)) return { error: t("err.invalidStock") };
   if (!isValidBarcodeFormat(barcode)) return { error: t("err.barcodeInvalid") };
 
+  const cost = readCostFromForm(formData);
+  if ("error" in cost) return { error: t("err.invalidCostPrice") };
+
   let variants: { color: string; stock: number }[] = [];
   if (has_variants) {
     try {
@@ -81,6 +136,9 @@ export async function addProduct(
     .select("id")
     .single();
   if (insertErr) return { error: insertErr.message };
+
+  const costErr = await saveCost(supabase, product.id, cost);
+  if (costErr) return { error: costErr };
 
   if (has_variants && variants.length > 0) {
     const { error: varErr } = await supabase.from("product_variants").insert(
@@ -112,18 +170,23 @@ export async function updateProduct(
     has_variants?: boolean;
     brand?: string | null;
     barcode?: string | null;
+    /** Datos privados; `undefined` = no tocar lo que ya hubiera guardado. */
+    cost?: { cost_price: number | null; supplier: string | null; note: string | null };
   }
 ): Promise<ActionResult> {
   const t = await getT();
   const supabase = await requireWarehouse();
   if (!supabase) return { error: t("common.noPermission") };
 
-  const { name, description, price, stock, newImageUrl, category_id, has_variants, brand, barcode } = fields;
+  const { name, description, price, stock, newImageUrl, category_id, has_variants, brand, barcode, cost } = fields;
   if (!name) return { error: t("err.productNameRequired") };
   if (isNaN(price) || price < 0) return { error: t("err.invalidPrice") };
   if (has_variants !== true && (isNaN(stock) || stock < 0)) return { error: t("err.invalidStock") };
   if (barcode !== undefined && !isValidBarcodeFormat(barcode)) {
     return { error: t("err.barcodeInvalid") };
+  }
+  if (cost?.cost_price != null && (isNaN(cost.cost_price) || cost.cost_price < 0)) {
+    return { error: t("err.invalidCostPrice") };
   }
 
   const updateData: Record<string, unknown> = {
@@ -140,6 +203,11 @@ export async function updateProduct(
 
   const { error } = await supabase.from("products").update(updateData).eq("id", id);
   if (error) return { error: error.message };
+
+  if (cost !== undefined) {
+    const costErr = await saveCost(supabase, id, cost);
+    if (costErr) return { error: costErr };
+  }
 
   revalidatePath("/admin/products");
   revalidatePath("/admin/stock-alert");

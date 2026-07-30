@@ -822,8 +822,7 @@ export default function ShopClient({
                           title={t("common.viewPhoto", { name: product.name })}
                           className="h-10 w-10 shrink-0 cursor-zoom-in overflow-hidden rounded-lg"
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+                          <Image src={product.image_url} alt={product.name} width={40} height={40} className="h-full w-full object-cover" />
                         </button>
                       ) : (
                         <div className="h-10 w-10 rounded-lg bg-paper-100" />
@@ -951,8 +950,7 @@ export default function ShopClient({
                           title={t("common.viewPhoto", { name: product.name })}
                           className="h-14 w-14 shrink-0 cursor-zoom-in overflow-hidden rounded-lg"
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+                          <Image src={product.image_url} alt={product.name} width={56} height={56} className="h-full w-full object-cover" />
                         </button>
                       ) : (
                         <div className="h-14 w-14 shrink-0 rounded-lg bg-paper-100" />

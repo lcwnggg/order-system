@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Image from "next/image";
 import {
   adjustStock,
   adjustVariantStock,
@@ -145,10 +146,11 @@ export default function StockAlertClient({ list }: { list: LowStockProduct[] }) 
                     title={t("common.viewPhoto", { name: product.name })}
                     className="h-12 w-12 shrink-0 cursor-zoom-in overflow-hidden rounded-xl ring-1 ring-paper-900/10 transition hover:ring-paper-400"
                   >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={product.image_url}
                       alt={product.name}
+                      width={48}
+                      height={48}
                       className="h-full w-full object-cover"
                     />
                   </button>

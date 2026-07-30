@@ -1,13 +1,17 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { addProduct, type ActionResult } from "./actions";
+import { addProduct, adjustStock, type ActionResult } from "./actions";
 import type { Category } from "@/app/admin/categories/categories-client";
+import type { Product } from "./product-list";
 import BarcodeField from "./barcode-scanner";
 import AiRecognizePanel from "./ai-recognize";
 import type { AiSuggestion } from "./ai-actions";
 import ImageCropModal from "./image-crop-modal";
+import TagPicker from "./tag-picker";
+import PrivateCostFields from "./private-cost-fields";
+import { normalizeBarcode } from "@/lib/barcode";
 import { useT } from "@/lib/i18n/client";
 import type { Translate } from "@/lib/i18n/translate";
 
@@ -50,6 +54,18 @@ type VariantDraft = { color: string; stock: string };
 // 记住上一次选的分类，作为下一次添加的默认值（而不是每次都清空重选）。
 const LAST_CATEGORY_KEY = "addProduct:lastCategory";
 
+// Misma idea con el proveedor: una remesa entera suele venir del mismo sitio.
+const LAST_SUPPLIER_KEY = "addProduct:lastSupplier";
+
+function readSavedSupplier(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    return window.localStorage.getItem(LAST_SUPPLIER_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
 // 读取上次选择，并对着当前分类表校验：分类可能已被改名/删除/挪走，
 // 直接信任 localStorage 会把商品挂到已不存在、或已不属于该大类的分类上。
 function readSavedCategory(categories: Category[]): { parentId: string; childId: string } {
@@ -70,7 +86,17 @@ function readSavedCategory(categories: Category[]): { parentId: string; childId:
   }
 }
 
-export default function ProductForm({ categories = [] }: { categories?: Category[] }) {
+export default function ProductForm({
+  categories = [],
+  products = [],
+  brandOptions = [],
+  supplierOptions = [],
+}: {
+  categories?: Category[];
+  products?: Product[];
+  brandOptions?: string[];
+  supplierOptions?: string[];
+}) {
   const t = useT();
   const parentCategories = categories.filter((c) => !c.parent_id);
   function childrenOf(parentId: string) {
@@ -92,8 +118,18 @@ export default function ProductForm({ categories = [] }: { categories?: Category
     () => readSavedCategory(categories).childId
   );
   const [hasVariants, setHasVariants] = useState(false);
-  const [variants, setVariants] = useState<VariantDraft[]>([{ color: "", stock: "0" }]);
+  const [variants, setVariants] = useState<VariantDraft[]>([{ color: "", stock: "" }]);
   const [barcode, setBarcode] = useState("");
+  const [brand, setBrand] = useState("");
+  const [price, setPrice] = useState("");
+  // Datos privados de compra (van a `product_costs`, invisible para las tiendas)
+  const [costPrice, setCostPrice] = useState("");
+  const [supplier, setSupplier] = useState(() => readSavedSupplier());
+  const [costNote, setCostNote] = useState("");
+  // 条码查重：录入/扫码时若命中已有商品，提示直接加库存，避免建出重复商品
+  const [dupStockQty, setDupStockQty] = useState("");
+  const [dupAdding, setDupAdding] = useState(false);
+  const [dupAdded, setDupAdded] = useState(false);
   // 待裁剪的原图（选择/拍照后先弹裁剪框，确认后才压缩上传）
   const [pendingCrop, setPendingCrop] = useState<File | null>(null);
   // 保留一份原图，"重新裁剪"时用原图而不是已裁剪过的图，避免越裁越小
@@ -111,25 +147,34 @@ export default function ProductForm({ categories = [] }: { categories?: Category
   }, [selectedParentCatId, selectedChildCatId]);
 
   useEffect(() => {
+    try {
+      window.localStorage.setItem(LAST_SUPPLIER_KEY, supplier);
+    } catch {
+      /* 隐私模式等场景下 localStorage 可能不可用，忽略即可 */
+    }
+  }, [supplier]);
+
+  useEffect(() => {
     if (state && "success" in state) {
-      // 分类、品牌大概率与下一件商品相同（同一批进货），特意不清空，
+      // 分类、品牌、供应商大概率与下一件商品相同（同一批进货），特意不清空，
       // 减少连续添加时的重复选择/输入；其余字段（名称/价格/库存/图片等）逐件都不同，正常清空。
-      const form = formRef.current;
-      const brandEl = form?.elements.namedItem("brand") as HTMLInputElement | null;
-      const lastBrand = brandEl?.value ?? "";
-      form?.reset();
-      if (brandEl) brandEl.value = lastBrand;
+      formRef.current?.reset();
       // 提交成功后清空表单：响应 action state 变化，属于正当的副作用重置
       /* eslint-disable react-hooks/set-state-in-effect */
+      setPrice("");
+      setCostPrice("");
+      setCostNote("");
       setImageUrl(null);
       setPreview(null);
       setPhase("idle");
       setUploadError(null);
       setHasVariants(false);
-      setVariants([{ color: "", stock: "0" }]);
+      setVariants([{ color: "", stock: "" }]);
       setBarcode("");
       setPendingCrop(null);
       setOriginalFile(null);
+      setDupStockQty("");
+      setDupAdded(false);
       /* eslint-enable react-hooks/set-state-in-effect */
     }
   }, [state]);
@@ -200,8 +245,37 @@ export default function ProductForm({ categories = [] }: { categories?: Category
     setOriginalFile(null);
   }
 
+  const duplicateProduct = useMemo(() => {
+    const norm = normalizeBarcode(barcode);
+    if (!norm) return null;
+    return products.find((p) => normalizeBarcode(p.barcode) === norm) ?? null;
+  }, [barcode, products]);
+
+  // 换了条码/清空条码时，上一次查重命中的"加库存"状态就不再适用了。
+  // 渲染期间直接比对重置（而不是用 effect），命中变化的当次渲染就已经是干净状态。
+  const [trackedDupId, setTrackedDupId] = useState<string | undefined>(undefined);
+  if (duplicateProduct?.id !== trackedDupId) {
+    setTrackedDupId(duplicateProduct?.id);
+    setDupStockQty("");
+    setDupAdded(false);
+  }
+
+  async function handleAddStockToDuplicate() {
+    if (!duplicateProduct) return;
+    const qty = parseInt(dupStockQty, 10);
+    if (isNaN(qty) || qty <= 0) return;
+    setDupAdding(true);
+    setDupAdded(false);
+    const result = await adjustStock(duplicateProduct.id, qty);
+    setDupAdding(false);
+    if (!("error" in result)) {
+      setDupAdded(true);
+      setDupStockQty("");
+    }
+  }
+
   function addVariantRow() {
-    setVariants((prev) => [...prev, { color: "", stock: "0" }]);
+    setVariants((prev) => [...prev, { color: "", stock: "" }]);
   }
   function removeVariantRow(idx: number) {
     setVariants((prev) => prev.filter((_, i) => i !== idx));
@@ -234,9 +308,9 @@ export default function ProductForm({ categories = [] }: { categories?: Category
         if (el && value) el.value = value;
       };
       setField("name", s.nombre);
-      setField("brand", s.marca);
       setField("description", s.descripcion);
     }
+    if (s.marca) setBrand(s.marca);
     // 分类：按名称匹配到已有分类，自动选中大类/小类
     if (s.categoria) {
       const cat = categories.find((c) => c.name === s.categoria);
@@ -293,11 +367,12 @@ export default function ProductForm({ categories = [] }: { categories?: Category
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-paper-700">{t("form.brand")}</label>
-            <input
+            <TagPicker
               name="brand"
-              type="text"
+              value={brand}
+              onChange={setBrand}
+              options={brandOptions}
               placeholder={t("form.brandPlaceholder")}
-              className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
             />
           </div>
         </div>
@@ -311,13 +386,69 @@ export default function ProductForm({ categories = [] }: { categories?: Category
             required
             min="0"
             step="0.01"
+            inputMode="decimal"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
             placeholder="0.00"
             className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
           />
         </div>
 
+        {/* Coste y proveedor — privado, las tiendas no lo ven */}
+        <PrivateCostFields
+          costPrice={costPrice}
+          onCostPrice={setCostPrice}
+          supplier={supplier}
+          onSupplier={setSupplier}
+          note={costNote}
+          onNote={setCostNote}
+          supplierOptions={supplierOptions}
+          salePrice={price}
+          withHiddenInputs
+        />
+
         {/* 条码（可选，支持手机摄像头扫码） */}
         <BarcodeField name="barcode" value={barcode} onChange={setBarcode} inputId="new-barcode" />
+
+        {/* 条码查重：命中已有商品时，提示直接加库存而不是建重复商品 */}
+        {duplicateProduct && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <p className="text-sm font-medium text-amber-800">
+              {t("form.barcodeDuplicateWarning", { name: duplicateProduct.name })}
+            </p>
+            {duplicateProduct.has_variants ? (
+              <p className="mt-1 text-xs text-amber-700">{t("form.barcodeDuplicateVariantsHint")}</p>
+            ) : (
+              <>
+                <p className="mt-1 text-xs text-amber-700">
+                  {t("form.barcodeDuplicateStock", { n: duplicateProduct.stock })}
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={dupStockQty}
+                    onChange={(e) => setDupStockQty(e.target.value)}
+                    placeholder={t("form.stockShort")}
+                    className="w-20 rounded-lg border border-amber-300 bg-white px-2.5 py-1.5 text-sm text-paper-900 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200"
+                  />
+                  <button
+                    type="button"
+                    disabled={dupAdding || !dupStockQty}
+                    onClick={handleAddStockToDuplicate}
+                    className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {dupAdding ? t("common.submitting") : t("form.barcodeDuplicateAddStock")}
+                  </button>
+                  {dupAdded && (
+                    <span className="text-xs font-medium text-green-600">{t("form.barcodeDuplicateAdded")}</span>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         {/* 描述 */}
         <div>
@@ -370,7 +501,7 @@ export default function ProductForm({ categories = [] }: { categories?: Category
               aria-checked={hasVariants}
               onClick={() => {
                 setHasVariants((v) => !v);
-                setVariants([{ color: "", stock: "0" }]);
+                setVariants([{ color: "", stock: "" }]);
               }}
               className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
                 hasVariants ? "bg-paper-700" : "bg-paper-300"
@@ -419,9 +550,10 @@ export default function ProductForm({ categories = [] }: { categories?: Category
                         type="number"
                         min="0"
                         step="1"
-                        placeholder={t("form.stockShort")}
+                        placeholder="0"
                         value={v.stock}
                         onChange={(e) => updateVariantRow(idx, "stock", e.target.value)}
+                        onFocus={(e) => e.target.select()}
                         className="w-20 rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
                       />
                       {variants.length > 1 && (

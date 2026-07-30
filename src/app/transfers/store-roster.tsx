@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import Image from "next/image";
 import type { GroupStore, TransferRequest } from "@/lib/transfers";
 import { claimTransferRequest, declineTransferRequest } from "./actions";
 import { useImageLightbox } from "@/app/image-lightbox";
@@ -23,8 +24,7 @@ function ItemThumb({ req, size = "h-9 w-9" }: { req: TransferRequest; size?: str
           title={t("common.viewPhoto", { name: req.itemText })}
           className={`${size} shrink-0 cursor-zoom-in overflow-hidden rounded-xl ring-1 ring-paper-900/10 transition hover:ring-paper-400`}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={req.photoUrl} alt={req.itemText} className="h-full w-full object-cover" />
+          <Image src={req.photoUrl} alt={req.itemText} width={36} height={36} className="h-full w-full object-cover" />
         </button>
         {lightbox.node}
       </>

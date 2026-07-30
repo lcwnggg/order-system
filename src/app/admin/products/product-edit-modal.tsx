@@ -5,6 +5,9 @@ import { createClient } from "@/lib/supabase/client";
 import { updateProduct, upsertVariants, type ActionResult } from "./actions";
 import BarcodeField from "./barcode-scanner";
 import ImageCropModal from "./image-crop-modal";
+import TagPicker, { canonicalTag } from "./tag-picker";
+import PrivateCostFields from "./private-cost-fields";
+import { useImageLightbox } from "@/app/image-lightbox";
 import { useT } from "@/lib/i18n/client";
 import type { Translate } from "@/lib/i18n/translate";
 
@@ -76,12 +79,24 @@ export default function ProductEditModal({
   product,
   categories,
   variantsForProduct,
+  cost,
+  brandOptions = [],
+  supplierOptions = [],
   onClose,
   onSaved,
 }: {
   product: Product;
   categories: Category[];
   variantsForProduct: ProductVariant[];
+  /**
+   * Datos privados de compra ya guardados. `null` = el producto no tiene ficha
+   * todavía pero se puede rellenar aquí; `undefined` = esta pantalla no gestiona
+   * costes, así que el bloque no se muestra y al guardar NO se toca lo que
+   * hubiera en la base de datos (si no, abrir y guardar borraría el coste).
+   */
+  cost?: { cost_price: number | null; supplier: string | null; note: string | null } | null;
+  brandOptions?: string[];
+  supplierOptions?: string[];
   onClose: () => void;
   onSaved?: () => void;
 }) {
@@ -110,6 +125,12 @@ export default function ProductEditModal({
       sort_order: v.sort_order,
     }))
   );
+  const managesCost = cost !== undefined;
+  const [editCostPrice, setEditCostPrice] = useState(
+    cost?.cost_price == null ? "" : String(cost.cost_price)
+  );
+  const [editSupplier, setEditSupplier] = useState(cost?.supplier ?? "");
+  const [editCostNote, setEditCostNote] = useState(cost?.note ?? "");
   const [newImageUrl, setNewImageUrl] = useState<string | null | undefined>(undefined);
   const [preview, setPreview] = useState<string | null>(null);
   const [phase, setPhase] = useState<UploadPhase>("idle");
@@ -119,7 +140,7 @@ export default function ProductEditModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [saveResult, setSaveResult] = useState<ActionResult | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [zoomOpen, setZoomOpen] = useState(false); // 图片放大灯箱
+  const lightbox = useImageLightbox(); // 图片放大灯箱（复用全站统一组件）
 
   const initialCat = categories.find((c) => c.id === product.category_id);
   const [editParentCatId, setEditParentCatId] = useState<string>(() => {
@@ -194,7 +215,7 @@ export default function ProductEditModal({
   }
 
   function addVariantRow() {
-    setEditVariants((prev) => [...prev, { color: "", stock: "0", sort_order: prev.length }]);
+    setEditVariants((prev) => [...prev, { color: "", stock: "", sort_order: prev.length }]);
   }
   function removeVariantRow(idx: number) {
     setEditVariants((prev) => {
@@ -219,8 +240,15 @@ export default function ProductEditModal({
         newImageUrl,
         category_id: editChildCatId || editParentCatId || null,
         has_variants: editHasVariants,
-        brand: editBrand.trim() || null,
+        brand: canonicalTag(editBrand, brandOptions) || null,
         barcode: editBarcode,
+        cost: managesCost
+          ? {
+              cost_price: editCostPrice.trim() === "" ? null : parseFloat(editCostPrice),
+              supplier: canonicalTag(editSupplier, supplierOptions) || null,
+              note: editCostNote.trim() || null,
+            }
+          : undefined,
       });
       if ("error" in result) { setSaveResult(result); setIsSaving(false); return; }
       // Si el producto deja de tener variantes, sus filas de color ya no pintan nada:
@@ -247,29 +275,7 @@ export default function ProductEditModal({
   return (
     <>
     {/* 图片放大灯箱 */}
-    {zoomOpen && displayImage && (
-      <div
-        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4"
-        onClick={() => setZoomOpen(false)}
-      >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={displayImage}
-          alt={t("edit.zoomAlt")}
-          className="max-h-full max-w-full rounded-lg object-contain shadow-2xl"
-        />
-        <button
-          type="button"
-          onClick={() => setZoomOpen(false)}
-          className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-paper-700 shadow hover:bg-white"
-          aria-label={t("common.close")}
-        >
-          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-    )}
+    {lightbox.node}
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
@@ -302,12 +308,11 @@ export default function ProductEditModal({
             {/* 品牌 */}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-paper-700">{t("form.brand")}</label>
-              <input
-                type="text"
+              <TagPicker
                 value={editBrand}
-                onChange={(e) => setEditBrand(e.target.value)}
+                onChange={setEditBrand}
+                options={brandOptions}
                 placeholder={t("form.brandPlaceholder")}
-                className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
               />
             </div>
 
@@ -329,6 +334,20 @@ export default function ProductEditModal({
               />
             </div>
 
+            {/* Coste y proveedor — privado, las tiendas no lo ven */}
+            {managesCost && (
+            <PrivateCostFields
+              costPrice={editCostPrice}
+              onCostPrice={setEditCostPrice}
+              supplier={editSupplier}
+              onSupplier={setEditSupplier}
+              note={editCostNote}
+              onNote={setEditCostNote}
+              supplierOptions={supplierOptions}
+              salePrice={editPrice}
+            />
+            )}
+
             {/* 颜色变体开关 + 库存 */}
             <div>
               <div className="mb-3 flex items-center gap-3">
@@ -340,7 +359,7 @@ export default function ProductEditModal({
                     const next = !editHasVariants;
                     setEditHasVariants(next);
                     if (next && editVariants.length === 0) {
-                      setEditVariants([{ color: "", stock: "0", sort_order: 0 }]);
+                      setEditVariants([{ color: "", stock: "", sort_order: 0 }]);
                     }
                   }}
                   className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${editHasVariants ? "bg-paper-700" : "bg-paper-300"}`}
@@ -361,6 +380,7 @@ export default function ProductEditModal({
                     step="1"
                     value={editStock}
                     onChange={(e) => setEditStock(e.target.value)}
+                    onFocus={(e) => e.target.select()}
                     className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
                   />
                 </div>
@@ -383,9 +403,10 @@ export default function ProductEditModal({
                             type="number"
                             min="0"
                             step="1"
-                            placeholder={t("form.stockShort")}
+                            placeholder="0"
                             value={v.stock}
                             onChange={(e) => updateVariantRow(realIdx, "stock", e.target.value)}
+                            onFocus={(e) => e.target.select()}
                             className="w-20 rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
                           />
                           {visibleEditVariants.length > 1 && (
@@ -466,7 +487,7 @@ export default function ProductEditModal({
                     <img
                       src={displayImage}
                       alt={t("edit.imagePreviewAlt")}
-                      onClick={() => setZoomOpen(true)}
+                      onClick={() => lightbox.open(displayImage, product.name)}
                       title={t("edit.clickToZoom")}
                       className="h-16 w-16 cursor-zoom-in rounded-lg object-cover ring-1 ring-paper-300 transition hover:ring-paper-400"
                     />

@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
+// Alias: este archivo también usa `new Image()` (DOM) para leer dimensiones al comprimir fotos
+import NextImage from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import type { GroupStore, TransferRequest, TransferStatus } from "@/lib/transfers";
 import { useTransferRealtime } from "./use-transfer-realtime";
@@ -85,8 +87,7 @@ function ItemThumb({ req, size = "h-11 w-11" }: { req: TransferRequest; size?: s
           title={t("common.viewPhoto", { name: req.itemText })}
           className={`${size} shrink-0 cursor-zoom-in overflow-hidden rounded-xl ring-1 ring-paper-900/10 transition hover:ring-paper-400`}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={req.photoUrl} alt={req.itemText} className="h-full w-full object-cover" />
+          <NextImage src={req.photoUrl} alt={req.itemText} width={40} height={40} className="h-full w-full object-cover" />
         </button>
         {lightbox.node}
       </>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import Image from "next/image";
 import type { TransferRequest, TransferStatus } from "@/lib/transfers";
 import { useTransferRealtime } from "@/app/transfers/use-transfer-realtime";
 import { claimTransferRequest, setTransferStatus } from "@/app/transfers/actions";
@@ -122,8 +123,7 @@ function PanelCard({ req, currentUserId }: { req: TransferRequest; currentUserId
             title={t("common.viewPhoto", { name: req.itemText })}
             className="h-10 w-10 shrink-0 cursor-zoom-in overflow-hidden rounded-lg ring-1 ring-paper-900/10 transition hover:ring-paper-400"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={req.photoUrl} alt={req.itemText} className="h-full w-full object-cover" />
+            <Image src={req.photoUrl} alt={req.itemText} width={40} height={40} className="h-full w-full object-cover" />
           </button>
         ) : (
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent-100 text-accent-600">

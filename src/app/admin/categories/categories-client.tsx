@@ -10,7 +10,7 @@ import {
   removeProductFromCategory,
   type ActionResult,
 } from "./actions";
-import type { ProductVariant } from "@/app/admin/products/actions";
+import type { ProductCost, ProductVariant } from "@/app/admin/products/actions";
 import ProductEditModal from "@/app/admin/products/product-edit-modal";
 import { getTotalStock, isLowStock } from "@/lib/stock";
 import { useT } from "@/lib/i18n/client";
@@ -43,10 +43,16 @@ export default function CategoriesClient({
   categoryTree,
   products,
   variants,
+  costs = [],
+  brandOptions = [],
+  supplierOptions = [],
 }: {
   categoryTree: CategoryTree[];
   products: ProductSummary[];
   variants: ProductVariant[];
+  costs?: ProductCost[];
+  brandOptions?: string[];
+  supplierOptions?: string[];
 }) {
   const t = useT();
   const router = useRouter();
@@ -604,6 +610,9 @@ export default function CategoriesClient({
             ...p.children.map((c) => ({ id: c.id, name: c.name, parent_id: c.parent_id, sort_order: c.sort_order })),
           ])}
           variantsForProduct={variantsFor(editingProduct.id)}
+          cost={costs.find((c) => c.product_id === editingProduct.id) ?? null}
+          brandOptions={brandOptions}
+          supplierOptions={supplierOptions}
           onClose={() => setEditingProduct(null)}
           onSaved={() => router.refresh()}
         />

@@ -216,6 +216,26 @@ const zh: Dictionary = {
   "form.deleteImage": "删除图片",
   "form.productAdded": "商品已成功添加",
   "form.uploadingImage": "图片上传中…",
+  "form.barcodeDuplicateWarning": "已有相同条码的商品：「{name}」。",
+  "form.barcodeDuplicateStock": "当前库存：{n} 件。",
+  "form.barcodeDuplicateVariantsHint": "该商品有颜色变体，请在下方列表中打开它来加库存。",
+  "form.barcodeDuplicateAddStock": "+ 加库存",
+  "form.barcodeDuplicateAdded": "库存已添加 ✓",
+
+  // ── 标签（品牌 / 供应商）──
+  "tags.clear": "清空",
+  "tags.showAll": "查看全部",
+  "tags.createNew": "新建「{name}」",
+
+  // ── 进货：进货价与供应商（私密）──
+  "cost.sectionTitle": "进货信息",
+  "cost.onlyYou": "· 只有你能看到",
+  "cost.costPrice": "进货价（€）",
+  "cost.margin": "利润 €{profit} · {pct}%",
+  "cost.supplier": "供应商",
+  "cost.supplierPlaceholder": "从谁那里进的？",
+  "cost.note": "私密备注",
+  "cost.notePlaceholder": "进货条件、联系电话、上次进货日期…",
 
   // ── 商品编辑 ──
   "edit.title": "编辑商品",
@@ -224,7 +244,6 @@ const zh: Dictionary = {
   "edit.colorPlaceholder": "如「黑色」",
   "edit.descriptionPlaceholder": "可选",
   "edit.imageKeepHint": "（不选则保留原图）",
-  "edit.zoomAlt": "放大预览",
   "edit.imagePreviewAlt": "图片预览",
   "edit.clickToZoom": "点击放大查看",
   "edit.compressing": "正在压缩…",
@@ -317,6 +336,7 @@ const zh: Dictionary = {
   "err.productNameRequired": "商品名称不能为空",
   "err.invalidPrice": "请输入有效价格",
   "err.invalidStock": "请输入有效库存数量",
+  "err.invalidCostPrice": "请输入有效进货价",
   "err.barcodeInvalid": "条码格式无效（只允许数字、字母、连字符）",
   "err.variantJson": "颜色变体数据格式错误",
   "err.variantAtLeastOne": "开启颜色变体时至少添加一种颜色",

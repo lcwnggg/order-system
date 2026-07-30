@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useTransition, useMemo, useRef, useEffect } from "react";
+import Image from "next/image";
 import {
   deleteProduct,
   toggleProductActive,
   adjustStock,
   adjustVariantStock,
+  type ProductCost,
   type ProductVariant,
 } from "./actions";
 import type { Category } from "@/app/admin/categories/categories-client";
@@ -38,13 +40,28 @@ export default function ProductList({
   products,
   categories,
   variants,
+  costs = [],
+  brandOptions = [],
+  supplierOptions = [],
 }: {
   products: Product[];
   categories: Category[];
   variants: ProductVariant[];
+  costs?: ProductCost[];
+  brandOptions?: string[];
+  supplierOptions?: string[];
 }) {
   const t = useT();
   const lightbox = useImageLightbox();
+
+  // Coste/proveedor por producto. Esta pantalla es solo del almacén, y la tabla
+  // `product_costs` ya tiene RLS de solo-almacén: si un empleado llegase aquí,
+  // el mapa vendría vacío igualmente.
+  const costByProduct = useMemo(() => {
+    const map = new Map<string, ProductCost>();
+    for (const c of costs) map.set(c.product_id, c);
+    return map;
+  }, [costs]);
 
   // ── 分类辅助 ──
   const parentCategories = useMemo(
@@ -121,9 +138,13 @@ export default function ProductList({
     return products.filter((p) => {
       if (adminSearch.trim()) {
         const q = adminSearch.trim().toLowerCase();
+        // También por proveedor: «¿qué le compré a Fulano?» es una pregunta
+        // frecuente y el proveedor no se ve en ningún otro filtro.
+        const supplier = costByProduct.get(p.id)?.supplier ?? "";
         if (
           !p.name.toLowerCase().includes(q) &&
-          !(p.brand?.toLowerCase().includes(q) ?? false)
+          !(p.brand?.toLowerCase().includes(q) ?? false) &&
+          !supplier.toLowerCase().includes(q)
         ) return false;
       }
       if (filterCategory === "__uncategorized__") {
@@ -139,7 +160,7 @@ export default function ProductList({
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [products, adminSearch, filterCategory, filterStatus, stockLessThan, categories, variants]);
+  }, [products, adminSearch, filterCategory, filterStatus, stockLessThan, categories, variants, costByProduct]);
 
   // "最近添加" tab：按 created_at 倒序
   const recentProducts = useMemo(
@@ -296,6 +317,29 @@ export default function ProductList({
   }
 
   // ── 共用行渲染 ──
+  // Línea privada de compra: coste + proveedor. Marcada con un candado para que
+  // quede claro de un vistazo que eso no lo ve nadie más.
+  function renderPrivateInfo(product: Product) {
+    const c = costByProduct.get(product.id);
+    if (!c || (c.cost_price == null && !c.supplier)) return null;
+    const profit = c.cost_price == null ? null : Number(product.price) - Number(c.cost_price);
+    return (
+      <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[11px] text-amber-700">
+        <svg className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+        {c.cost_price != null && <span className="font-medium">€{Number(c.cost_price).toFixed(2)}</span>}
+        {profit != null && (
+          <span className={profit >= 0 ? "text-green-700" : "text-red-600"}>
+            {profit >= 0 ? "+" : ""}€{profit.toFixed(2)}
+          </span>
+        )}
+        {c.supplier && <span className="truncate">· {c.supplier}</span>}
+      </p>
+    );
+  }
+
   function renderRow(product: Product) {
     const isDeleting = deletingId === product.id;
     const isToggling = togglingId === product.id;
@@ -317,8 +361,7 @@ export default function ProductList({
               title={t("common.viewPhoto", { name: product.name })}
               className="block h-10 w-10 cursor-zoom-in overflow-hidden rounded-md ring-1 ring-transparent transition hover:ring-paper-400"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={product.image_url}
                 alt={product.name}
                 width={40}
@@ -352,6 +395,7 @@ export default function ProductList({
               <span className="text-xs text-blue-500">{t("list.colorsCount", { n: pvs.length })}</span>
             )}
           </div>
+          {renderPrivateInfo(product)}
         </td>
 
         {/* 价格 */}
@@ -502,8 +546,7 @@ export default function ProductList({
               title={t("common.viewPhoto", { name: product.name })}
               className="h-14 w-14 shrink-0 cursor-zoom-in overflow-hidden rounded-lg"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={product.image_url} alt={product.name} width={56} height={56}
+              <Image src={product.image_url} alt={product.name} width={56} height={56}
                 className="h-full w-full object-cover" />
             </button>
           ) : (
@@ -528,6 +571,7 @@ export default function ProductList({
               )}
             </div>
             <p className="mt-1 text-sm font-bold text-paper-900">€{Number(product.price).toFixed(2)}</p>
+            {renderPrivateInfo(product)}
             {product.barcode && (
               <p className="mt-0.5 flex items-center gap-1 font-mono text-[11px] text-paper-500">
                 <svg className="h-3 w-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -895,6 +939,9 @@ export default function ProductList({
           product={editingProduct}
           categories={categories}
           variantsForProduct={variantsFor(editingProduct.id)}
+          cost={costByProduct.get(editingProduct.id) ?? null}
+          brandOptions={brandOptions}
+          supplierOptions={supplierOptions}
           onClose={closeEdit}
         />
       )}

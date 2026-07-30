@@ -3,9 +3,20 @@
 import { useState } from "react";
 import ProductForm from "./product-form";
 import type { Category } from "@/app/admin/categories/categories-client";
+import type { Product } from "./product-list";
 import { useT } from "@/lib/i18n/client";
 
-export default function AddProductPanel({ categories }: { categories: Category[] }) {
+export default function AddProductPanel({
+  categories,
+  products,
+  brandOptions,
+  supplierOptions,
+}: {
+  categories: Category[];
+  products: Product[];
+  brandOptions: string[];
+  supplierOptions: string[];
+}) {
   const t = useT();
   const [open, setOpen] = useState(false);
 
@@ -40,7 +51,12 @@ export default function AddProductPanel({ categories }: { categories: Category[]
           </svg>
         </button>
       </div>
-      <ProductForm categories={categories} />
+      <ProductForm
+        categories={categories}
+        products={products}
+        brandOptions={brandOptions}
+        supplierOptions={supplierOptions}
+      />
     </div>
   );
 }
