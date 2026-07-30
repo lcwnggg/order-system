@@ -6,7 +6,15 @@
 --   1) Crea (si no existen ya, por nombre) las categorías principales y sus
 --      subcategorías de una tienda de móviles.
 --   2) Asigna una subcategoría a cada producto SIN categoría, adivinándola por
---      palabras clave del nombre y de la marca.
+--      palabras clave del nombre, la marca y la descripción.
+--
+-- Multi-tenant (ver multi_tenant.sql): `categories.warehouse_id` es NOT NULL y
+-- normalmente lo rellena el trigger `set_owner_categories` a partir de
+-- `auth.uid()`. Pero en el SQL Editor no hay sesión de usuario: `auth.uid()` es
+-- NULL y el INSERT reventaría con «null value in column warehouse_id». Por eso
+-- aquí el almacén se deduce de los propios productos: se trabaja, uno por uno,
+-- sobre cada almacén que tenga productos, y cada producto solo puede acabar en
+-- una categoría de SU almacén.
 --
 -- Reglas de convivencia con lo que ya tienes:
 --   · Nunca duplica una categoría que ya exista con ese mismo nombre.
@@ -34,10 +42,10 @@ AS $$
 $$;
 
 -- ─────────────────────────────────────────────
--- 1. Categorías principales
+-- 1. Categorías principales — una copia para cada almacén con productos
 -- ─────────────────────────────────────────────
-INSERT INTO public.categories (name, parent_id, sort_order)
-SELECT v.name, NULL, v.sort_order
+INSERT INTO public.categories (name, parent_id, sort_order, warehouse_id)
+SELECT v.name, NULL, v.sort_order, w.warehouse_id
 FROM (VALUES
   ('Móviles y tablets',       10),
   ('Fundas y protección',     20),
@@ -48,16 +56,21 @@ FROM (VALUES
   ('Informática',             70),
   ('Otros',                   80)
 ) AS v(name, sort_order)
+CROSS JOIN (
+  SELECT DISTINCT warehouse_id FROM public.products WHERE warehouse_id IS NOT NULL
+) AS w
 WHERE NOT EXISTS (
   SELECT 1 FROM public.categories c
-  WHERE c.parent_id IS NULL AND lower(c.name) = lower(v.name)
+  WHERE c.warehouse_id = w.warehouse_id
+    AND c.parent_id IS NULL
+    AND lower(c.name) = lower(v.name)
 );
 
 -- ─────────────────────────────────────────────
--- 2. Subcategorías
+-- 2. Subcategorías — cuelgan del padre, y heredan su almacén
 -- ─────────────────────────────────────────────
-INSERT INTO public.categories (name, parent_id, sort_order)
-SELECT v.name, p.id, v.sort_order
+INSERT INTO public.categories (name, parent_id, sort_order, warehouse_id)
+SELECT v.name, p.id, v.sort_order, p.warehouse_id
 FROM (VALUES
   ('Móviles y tablets',      'Smartphones',              10),
   ('Móviles y tablets',      'Tablets',                  20),
@@ -154,7 +167,8 @@ WITH rules(prio, pattern, cat_name) AS (VALUES
 haystack AS (
   SELECT
     p.id,
-    lower(unaccent_safe(
+    p.warehouse_id,
+    lower(public.unaccent_safe(
       coalesce(p.name, '') || ' ' || coalesce(p.brand, '') || ' ' || coalesce(p.description, '')
     )) AS txt
   FROM public.products p
@@ -162,16 +176,20 @@ haystack AS (
 ),
 best AS (
   SELECT DISTINCT ON (h.id)
-    h.id AS product_id,
-    r.cat_name
+    h.id           AS product_id,
+    h.warehouse_id AS warehouse_id,
+    r.cat_name     AS cat_name
   FROM haystack h
-  JOIN rules r ON h.txt ~ lower(unaccent_safe(r.pattern))
+  JOIN rules r ON h.txt ~ lower(public.unaccent_safe(r.pattern))
   ORDER BY h.id, r.prio
 )
 UPDATE public.products p
 SET category_id = c.id
 FROM best b
-JOIN public.categories c ON lower(c.name) = lower(b.cat_name) AND c.parent_id IS NOT NULL
+JOIN public.categories c
+  ON lower(c.name) = lower(b.cat_name)
+ AND c.parent_id IS NOT NULL
+ AND c.warehouse_id = b.warehouse_id   -- cada producto, a una categoría de SU almacén
 WHERE p.id = b.product_id;
 
 -- Lo que no encajó en ninguna regla va a «Otros accesorios», para que no quede
@@ -181,6 +199,7 @@ SET category_id = c.id
 FROM public.categories c
 JOIN public.categories parent ON parent.id = c.parent_id
 WHERE p.category_id IS NULL
+  AND c.warehouse_id = p.warehouse_id
   AND lower(c.name) = 'otros accesorios'
   AND lower(parent.name) = 'accesorios';
 
@@ -188,7 +207,7 @@ WHERE p.category_id IS NULL
 -- 4. Revisión: qué ha quedado en cada categoría
 -- ─────────────────────────────────────────────
 --   SELECT coalesce(parent.name, '—') AS principal,
---          c.name AS subcategoria,
+--          coalesce(c.name, 'SIN CATEGORÍA') AS subcategoria,
 --          count(p.id) AS productos
 --   FROM public.products p
 --   LEFT JOIN public.categories c ON c.id = p.category_id
