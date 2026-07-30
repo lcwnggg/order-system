@@ -32,6 +32,7 @@ const zh: Dictionary = {
   "common.units": "件",
   "common.soldOut": "售罄",
   "common.listSeparator": "、",
+  "common.viewPhoto": "查看「{name}」的大图",
 
   // ── 通用错误 ──
   "common.noPermission": "无权限",
@@ -414,10 +415,7 @@ const zh: Dictionary = {
   "stockAlert.title": "库存告急商品",
   "stockAlert.subtitle": "以下商品库存 ≤ 5 件，共 {n} 件，请及时补货。",
   "stockAlert.empty": "暂无库存告急商品",
-  "stockAlert.thName": "商品名称",
-  "stockAlert.thStatus": "状态",
-  "stockAlert.thCurrentStock": "当前库存",
-  "stockAlert.restock": "去补货 →",
+  "stockAlert.qtyLabel": "补货数量",
 
   // ── 订单管理（仓库） ──
   "adminOrders.eyebrow": "仓库 — 订单",
@@ -471,9 +469,6 @@ const zh: Dictionary = {
     "在 Safari 里点分享按钮（⎋）→「添加到主屏幕」。然后从那个图标打开，再回到这里开启提醒。",
   "push.newOrderTitle": "新订单",
   "push.newOrderBody": "{store} · {lines} 个品类，共 {units} 件",
-
-  "print.thProduct": "商品（门店需求明细）",
-  "print.thTotal": "合计",
 
   // ── 门店互调 ──
   "transfers.eyebrow": "门店 — 互相调货",

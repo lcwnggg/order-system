@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { cancelOrder } from "../actions";
+import { useImageLightbox } from "@/app/image-lightbox";
 import { useI18n } from "@/lib/i18n/client";
 import { formatDateTime } from "@/lib/i18n/datetime";
 import type { TranslationKey } from "@/lib/i18n/dictionaries";
@@ -11,6 +12,7 @@ type StoreOrderItem = {
   id: string;
   productId: string;
   name: string;
+  imageUrl: string | null;
   price: number;
   quantity: number;
   variantId: string | null;
@@ -44,6 +46,7 @@ const STATUS_COLOR: Record<StoreOrder["status"], string> = {
 export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }) {
   const { locale, t } = useI18n();
   const router = useRouter();
+  const lightbox = useImageLightbox();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
@@ -76,6 +79,11 @@ export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }
         router.refresh();
       }
     });
+  }
+
+  /** Nombre + color, para el pie del visor de fotos */
+  function itemLabel(item: StoreOrderItem) {
+    return item.variantColor ? `${item.name} · ${item.variantColor}` : item.name;
   }
 
   function orderTotal(items: StoreOrderItem[]) {
@@ -140,12 +148,32 @@ export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }
 
             <div className="divide-y divide-paper-100 px-5">
               {order.items.map((item) => (
-                <div key={item.id} className="flex items-center justify-between py-2.5 text-sm">
-                  <span className="text-paper-700">
-                    {item.name}
-                    {item.variantColor && (
-                      <span className="ml-1 text-paper-500">· {item.variantColor}</span>
+                <div key={item.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                  <span className="flex min-w-0 items-center gap-2.5 text-paper-700">
+                    {item.imageUrl ? (
+                      <button
+                        type="button"
+                        onClick={() => lightbox.open(item.imageUrl, itemLabel(item))}
+                        title={t("common.viewPhoto", { name: item.name })}
+                        className="h-10 w-10 shrink-0 cursor-zoom-in overflow-hidden rounded-lg ring-1 ring-paper-900/10 transition hover:ring-paper-400"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
+                          loading="lazy"
+                          className="h-full w-full object-cover"
+                        />
+                      </button>
+                    ) : (
+                      <span className="h-10 w-10 shrink-0 rounded-lg bg-paper-100" />
                     )}
+                    <span className="min-w-0">
+                      {item.name}
+                      {item.variantColor && (
+                        <span className="ml-1 text-paper-500">· {item.variantColor}</span>
+                      )}
+                    </span>
                   </span>
                   <span className="text-paper-500">
                     €{Number(item.price).toFixed(2)} × {item.quantity}
@@ -179,6 +207,8 @@ export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }
           </div>
         );
       })}
+
+      {lightbox.node}
     </div>
   );
 }

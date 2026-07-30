@@ -34,6 +34,7 @@ const es = {
   "common.units": "uds.",
   "common.soldOut": "Agotado",
   "common.listSeparator": ", ",
+  "common.viewPhoto": "Ver la foto de {name}",
 
   // ── errores genéricos ──
   "common.noPermission": "Sin permiso",
@@ -431,10 +432,7 @@ const es = {
   "stockAlert.subtitle":
     "Estos productos tienen 5 unidades o menos ({n} en total). Reponlos cuanto antes.",
   "stockAlert.empty": "No hay productos con stock bajo",
-  "stockAlert.thName": "Producto",
-  "stockAlert.thStatus": "Estado",
-  "stockAlert.thCurrentStock": "Stock actual",
-  "stockAlert.restock": "Reponer →",
+  "stockAlert.qtyLabel": "Cuántas unidades reponer",
 
   // ── pedidos (almacén) ──
   "adminOrders.eyebrow": "Almacén — Pedidos",
@@ -490,9 +488,6 @@ const es = {
     "En Safari: toca el botón de Compartir (⎋) → «Añadir a pantalla de inicio». Luego abre la app desde ese icono y vuelve aquí para activar los avisos.",
   "push.newOrderTitle": "Pedido nuevo",
   "push.newOrderBody": "{store} · {lines} referencias, {units} unidades",
-
-  "print.thProduct": "Producto (desglose por tienda)",
-  "print.thTotal": "Total",
 
   // ── traspasos entre tiendas ──
   "transfers.eyebrow": "Tiendas — Traspasos",

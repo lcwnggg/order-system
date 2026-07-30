@@ -12,6 +12,7 @@ import type { Category } from "@/app/admin/categories/categories-client";
 import ProductEditModal from "./product-edit-modal";
 import { getTotalStock, isLowStock as isLowStockOf } from "@/lib/stock";
 import ScanButton from "@/app/scan-button";
+import { useImageLightbox } from "@/app/image-lightbox";
 import { useT } from "@/lib/i18n/client";
 
 export type Product = {
@@ -43,6 +44,7 @@ export default function ProductList({
   variants: ProductVariant[];
 }) {
   const t = useT();
+  const lightbox = useImageLightbox();
 
   // ── 分类辅助 ──
   const parentCategories = useMemo(
@@ -306,17 +308,24 @@ export default function ProductList({
         title={t("list.clickToEdit")}
         className={`group cursor-pointer hover:bg-paper-100/80 ${!product.is_active ? "opacity-50" : ""}`}
       >
-        {/* 图片 */}
-        <td className="px-3 py-1.5">
+        {/* 图片（点击看大图，不触发整行编辑） */}
+        <td className="px-3 py-1.5" onClick={(e) => e.stopPropagation()}>
           {product.image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={product.image_url}
-              alt={product.name}
-              width={40}
-              height={40}
-              className="h-10 w-10 rounded-md object-cover"
-            />
+            <button
+              type="button"
+              onClick={() => lightbox.open(product.image_url, product.name)}
+              title={t("common.viewPhoto", { name: product.name })}
+              className="block h-10 w-10 cursor-zoom-in overflow-hidden rounded-md ring-1 ring-transparent transition hover:ring-paper-400"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={product.image_url}
+                alt={product.name}
+                width={40}
+                height={40}
+                className="h-10 w-10 object-cover"
+              />
+            </button>
           ) : (
             <div className="flex h-10 w-10 items-center justify-center rounded-md bg-paper-100 text-paper-400">
               <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -487,9 +496,16 @@ export default function ProductList({
         {/* 主信息行 */}
         <div className="flex items-start gap-3 p-3">
           {product.image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={product.image_url} alt={product.name} width={56} height={56}
-              className="h-14 w-14 shrink-0 rounded-lg object-cover" />
+            <button
+              type="button"
+              onClick={() => lightbox.open(product.image_url, product.name)}
+              title={t("common.viewPhoto", { name: product.name })}
+              className="h-14 w-14 shrink-0 cursor-zoom-in overflow-hidden rounded-lg"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={product.image_url} alt={product.name} width={56} height={56}
+                className="h-full w-full object-cover" />
+            </button>
           ) : (
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-paper-100 text-paper-400">
               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -882,6 +898,8 @@ export default function ProductList({
           onClose={closeEdit}
         />
       )}
+
+      {lightbox.node}
     </>
   );
 }

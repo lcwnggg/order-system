@@ -1,9 +1,9 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/app/app-shell";
 import { getI18n } from "@/lib/i18n/server";
 import { getTotalStock, isLowStock } from "@/lib/stock";
+import StockAlertClient from "./stock-alert-client";
 
 export default async function StockAlertPage() {
   const { t } = await getI18n();
@@ -54,105 +54,14 @@ export default async function StockAlertPage() {
 
   return (
     <AppShell email={user.email}>
-        <div className="mb-6">
-          <h1 className="text-xl font-semibold text-paper-900">{t("stockAlert.title")}</h1>
-          <p className="mt-1 text-sm text-paper-500">{t("stockAlert.subtitle", { n: list.length })}</p>
-        </div>
+      <div className="mb-6">
+        <h1 className="text-xl font-semibold text-paper-900">{t("stockAlert.title")}</h1>
+        <p className="mt-1 text-sm text-paper-500">
+          {t("stockAlert.subtitle", { n: list.length })}
+        </p>
+      </div>
 
-        {list.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-paper-300 bg-white py-20 text-center">
-            <p className="text-sm text-paper-500">{t("stockAlert.empty")}</p>
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-2xl glass-strong">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-paper-100 bg-paper-100 text-left">
-                  <th className="px-5 py-3 font-medium text-paper-500">{t("stockAlert.thName")}</th>
-                  <th className="px-5 py-3 font-medium text-paper-500">{t("stockAlert.thStatus")}</th>
-                  <th className="px-5 py-3 text-right font-medium text-paper-500">{t("stockAlert.thCurrentStock")}</th>
-                  <th className="px-5 py-3 font-medium text-paper-500"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-paper-100">
-                {list.map((product) => (
-                  <tr key={product.id} className="hover:bg-paper-100">
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-3">
-                        {product.image_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={product.image_url}
-                            alt={product.name}
-                            className="h-10 w-10 rounded-lg object-cover"
-                          />
-                        ) : (
-                          <div className="h-10 w-10 rounded-lg bg-paper-100" />
-                        )}
-                        <span className="font-medium text-paper-900">{product.name}</span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3">
-                      <span
-                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                          product.is_active
-                            ? "bg-green-50 text-green-700"
-                            : "bg-paper-100 text-paper-500"
-                        }`}
-                      >
-                        {product.is_active ? t("list.active") : t("list.inactive")}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      {product.has_variants ? (
-                        <div className="flex flex-wrap items-center justify-end gap-1">
-                          {product.variants.length === 0 ? (
-                            <span className="text-xs text-paper-500">{t("list.noVariants")}</span>
-                          ) : (
-                            product.variants.map((v) => (
-                              <span
-                                key={v.id}
-                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-                                  v.stock === 0
-                                    ? "bg-red-50 text-red-600"
-                                    : v.stock <= 5
-                                    ? "bg-amber-50 text-amber-600"
-                                    : "bg-green-50 text-green-600"
-                                }`}
-                              >
-                                <span className="text-paper-500">{v.color}</span>
-                                {v.stock === 0 ? t("common.soldOut") : v.stock}
-                              </span>
-                            ))
-                          )}
-                        </div>
-                      ) : (
-                        <>
-                          <span
-                            className={`text-lg font-bold ${
-                              product.stock === 0 ? "text-red-600" : "text-amber-600"
-                            }`}
-                          >
-                            {product.stock}
-                          </span>
-                          <span className="ml-1 text-xs text-paper-500">{t("common.units")}</span>
-                        </>
-                      )}
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <Link
-                        href="/admin/products"
-                        className="text-xs font-medium text-paper-500 hover:text-paper-900 hover:underline"
-                      >
-                        {t("stockAlert.restock")}
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </AppShell>
+      <StockAlertClient list={list} />
+    </AppShell>
   );
 }

@@ -5,6 +5,7 @@ import type { TransferRequest, TransferStatus } from "@/lib/transfers";
 import { useTransferRealtime } from "@/app/transfers/use-transfer-realtime";
 import { claimTransferRequest, setTransferStatus } from "@/app/transfers/actions";
 import TransferAlerts from "@/app/transfers/transfer-alerts";
+import { useImageLightbox } from "@/app/image-lightbox";
 import { useT } from "@/lib/i18n/client";
 import { useTimeAgo } from "@/app/transfers/time-ago";
 import type { TranslationKey } from "@/lib/i18n/dictionaries";
@@ -98,6 +99,7 @@ export default function WarehouseTransferPanel({
 function PanelCard({ req, currentUserId }: { req: TransferRequest; currentUserId: string }) {
   const t = useT();
   const timeAgo = useTimeAgo();
+  const lightbox = useImageLightbox();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const minedByMe = req.claimedBy === currentUserId;
@@ -114,8 +116,15 @@ function PanelCard({ req, currentUserId }: { req: TransferRequest; currentUserId
     <div className="flex flex-col gap-2 rounded-xl bg-white/80 p-3 ring-1 ring-accent-100">
       <div className="flex items-center gap-3">
         {req.photoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={req.photoUrl} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover ring-1 ring-paper-900/10" />
+          <button
+            type="button"
+            onClick={() => lightbox.open(req.photoUrl, req.itemText)}
+            title={t("common.viewPhoto", { name: req.itemText })}
+            className="h-10 w-10 shrink-0 cursor-zoom-in overflow-hidden rounded-lg ring-1 ring-paper-900/10 transition hover:ring-paper-400"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={req.photoUrl} alt={req.itemText} className="h-full w-full object-cover" />
+          </button>
         ) : (
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent-100 text-accent-600">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" /></svg>
@@ -182,6 +191,8 @@ function PanelCard({ req, currentUserId }: { req: TransferRequest; currentUserId
           </button>
         </div>
       )}
+
+      {lightbox.node}
     </div>
   );
 }

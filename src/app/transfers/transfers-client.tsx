@@ -6,6 +6,7 @@ import type { GroupStore, TransferRequest, TransferStatus } from "@/lib/transfer
 import { useTransferRealtime } from "./use-transfer-realtime";
 import { StoreRoster } from "./store-roster";
 import { createTransferRequest, setTransferStatus } from "./actions";
+import { useImageLightbox } from "@/app/image-lightbox";
 import { useT } from "@/lib/i18n/client";
 import type { TranslationKey } from "@/lib/i18n/dictionaries";
 import type { Translate } from "@/lib/i18n/translate";
@@ -69,9 +70,27 @@ function StatusPill({ status }: { status: TransferStatus }) {
 }
 
 function ItemThumb({ req, size = "h-11 w-11" }: { req: TransferRequest; size?: string }) {
+  const t = useT();
+  const lightbox = useImageLightbox();
+
   if (req.photoUrl) {
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img src={req.photoUrl} alt="" className={`${size} shrink-0 rounded-xl object-cover ring-1 ring-paper-900/10`} />;
+    return (
+      <>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            lightbox.open(req.photoUrl, req.itemText);
+          }}
+          title={t("common.viewPhoto", { name: req.itemText })}
+          className={`${size} shrink-0 cursor-zoom-in overflow-hidden rounded-xl ring-1 ring-paper-900/10 transition hover:ring-paper-400`}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={req.photoUrl} alt={req.itemText} className="h-full w-full object-cover" />
+        </button>
+        {lightbox.node}
+      </>
+    );
   }
   return (
     <span className={`${size} flex shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent-100 to-[#d8c4e8] text-accent-600`}>

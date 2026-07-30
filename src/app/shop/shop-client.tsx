@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useTransition, useState, useMemo, useEffect, useRef } from "react";
 import { submitOrder } from "./actions";
 import ScanButton from "@/app/scan-button";
+import { useImageLightbox } from "@/app/image-lightbox";
 import { useT } from "@/lib/i18n/client";
 
 export type Product = {
@@ -55,6 +56,7 @@ export default function ShopClient({
   variants: ProductVariant[];
 }) {
   const t = useT();
+  const lightbox = useImageLightbox();
 
   // ── 购物车 & 下单 ──
   const [cart, setCart] = useState<CartMap>({});
@@ -625,6 +627,16 @@ export default function ShopClient({
                           className={`object-cover transition-transform duration-300 group-hover:scale-[1.03] ${outOfStock ? "opacity-60 grayscale" : ""}`}
                         />
                       ) : imgPlaceholder("lg")}
+                      {product.image_url && (
+                        <button
+                          type="button"
+                          onClick={() => lightbox.open(product.image_url, product.name)}
+                          title={t("common.viewPhoto", { name: product.name })}
+                          className="absolute inset-0 cursor-zoom-in"
+                        >
+                          <span className="sr-only">{t("common.viewPhoto", { name: product.name })}</span>
+                        </button>
+                      )}
                     </div>
 
                     <div className="flex flex-1 flex-col px-4 pb-4 pt-3">
@@ -715,6 +727,16 @@ export default function ShopClient({
                           <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-paper-700">{t("shop.outOfStockShort")}</span>
                         </div>
                       )}
+                      {product.image_url && (
+                        <button
+                          type="button"
+                          onClick={() => lightbox.open(product.image_url, product.name)}
+                          title={t("common.viewPhoto", { name: product.name })}
+                          className="absolute inset-0 cursor-zoom-in"
+                        >
+                          <span className="sr-only">{t("common.viewPhoto", { name: product.name })}</span>
+                        </button>
+                      )}
                     </div>
 
                     <div className="flex flex-1 flex-col p-2">
@@ -794,8 +816,15 @@ export default function ShopClient({
                   {cartEntries.map(([key, { product, variant, quantity }]) => (
                     <li key={key} className="flex items-center gap-3">
                       {product.image_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={product.image_url} alt={product.name} className="h-10 w-10 rounded-lg object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => lightbox.open(product.image_url, product.name)}
+                          title={t("common.viewPhoto", { name: product.name })}
+                          className="h-10 w-10 shrink-0 cursor-zoom-in overflow-hidden rounded-lg"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+                        </button>
                       ) : (
                         <div className="h-10 w-10 rounded-lg bg-paper-100" />
                       )}
@@ -916,8 +945,15 @@ export default function ShopClient({
                   {cartEntries.map(([key, { product, variant, quantity }]) => (
                     <li key={key} className="flex items-start gap-3 py-3">
                       {product.image_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={product.image_url} alt={product.name} className="h-14 w-14 shrink-0 rounded-lg object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => lightbox.open(product.image_url, product.name)}
+                          title={t("common.viewPhoto", { name: product.name })}
+                          className="h-14 w-14 shrink-0 cursor-zoom-in overflow-hidden rounded-lg"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={product.image_url} alt={product.name} className="h-full w-full object-cover" />
+                        </button>
                       ) : (
                         <div className="h-14 w-14 shrink-0 rounded-lg bg-paper-100" />
                       )}
@@ -988,6 +1024,8 @@ export default function ShopClient({
           </div>
         </div>
       )}
+
+      {lightbox.node}
     </div>
   );
 }

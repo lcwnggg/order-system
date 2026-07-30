@@ -28,7 +28,7 @@ export default async function ShopOrdersPage() {
     .select(
       `id, status, created_at, note,
        order_items ( id, quantity, variant_id, unit_price,
-         products ( id, name, price )
+         products ( id, name, price, image_url )
        )`
     )
     .eq("store_id", user.id)
@@ -62,12 +62,13 @@ export default async function ShopOrdersPage() {
         quantity: number;
         variant_id: string | null;
         unit_price: number | null;
-        products: { id: string; name: string; price: number };
+        products: { id: string; name: string; price: number; image_url: string | null };
       };
       return {
         id: item.id,
         productId: item.products.id,
         name: item.products.name,
+        imageUrl: item.products.image_url ?? null,
         // 下单时的价格快照；旧订单可能为空，回退到当前商品价
         price: item.unit_price ?? item.products.price,
         quantity: item.quantity,

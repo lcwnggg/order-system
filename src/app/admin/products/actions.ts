@@ -95,6 +95,7 @@ export async function addProduct(
   }
 
   revalidatePath("/admin/products");
+  revalidatePath("/admin/stock-alert");
   revalidatePath("/shop");
   return { success: true };
 }
@@ -141,6 +142,7 @@ export async function updateProduct(
   if (error) return { error: error.message };
 
   revalidatePath("/admin/products");
+  revalidatePath("/admin/stock-alert");
   revalidatePath("/shop");
   return { success: true };
 }
@@ -175,6 +177,7 @@ export async function upsertVariants(
   }
 
   revalidatePath("/admin/products");
+  revalidatePath("/admin/stock-alert");
   revalidatePath("/shop");
   return { success: true };
 }
@@ -193,6 +196,7 @@ export async function adjustVariantStock(variantId: string, delta: number): Prom
   if (error) return { error: error.message };
 
   revalidatePath("/admin/products");
+  revalidatePath("/admin/stock-alert");
   revalidatePath("/shop");
   return { success: true };
 }
@@ -206,6 +210,7 @@ export async function toggleProductActive(id: string, isActive: boolean): Promis
   if (error) return { error: error.message };
 
   revalidatePath("/admin/products");
+  revalidatePath("/admin/stock-alert");
   revalidatePath("/shop");
   return { success: true };
 }
@@ -230,6 +235,7 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
   if (error) return { error: error.message };
 
   revalidatePath("/admin/products");
+  revalidatePath("/admin/stock-alert");
   return { success: true };
 }
 
@@ -247,6 +253,7 @@ export async function adjustStock(id: string, delta: number): Promise<ActionResu
   if (error) return { error: error.message };
 
   revalidatePath("/admin/products");
+  revalidatePath("/admin/stock-alert");
   revalidatePath("/shop");
   return { success: true };
 }
@@ -341,6 +348,7 @@ export async function bulkImportProducts(
   }
 
   revalidatePath("/admin/products");
+  revalidatePath("/admin/stock-alert");
   revalidatePath("/admin/categories");
   revalidatePath("/shop");
   return { imported, skipped, failed, errors };

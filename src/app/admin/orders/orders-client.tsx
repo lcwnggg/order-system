@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { updateOrderStatus, deleteOrder, renameOrder } from "./actions";
+import { useImageLightbox } from "@/app/image-lightbox";
 import { useI18n } from "@/lib/i18n/client";
 import { formatDateTime } from "@/lib/i18n/datetime";
 import type { TranslationKey } from "@/lib/i18n/dictionaries";
@@ -151,7 +152,7 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
   const [openOverrides, setOpenOverrides] = useState<Record<string, boolean>>({});
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const [lightbox, setLightbox] = useState<{ url: string; label: string } | null>(null);
+  const lightbox = useImageLightbox();
   const [, startTransition] = useTransition();
 
   const filtered = useMemo(
@@ -265,60 +266,72 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
       return a.name.localeCompare(b.name, tag);
     });
 
-    // Build HTML rows, with category section headers
+    // Cada referencia es un bloque; van en dos columnas para no desperdiciar
+    // el ancho del A4 (una tabla a página completa dejaba media hoja en blanco).
     let lastParent = "";
-    const tableRows = rows
+    const itemsHtml = rows
       .map((p) => {
         const { parent, child } = catLabel(p.categoryId);
         const storeDetail = [...p.stores.entries()]
           .map(([s, q]) => `<span class="store-tag">${escapeHtml(s)}×${q}</span>`)
-          .join(" ");
+          .join("");
         let header = "";
         if (parent !== lastParent) {
           lastParent = parent;
-          header = `<tr class="cat-row"><td colspan="3">${escapeHtml(parent)}</td></tr>`;
+          header = `<div class="cat">${escapeHtml(parent)}</div>`;
         }
         const thumb = p.imageUrl
           ? `<img class="thumb" src="${escapeHtml(p.imageUrl)}" alt="">`
           : `<div class="thumb no-img"></div>`;
         const brand = p.brand ? `<span class="brand">${escapeHtml(p.brand)}</span>` : "";
-        return `${header}<tr>
-<td class="img">${thumb}</td>
-<td><div class="pname">${escapeHtml(p.name)}${brand}</div>${child ? `<div class="cname">${escapeHtml(parent)} › ${escapeHtml(child)}</div>` : ""}<div class="stores">${storeDetail}</div></td>
-<td class="qty">${p.total}</td></tr>`;
+        return `${header}<div class="item">
+${thumb}
+<div class="info"><div class="pname">${escapeHtml(p.name)}${brand}</div>${
+          child ? `<div class="cname">${escapeHtml(child)}</div>` : ""
+        }<div class="stores">${storeDetail}</div></div>
+<div class="qty">${p.total}</div></div>`;
       })
       .join("");
 
     const html = `<!DOCTYPE html><html lang="${tag}"><head><meta charset="utf-8">
 <title>${t("print.title")} ${dateStr}</title>
 <style>
-body{font-family:sans-serif;margin:2cm;color:#111;font-size:14px}
-h1{font-size:20px;margin-bottom:4px}
-.sub{color:#555;font-size:12px;margin-bottom:24px}
-table{width:100%;border-collapse:collapse}
-th{text-align:left;border-bottom:2px solid #111;padding:8px 4px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#444}
-th.qty,td.qty{text-align:right}
-td{padding:9px 4px;border-bottom:1px solid #e5e7eb;vertical-align:top}
-td.qty{font-weight:700;font-size:18px;white-space:nowrap;vertical-align:top;padding-top:11px}
-td.img{width:52px;padding-right:10px}
-.thumb{width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb;display:block;background:#fff}
+@page{size:A4 portrait;margin:9mm 8mm}
+*{box-sizing:border-box}
+body{font-family:sans-serif;margin:0;color:#111;font-size:12px;
+  -webkit-print-color-adjust:exact;print-color-adjust:exact}
+/* Cabecera en una sola línea, pegada al primer producto */
+.head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  border-bottom:1.5px solid #111;padding-bottom:4px;margin-bottom:6px}
+h1{font-size:15px;margin:0;letter-spacing:-.01em}
+.sub{color:#555;font-size:10px;text-align:right}
+/* Dos columnas: se aprovecha todo el ancho de la hoja */
+.cols{column-count:2;column-gap:7mm}
+.cat{break-inside:avoid;break-after:avoid;page-break-after:avoid;
+  font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#6b7280;
+  background:#f3f4f6;border-radius:3px;padding:2px 5px;margin:5px 0 2px}
+.cat:first-child{margin-top:0}
+.item{display:flex;align-items:flex-start;gap:6px;padding:3px 0;
+  border-bottom:1px solid #e5e7eb;break-inside:avoid;page-break-inside:avoid}
+.thumb{width:34px;height:34px;flex:0 0 34px;object-fit:cover;border-radius:4px;
+  border:1px solid #e5e7eb;background:#fff}
 .thumb.no-img{background:#f3f4f6}
-.pname{font-weight:600;margin-bottom:3px}
-.brand{display:inline-block;margin-left:6px;font-size:11px;font-weight:600;color:#374151;background:#eef2f7;border:1px solid #dfe5ec;padding:1px 6px;border-radius:4px;vertical-align:1px}
-.cname{font-size:11px;color:#9ca3af;margin-bottom:4px}
-.stores{display:flex;flex-wrap:wrap;gap:4px}
-.store-tag{font-size:11px;color:#374151;background:#f3f4f6;padding:1px 7px;border-radius:999px}
-.cat-row{background:#f9fafb}
-.cat-row td{padding:10px 4px 3px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#6b7280;border-bottom:1px solid #d1d5db}
-tr{break-inside:avoid;page-break-inside:avoid}
-@media print{body{margin:1cm}}
+.info{flex:1;min-width:0}
+.pname{font-weight:600;font-size:11.5px;line-height:1.25}
+.brand{display:inline-block;margin-left:4px;font-size:9px;font-weight:600;color:#374151;
+  background:#eef2f7;border:1px solid #dfe5ec;padding:0 4px;border-radius:3px;vertical-align:1px}
+.cname{font-size:9px;color:#9ca3af;line-height:1.3}
+.stores{display:flex;flex-wrap:wrap;gap:3px;margin-top:1px}
+.store-tag{font-size:9px;color:#374151;background:#f3f4f6;padding:0 5px;border-radius:999px;line-height:1.5}
+.qty{flex:0 0 auto;font-weight:700;font-size:15px;line-height:1.1;white-space:nowrap;padding-left:4px}
 </style></head><body>
+<div class="head">
 <h1>${t("print.title")}</h1>
 <div class="sub">${t("print.generated", { date: dateStr })} · ${t("print.pendingOrders", {
       n: pendingOrders.length,
     })} · ${t("print.productKinds", { n: rows.length })}</div>
-<table><thead><tr><th class="img"></th><th>${t("print.thProduct")}</th><th class="qty">${t("print.thTotal")}</th></tr></thead>
-<tbody>${tableRows}</tbody></table>
+</div>
+<div class="cols">${itemsHtml}</div>
 </body></html>`;
 
     const win = window.open("", "_blank");
@@ -719,10 +732,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
                         <ProductThumb
                           item={item}
                           alt={t("adminOrders.viewPhoto", { name: item.product.name })}
-                          onOpen={() =>
-                            item.product.image_url &&
-                            setLightbox({ url: item.product.image_url, label: itemLabel(item) })
-                          }
+                          onOpen={() => lightbox.open(item.product.image_url, itemLabel(item))}
                         />
                         <span className="min-w-0 flex-1 text-paper-700">
                           {item.product.name}
@@ -752,29 +762,7 @@ tr{break-inside:avoid;page-break-inside:avoid}
       )}
 
       {/* Foto a tamaño completo (la vía que funciona en el móvil) */}
-      {lightbox && (
-        <div
-          className="fixed inset-0 z-[80] flex flex-col items-center justify-center gap-4 bg-black/85 p-6"
-          onClick={() => setLightbox(null)}
-          role="dialog"
-          aria-modal="true"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={lightbox.url}
-            alt={lightbox.label}
-            className="max-h-[75vh] max-w-full rounded-2xl bg-white object-contain"
-          />
-          <p className="text-sm font-medium text-white/90">{lightbox.label}</p>
-          <button
-            type="button"
-            onClick={() => setLightbox(null)}
-            className="rounded-lg bg-white/15 px-5 py-2 text-sm font-medium text-white hover:bg-white/25"
-          >
-            {t("common.close")}
-          </button>
-        </div>
-      )}
+      {lightbox.node}
     </div>
   );
 }
