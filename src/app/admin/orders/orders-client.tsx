@@ -212,36 +212,44 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
       day: "2-digit",
     });
 
-    // Build product → { total, brand, image, categoryId, stores }
-    const productMap = new Map<
-      string,
-      {
-        name: string;
-        brand: string | null;
-        imageUrl: string | null;
-        total: number;
-        categoryId: string | null;
-        stores: Map<string, number>;
-      }
-    >();
-    for (const order of pendingOrders) {
-      const storeName = displayStore(order, t);
-      for (const item of order.items) {
-        const key = item.variantColor ? `${item.product.id}-${item.variantColor}` : item.product.id;
-        if (!productMap.has(key)) {
-          productMap.set(key, {
-            name: itemLabel(item),
-            brand: item.product.brand,
-            imageUrl: item.product.image_url,
-            total: 0,
-            categoryId: item.product.category_id,
-            stores: new Map(),
-          });
+    // La hoja sigue el mismo criterio que el resumen de pantalla: si se está
+    // mirando «por tienda», se imprime por tienda; si no, por categoría.
+    const byStore = summaryView === "store";
+
+    type PrintRow = {
+      name: string;
+      brand: string | null;
+      imageUrl: string | null;
+      total: number;
+      categoryId: string | null;
+      stores: Map<string, number>;
+    };
+
+    /** Agrupa las líneas pendientes por referencia (color incluido). */
+    function collect(ordersIn: Order[]): PrintRow[] {
+      const map = new Map<string, PrintRow>();
+      for (const order of ordersIn) {
+        const storeName = displayStore(order, t);
+        for (const item of order.items) {
+          const key = item.variantColor
+            ? `${item.product.id}-${item.variantColor}`
+            : item.product.id;
+          if (!map.has(key)) {
+            map.set(key, {
+              name: itemLabel(item),
+              brand: item.product.brand,
+              imageUrl: item.product.image_url,
+              total: 0,
+              categoryId: item.product.category_id,
+              stores: new Map(),
+            });
+          }
+          const p = map.get(key)!;
+          p.total += item.quantity;
+          p.stores.set(storeName, (p.stores.get(storeName) ?? 0) + item.quantity);
         }
-        const p = productMap.get(key)!;
-        p.total += item.quantity;
-        p.stores.set(storeName, (p.stores.get(storeName) ?? 0) + item.quantity);
       }
+      return [...map.values()];
     }
 
     // Category label helper
@@ -255,46 +263,82 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
       return { parent: par?.name ?? none, child: cat.name };
     }
 
-    // Sort by parent category → child category → product name
-    const rows = [...productMap.values()].sort((a, b) => {
-      const la = catLabel(a.categoryId);
-      const lb = catLabel(b.categoryId);
-      const pc = la.parent.localeCompare(lb.parent, tag);
-      if (pc !== 0) return pc;
-      const cc = la.child.localeCompare(lb.child, tag);
-      if (cc !== 0) return cc;
-      return a.name.localeCompare(b.name, tag);
-    });
+    /** Categoría padre → subcategoría → nombre. */
+    function sortRows(list: PrintRow[]) {
+      return list.sort((a, b) => {
+        const la = catLabel(a.categoryId);
+        const lb = catLabel(b.categoryId);
+        const pc = la.parent.localeCompare(lb.parent, tag);
+        if (pc !== 0) return pc;
+        const cc = la.child.localeCompare(lb.child, tag);
+        if (cc !== 0) return cc;
+        return a.name.localeCompare(b.name, tag);
+      });
+    }
 
     // Cada referencia es un bloque y los bloques van en columnas (ver el CSS:
     // se meten tantas como quepan a lo ancho de la hoja). Todo lo secundario
     // —subcategoría y desglose por tienda— va en la misma línea para no gastar
     // renglones: así no queda media hoja en blanco a la derecha.
-    let lastParent = "";
-    const itemsHtml = rows
-      .map((p) => {
-        const { parent, child } = catLabel(p.categoryId);
-        // El espacio entre etiquetas es necesario: sin él la línea no tiene por
-        // dónde cortar y el desglose se sale de la columna.
-        const storeDetail = [...p.stores.entries()]
-          .map(([s, q]) => `<span class="store-tag">${escapeHtml(s)}×${q}</span>`)
-          .join(" ");
-        let header = "";
-        if (parent !== lastParent) {
-          lastParent = parent;
-          header = `<div class="cat">${escapeHtml(parent)}</div>`;
-        }
-        const thumb = p.imageUrl
-          ? `<img class="thumb" src="${escapeHtml(p.imageUrl)}" alt="">`
-          : `<div class="thumb no-img"></div>`;
-        const brand = p.brand ? `<span class="brand">${escapeHtml(p.brand)}</span>` : "";
-        const meta = child ? `<span class="cname">${escapeHtml(child)}</span>` : "";
-        return `${header}<div class="item">
+    function itemHtml(p: PrintRow, showStores: boolean) {
+      const { child } = catLabel(p.categoryId);
+      // El espacio entre etiquetas es necesario: sin él la línea no tiene por
+      // dónde cortar y el desglose se sale de la columna.
+      const storeDetail = showStores
+        ? [...p.stores.entries()]
+            .map(([s, q]) => `<span class="store-tag">${escapeHtml(s)}×${q}</span>`)
+            .join(" ")
+        : "";
+      const thumb = p.imageUrl
+        ? `<img class="thumb" src="${escapeHtml(p.imageUrl)}" alt="">`
+        : `<div class="thumb no-img"></div>`;
+      const brand = p.brand ? `<span class="brand">${escapeHtml(p.brand)}</span>` : "";
+      const meta = child ? `<span class="cname">${escapeHtml(child)}</span>` : "";
+      return `<div class="item">
 ${thumb}
 <div class="info"><span class="pname">${escapeHtml(p.name)}</span>${brand} <span class="meta">${meta}${storeDetail}</span></div>
 <div class="qty">${p.total}</div></div>`;
-      })
-      .join("");
+    }
+
+    // `rows` solo se usa para el contador de referencias de la cabecera: es el
+    // total de referencias distintas, no la suma de bloques por tienda.
+    const rows = sortRows(collect(pendingOrders));
+
+    let itemsHtml: string;
+    if (byStore) {
+      // Una sección por tienda; dentro, el mismo orden por categoría. El
+      // desglose «tienda×n» sobra aquí porque el bloque ya es de una tienda.
+      const perStore = new Map<string, { label: string; orders: Order[] }>();
+      for (const order of pendingOrders) {
+        const g = perStore.get(order.store_id) ?? { label: displayStore(order, t), orders: [] };
+        g.orders.push(order);
+        perStore.set(order.store_id, g);
+      }
+      itemsHtml = [...perStore.values()]
+        .sort((a, b) => a.label.localeCompare(b.label, tag))
+        .map((g) => {
+          const list = sortRows(collect(g.orders));
+          const head = `<div class="cat store-head">${escapeHtml(g.label)} <span class="cat-n">${t(
+            "adminOrders.storeOrderCount",
+            { n: g.orders.length }
+          )} · ${t("print.productKinds", { n: list.length })}</span></div>`;
+          return head + list.map((p) => itemHtml(p, false)).join("");
+        })
+        .join("");
+    } else {
+      let lastParent = "";
+      itemsHtml = rows
+        .map((p) => {
+          const { parent } = catLabel(p.categoryId);
+          let header = "";
+          if (parent !== lastParent) {
+            lastParent = parent;
+            header = `<div class="cat">${escapeHtml(parent)}</div>`;
+          }
+          return header + itemHtml(p, true);
+        })
+        .join("");
+    }
 
     const html = `<!DOCTYPE html><html lang="${tag}"><head><meta charset="utf-8">
 <title>${t("print.title")} ${dateStr}</title>
@@ -307,21 +351,28 @@ body{font-family:sans-serif;margin:0;color:#111;font-size:11px;
 .head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;
   border-bottom:1.2px solid #111;padding-bottom:3px;margin-bottom:4px}
 h1{font-size:13px;margin:0;letter-spacing:-.01em}
+.mode{font-size:9px;font-weight:600;color:#4b5563;background:#eceef2;
+  border-radius:999px;padding:1px 6px;margin-left:4px;vertical-align:1px}
 .sub{color:#555;font-size:9px;text-align:right}
-/* Se meten tantas columnas como quepan (mínimo 58 mm cada una): 3 en A4
-   vertical, 4 en horizontal. Así no sobra ancho de papel sin usar. */
-.cols{columns:58mm;column-gap:5mm;column-rule:1px solid #eceef2}
+/* Se meten tantas columnas como quepan (mínimo 63 mm cada una): 2 en A4
+   vertical, 3 en horizontal. Con la miniatura grande, tres columnas en
+   vertical dejaban el nombre partido en cuatro renglones. */
+.cols{columns:63mm;column-gap:6mm;column-rule:1px solid #eceef2}
 .cat{break-inside:avoid;break-after:avoid;page-break-after:avoid;
-  font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#4b5563;
-  background:#eceef2;border-radius:2px;padding:1px 4px;margin:4px 0 1px}
+  font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#4b5563;
+  background:#eceef2;border-radius:2px;padding:2px 4px;margin:6px 0 2px}
 .cat:first-child{margin-top:0}
-.item{display:flex;align-items:flex-start;gap:4px;padding:2px 0;
+/* Por tienda el encabezado manda más que una categoría: se marca con filete. */
+.store-head{font-size:10px;text-transform:none;letter-spacing:0;color:#111;
+  background:#e2e6ec;border-left:2.5px solid #111;border-radius:0 2px 2px 0}
+.cat-n{font-weight:500;color:#6b7280;font-size:8px}
+.item{display:flex;align-items:center;gap:5px;padding:3px 0;
   border-bottom:1px solid #e5e7eb;break-inside:avoid;page-break-inside:avoid}
-.thumb{width:26px;height:26px;flex:0 0 26px;object-fit:cover;border-radius:3px;
+.thumb{width:44px;height:44px;flex:0 0 44px;object-fit:cover;border-radius:4px;
   border:1px solid #e5e7eb;background:#fff}
 .thumb.no-img{background:#f3f4f6}
-.info{flex:1;min-width:0;line-height:1.35;overflow-wrap:anywhere}
-.pname{font-weight:600;font-size:10px}
+.info{flex:1;min-width:0;line-height:1.4;overflow-wrap:anywhere}
+.pname{font-weight:600;font-size:10.5px}
 /* Marca, subcategoría y tiendas siguen el flujo del nombre: rellenan el hueco
    que quede a la derecha en vez de abrir un renglón nuevo cada una. */
 .brand{font-size:8px;font-weight:600;color:#374151;background:#eef2f7;
@@ -330,10 +381,12 @@ h1{font-size:13px;margin:0;letter-spacing:-.01em}
 .cname{color:#9ca3af;margin-right:3px;white-space:nowrap}
 .store-tag{background:#f3f4f6;color:#374151;padding:0 4px;border-radius:999px;
   margin-right:2px;white-space:nowrap}
-.qty{flex:0 0 auto;font-weight:700;font-size:13px;line-height:1.15;white-space:nowrap;padding-left:3px}
+.qty{flex:0 0 auto;font-weight:700;font-size:15px;line-height:1.15;white-space:nowrap;padding-left:4px}
 </style></head><body>
 <div class="head">
-<h1>${t("print.title")}</h1>
+<h1>${t("print.title")} <span class="mode">${
+      byStore ? t("adminOrders.byStore") : t("adminOrders.byProduct")
+    }</span></h1>
 <div class="sub">${t("print.generated", { date: dateStr })} · ${t("print.pendingOrders", {
       n: pendingOrders.length,
     })} · ${t("print.productKinds", { n: rows.length })}</div>
