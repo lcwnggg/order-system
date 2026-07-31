@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isValidBarcodeFormat, normalizeBarcode } from "@/lib/barcode";
+import { parseDecimal } from "@/lib/decimal";
 import { getT } from "@/lib/i18n/server";
 import type { Translate } from "@/lib/i18n/translate";
 
@@ -76,7 +77,7 @@ async function saveCost(
 /** Lee los campos privados de un FormData, normalizando vacíos a null. */
 function readCostFromForm(formData: FormData): CostInput | { error: "invalidCost" } {
   const rawCost = ((formData.get("cost_price") as string) ?? "").trim();
-  const cost_price = rawCost === "" ? null : parseFloat(rawCost);
+  const cost_price = rawCost === "" ? null : parseDecimal(rawCost);
   if (cost_price !== null && (isNaN(cost_price) || cost_price < 0)) return { error: "invalidCost" };
   return {
     cost_price,
@@ -120,7 +121,7 @@ export async function addProduct(
 
   const name = (formData.get("name") as string)?.trim();
   const description = (formData.get("description") as string)?.trim();
-  const price = parseFloat(formData.get("price") as string);
+  const price = parseDecimal(formData.get("price") as string);
   const has_variants = formData.get("has_variants") === "true";
   const stock = has_variants ? 0 : parseInt(formData.get("stock") as string, 10);
   const image_url = (formData.get("image_url") as string) || null;

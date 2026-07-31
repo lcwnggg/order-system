@@ -5,6 +5,7 @@ import { useTransition, useState, useMemo, useEffect, useRef } from "react";
 import { submitOrder } from "./actions";
 import ScanButton from "@/app/scan-button";
 import { useImageLightbox } from "@/app/image-lightbox";
+import ModalPortal from "@/app/modal-portal";
 import { useT } from "@/lib/i18n/client";
 
 export type Product = {
@@ -916,6 +917,7 @@ export default function ShopClient({
 
       {/* 手机购物车滑出面板 */}
       {mobileCartOpen && (
+        <ModalPortal>
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setMobileCartOpen(false)} />
           <div className="absolute inset-x-0 bottom-0 flex max-h-[88vh] flex-col rounded-t-2xl bg-white">
@@ -1021,6 +1023,7 @@ export default function ShopClient({
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
 
       {lightbox.node}

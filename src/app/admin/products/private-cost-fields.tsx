@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import TagPicker, { canonicalTag } from "./tag-picker";
+import { parseDecimal, sanitizeDecimalText } from "@/lib/decimal";
 import { useT } from "@/lib/i18n/client";
 
 /**
@@ -39,8 +40,8 @@ export default function PrivateCostFields({
   const hasData = !!costPrice.trim() || !!supplier.trim() || !!note.trim();
   const [open, setOpen] = useState(defaultOpen || hasData);
 
-  const cost = parseFloat(costPrice);
-  const sale = parseFloat(salePrice);
+  const cost = parseDecimal(costPrice);
+  const sale = parseDecimal(salePrice);
   const showMargin = !isNaN(cost) && cost > 0 && !isNaN(sale) && sale > 0;
   const profit = sale - cost;
   const marginPct = showMargin ? (profit / sale) * 100 : 0;
@@ -81,12 +82,10 @@ export default function PrivateCostFields({
             <div>
               <label className="mb-1.5 block text-sm font-medium text-amber-900">{t("cost.costPrice")}</label>
               <input
-                type="number"
-                min="0"
-                step="0.01"
+                type="text"
                 inputMode="decimal"
                 value={costPrice}
-                onChange={(e) => onCostPrice(e.target.value)}
+                onChange={(e) => onCostPrice(sanitizeDecimalText(e.target.value))}
                 onFocus={(e) => e.target.select()}
                 placeholder="0.00"
                 className="w-full rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-200"

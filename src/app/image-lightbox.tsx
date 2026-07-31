@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useT } from "@/lib/i18n/client";
+import ModalPortal from "./modal-portal";
 
 export type ZoomedImage = { url: string; label: string };
 
@@ -44,6 +45,7 @@ export function ImageLightbox({
   if (!image) return null;
 
   return (
+    <ModalPortal>
     <div
       className="fixed inset-0 z-[90] flex flex-col items-center justify-center gap-4 bg-black/85 p-6"
       onClick={onClose}
@@ -76,6 +78,7 @@ export function ImageLightbox({
         {t("common.close")}
       </button>
     </div>
+    </ModalPortal>
   );
 }
 

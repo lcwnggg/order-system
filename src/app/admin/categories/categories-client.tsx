@@ -12,6 +12,7 @@ import {
 } from "./actions";
 import type { ProductCost, ProductVariant } from "@/app/admin/products/actions";
 import ProductEditModal from "@/app/admin/products/product-edit-modal";
+import ModalPortal from "@/app/modal-portal";
 import { getTotalStock, isLowStock } from "@/lib/stock";
 import { useT } from "@/lib/i18n/client";
 
@@ -620,6 +621,7 @@ export default function CategoriesClient({
 
       {/* ── Modal：选择商品 ── */}
       {addModalCatId && (
+        <ModalPortal>
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onClick={(e) => {
@@ -714,6 +716,7 @@ export default function CategoriesClient({
             </div>
           </div>
         </div>
+        </ModalPortal>
       )}
     </>
   );

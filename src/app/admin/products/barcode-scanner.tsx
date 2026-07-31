@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { isValidBarcodeFormat } from "@/lib/barcode";
 import { useT } from "@/lib/i18n/client";
+import ModalPortal from "@/app/modal-portal";
 import type { Translate } from "@/lib/i18n/translate";
 
 // ─────────────────────────────────────────────────────────────
@@ -155,6 +156,7 @@ export function ScannerOverlay({
   }
 
   return (
+    <ModalPortal>
     <div className="fixed inset-0 z-[70] flex flex-col bg-black">
       {/* 顶部栏 */}
       <div className="flex shrink-0 items-center justify-between px-4 py-3">
@@ -234,6 +236,7 @@ export function ScannerOverlay({
         </div>
       )}
     </div>
+    </ModalPortal>
   );
 }
 

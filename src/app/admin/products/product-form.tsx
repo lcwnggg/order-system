@@ -10,6 +10,7 @@ import AiRecognizePanel from "./ai-recognize";
 import type { AiSuggestion } from "./ai-actions";
 import ImageCropModal from "./image-crop-modal";
 import TagPicker from "./tag-picker";
+import { sanitizeDecimalText } from "@/lib/decimal";
 import PrivateCostFields from "./private-cost-fields";
 import { normalizeBarcode } from "@/lib/barcode";
 import { useT } from "@/lib/i18n/client";
@@ -382,13 +383,12 @@ export default function ProductForm({
           </label>
           <input
             name="price"
-            type="number"
+            type="text"
             required
-            min="0"
-            step="0.01"
             inputMode="decimal"
             value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            onChange={(e) => setPrice(sanitizeDecimalText(e.target.value))}
+            onFocus={(e) => e.target.select()}
             placeholder="0.00"
             className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 placeholder-paper-500 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
           />

@@ -7,6 +7,8 @@ import BarcodeField from "./barcode-scanner";
 import ImageCropModal from "./image-crop-modal";
 import TagPicker, { canonicalTag } from "./tag-picker";
 import PrivateCostFields from "./private-cost-fields";
+import ModalPortal from "@/app/modal-portal";
+import { parseDecimal, sanitizeDecimalText } from "@/lib/decimal";
 import { useImageLightbox } from "@/app/image-lightbox";
 import { useT } from "@/lib/i18n/client";
 import type { Translate } from "@/lib/i18n/translate";
@@ -235,7 +237,7 @@ export default function ProductEditModal({
       const result = await updateProduct(product.id, {
         name: editName,
         description: editDescription,
-        price: parseFloat(editPrice),
+        price: parseDecimal(editPrice),
         stock: editHasVariants ? 0 : parseInt(editStock, 10),
         newImageUrl,
         category_id: editChildCatId || editParentCatId || null,
@@ -244,7 +246,7 @@ export default function ProductEditModal({
         barcode: editBarcode,
         cost: managesCost
           ? {
-              cost_price: editCostPrice.trim() === "" ? null : parseFloat(editCostPrice),
+              cost_price: editCostPrice.trim() === "" ? null : parseDecimal(editCostPrice),
               supplier: canonicalTag(editSupplier, supplierOptions) || null,
               note: editCostNote.trim() || null,
             }
@@ -273,14 +275,16 @@ export default function ProductEditModal({
   }
 
   return (
-    <>
+    <ModalPortal>
     {/* 图片放大灯箱 */}
     {lightbox.node}
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-[80] flex items-end justify-center bg-black/50 sm:items-center sm:p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+      {/* En el móvil ocupa toda la pantalla (100dvh cuenta con la barra del
+          navegador); en pantallas grandes sigue siendo una tarjeta centrada. */}
+      <div className="flex h-[100dvh] w-full max-w-lg flex-col overflow-hidden rounded-none bg-white shadow-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-2xl">
         <div className="flex shrink-0 items-center justify-between border-b border-paper-100 px-6 py-4">
           <h2 className="text-base font-semibold text-paper-900">{t("edit.title")}</h2>
           <button type="button" onClick={onClose} className="rounded-lg p-1.5 text-paper-500 transition-colors hover:bg-paper-100 hover:text-paper-600">
@@ -325,11 +329,12 @@ export default function ProductEditModal({
                 {t("form.price")} <span className="text-red-500">*</span>
               </label>
               <input
-                type="number"
-                min="0"
-                step="0.01"
+                type="text"
+                inputMode="decimal"
                 value={editPrice}
-                onChange={(e) => setEditPrice(e.target.value)}
+                onChange={(e) => setEditPrice(sanitizeDecimalText(e.target.value))}
+                onFocus={(e) => e.target.select()}
+                placeholder="0.00"
                 className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-900 outline-none focus:border-paper-500 focus:ring-2 focus:ring-paper-300"
               />
             </div>
@@ -539,7 +544,7 @@ export default function ProductEditModal({
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-paper-100 px-6 py-4">
+        <div className="flex shrink-0 items-center justify-end gap-3 border-t border-paper-100 px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-4">
           <button
             type="button"
             onClick={onClose}
@@ -558,6 +563,6 @@ export default function ProductEditModal({
         </div>
       </div>
     </div>
-    </>
+    </ModalPortal>
   );
 }
