@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isValidBarcodeFormat, normalizeBarcode } from "@/lib/barcode";
 import { getT } from "@/lib/i18n/server";
+import type { Translate } from "@/lib/i18n/translate";
 
 export type ActionResult = { error: string } | { success: true };
 
@@ -34,17 +35,33 @@ type CostInput = {
   note: string | null;
 };
 
-/** Guarda (o limpia) el coste/proveedor de un producto. Asume permisos ya comprobados. */
+/** Postgres: la tabla no existe (falta ejecutar supabase/product_costs.sql). */
+const UNDEFINED_TABLE = "42P01";
+
+function isCostEmpty(cost: CostInput) {
+  return cost.cost_price === null && !cost.supplier && !cost.note;
+}
+
+/**
+ * Guarda (o limpia) el coste/proveedor de un producto. Asume permisos ya comprobados.
+ *
+ * Devuelve `t("err.costTableMissing")` si la tabla aún no está creada, en vez de
+ * escupir el error crudo de Postgres: es el único fallo que se puede arreglar
+ * desde fuera de la aplicación, y conviene decir exactamente cómo.
+ */
 async function saveCost(
   supabase: Awaited<ReturnType<typeof createClient>>,
   productId: string,
-  cost: CostInput
+  cost: CostInput,
+  t: Translate
 ): Promise<string | null> {
-  const isEmpty = cost.cost_price === null && !cost.supplier && !cost.note;
-  if (isEmpty) {
-    // Sin nada que apuntar, no dejamos una fila vacía rondando.
+  if (isCostEmpty(cost)) {
+    // Sin nada que apuntar, no dejamos una fila vacía rondando. Si la tabla no
+    // existe todavía tampoco hay nada que borrar: no es motivo para tumbar el
+    // guardado del producto entero.
     const { error } = await supabase.from("product_costs").delete().eq("product_id", productId);
-    return error?.message ?? null;
+    if (error && error.code !== UNDEFINED_TABLE) return error.message;
+    return null;
   }
   const { error } = await supabase
     .from("product_costs")
@@ -52,6 +69,7 @@ async function saveCost(
       { product_id: productId, cost_price: cost.cost_price, supplier: cost.supplier, note: cost.note },
       { onConflict: "product_id" }
     );
+  if (error?.code === UNDEFINED_TABLE) return t("err.costTableMissing");
   return error?.message ?? null;
 }
 
@@ -137,7 +155,7 @@ export async function addProduct(
     .single();
   if (insertErr) return { error: insertErr.message };
 
-  const costErr = await saveCost(supabase, product.id, cost);
+  const costErr = await saveCost(supabase, product.id, cost, t);
   if (costErr) return { error: costErr };
 
   if (has_variants && variants.length > 0) {
@@ -205,7 +223,7 @@ export async function updateProduct(
   if (error) return { error: error.message };
 
   if (cost !== undefined) {
-    const costErr = await saveCost(supabase, id, cost);
+    const costErr = await saveCost(supabase, id, cost, t);
     if (costErr) return { error: costErr };
   }
 

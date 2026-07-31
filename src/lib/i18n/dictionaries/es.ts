@@ -347,6 +347,7 @@ const es = {
   "err.invalidPrice": "Introduce un precio válido",
   "err.invalidStock": "Introduce una cantidad de stock válida",
   "err.invalidCostPrice": "Introduce un precio de compra válido",
+  "err.costTableMissing": "Producto guardado, pero el precio de compra no: falta ejecutar supabase/product_costs.sql en Supabase.",
   "err.barcodeInvalid": "Código de barras no válido (solo números, letras y guiones)",
   "err.variantJson": "El formato de las variantes de color no es válido",
   "err.variantAtLeastOne": "Añade al menos un color al activar las variantes",

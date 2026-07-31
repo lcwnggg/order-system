@@ -337,6 +337,7 @@ const zh: Dictionary = {
   "err.invalidPrice": "请输入有效价格",
   "err.invalidStock": "请输入有效库存数量",
   "err.invalidCostPrice": "请输入有效进货价",
+  "err.costTableMissing": "商品已保存，但进货价没有：请先在 Supabase 执行 supabase/product_costs.sql。",
   "err.barcodeInvalid": "条码格式无效（只允许数字、字母、连字符）",
   "err.variantJson": "颜色变体数据格式错误",
   "err.variantAtLeastOne": "开启颜色变体时至少添加一种颜色",
