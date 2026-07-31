@@ -5,7 +5,8 @@ import Image from "next/image";
 import type { GroupStore, TransferRequest } from "@/lib/transfers";
 import { claimTransferRequest, declineTransferRequest } from "./actions";
 import { useImageLightbox } from "@/app/image-lightbox";
-import { useT } from "@/lib/i18n/client";
+import { useI18n, useT } from "@/lib/i18n/client";
+import { sortByName } from "@/lib/sort";
 import { useTimeAgo } from "./time-ago";
 
 function ItemThumb({ req, size = "h-9 w-9" }: { req: TransferRequest; size?: string }) {
@@ -82,7 +83,7 @@ export function StoreRoster({
   currentUserId: string;
   canDecline?: boolean;
 }) {
-  const t = useT();
+  const { t, tag } = useI18n();
   // 门店 → 该店发出的、仍待认领的请求
   const byStore = useMemo(() => {
     const m = new Map<string, TransferRequest[]>();
@@ -104,8 +105,8 @@ export function StoreRoster({
         extra.push({ id: r.requesterStoreId, name: r.requesterName });
       }
     }
-    return [...stores, ...extra];
-  }, [stores, openReqs]);
+    return sortByName([...stores, ...extra], tag);
+  }, [stores, openReqs, tag]);
 
   if (roster.length === 0) {
     return (

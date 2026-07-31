@@ -15,7 +15,8 @@ import ProductEditModal from "./product-edit-modal";
 import { getTotalStock, isLowStock as isLowStockOf } from "@/lib/stock";
 import ScanButton from "@/app/scan-button";
 import { useImageLightbox } from "@/app/image-lightbox";
-import { useT } from "@/lib/i18n/client";
+import { useI18n } from "@/lib/i18n/client";
+import { sortByName } from "@/lib/sort";
 
 export type Product = {
   id: string;
@@ -51,7 +52,7 @@ export default function ProductList({
   brandOptions?: string[];
   supplierOptions?: string[];
 }) {
-  const t = useT();
+  const { t, tag } = useI18n();
   const lightbox = useImageLightbox();
 
   // Coste/proveedor por producto. Esta pantalla es solo del almacén, y la tabla
@@ -64,9 +65,12 @@ export default function ProductList({
   }, [costs]);
 
   // ── 分类辅助 ──
+  // Alfabético: el filtro lateral y las cabeceras de grupo se leen buscando un
+  // nombre, no por el orden en que se crearon las categorías.
+  const sortedCategories = useMemo(() => sortByName(categories, tag), [categories, tag]);
   const parentCategories = useMemo(
-    () => categories.filter((c) => !c.parent_id),
-    [categories]
+    () => sortedCategories.filter((c) => !c.parent_id),
+    [sortedCategories]
   );
 
   function categoryLabel(categoryId: string | null) {

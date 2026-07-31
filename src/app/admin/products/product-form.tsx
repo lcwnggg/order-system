@@ -13,7 +13,8 @@ import TagPicker from "./tag-picker";
 import { sanitizeDecimalText } from "@/lib/decimal";
 import PrivateCostFields from "./private-cost-fields";
 import { normalizeBarcode } from "@/lib/barcode";
-import { useT } from "@/lib/i18n/client";
+import { useI18n } from "@/lib/i18n/client";
+import { sortByName } from "@/lib/sort";
 import type { Translate } from "@/lib/i18n/translate";
 
 function compressToJpeg(
@@ -98,10 +99,12 @@ export default function ProductForm({
   brandOptions?: string[];
   supplierOptions?: string[];
 }) {
-  const t = useT();
-  const parentCategories = categories.filter((c) => !c.parent_id);
+  const { t, tag } = useI18n();
+  // Alfabético: es como se busca una categoría en un desplegable.
+  const sortedCategories = useMemo(() => sortByName(categories, tag), [categories, tag]);
+  const parentCategories = sortedCategories.filter((c) => !c.parent_id);
   function childrenOf(parentId: string) {
-    return categories.filter((c) => c.parent_id === parentId);
+    return sortedCategories.filter((c) => c.parent_id === parentId);
   }
 
   const [state, action, pending] = useActionState<ActionResult | null, FormData>(addProduct, null);

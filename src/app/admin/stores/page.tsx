@@ -2,10 +2,11 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AppShell from "@/app/app-shell";
 import { getI18n } from "@/lib/i18n/server";
+import { nameCollator } from "@/lib/sort";
 import StoresClient, { type StoreUser } from "./stores-client";
 
 export default async function AdminStoresPage() {
-  const { t } = await getI18n();
+  const { t, tag } = await getI18n();
   const supabase = await createClient();
   const {
     data: { user },
@@ -39,6 +40,14 @@ export default async function AdminStoresPage() {
   } else {
     stores = (rpcStores ?? []) as StoreUser[];
   }
+
+  // Ni el RPC ni la consulta de respaldo ordenan: la lista salía como
+  // quisiera la base de datos. Alfabético por nombre de tienda (y por correo
+  // las que aún no tienen nombre).
+  const collator = nameCollator(tag);
+  stores.sort((a, b) =>
+    collator.compare(a.store_name?.trim() || a.email, b.store_name?.trim() || b.email)
+  );
 
   return (
     <AppShell email={user.email}>

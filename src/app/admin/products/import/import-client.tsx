@@ -5,7 +5,8 @@ import Link from "next/link";
 import * as XLSX from "xlsx";
 import { bulkImportProducts, type BulkImportMode, type BulkImportRow } from "../actions";
 import { isValidBarcodeFormat } from "@/lib/barcode";
-import { useT } from "@/lib/i18n/client";
+import { useI18n } from "@/lib/i18n/client";
+import { sortByName } from "@/lib/sort";
 import type { Translate } from "@/lib/i18n/translate";
 
 type CategoryRow = { id: string; name: string; parent_id: string | null };
@@ -160,10 +161,12 @@ export default function ImportClient({
   categories: CategoryRow[];
   existingProducts: ExistingProduct[];
 }) {
-  const t = useT();
-  const parentCategories = useMemo(() => categories.filter((c) => !c.parent_id), [categories]);
+  const { t, tag } = useI18n();
+  // Alfabético, igual que en el resto de listas de categorías.
+  const sortedCategories = useMemo(() => sortByName(categories, tag), [categories, tag]);
+  const parentCategories = useMemo(() => sortedCategories.filter((c) => !c.parent_id), [sortedCategories]);
   function childrenOf(parentId: string) {
-    return categories.filter((c) => c.parent_id === parentId);
+    return sortedCategories.filter((c) => c.parent_id === parentId);
   }
 
   const [rows, setRows] = useState<ImportRow[] | null>(null);

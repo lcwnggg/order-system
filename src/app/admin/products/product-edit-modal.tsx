@@ -10,7 +10,8 @@ import PrivateCostFields from "./private-cost-fields";
 import ModalPortal from "@/app/modal-portal";
 import { parseDecimal, sanitizeDecimalText } from "@/lib/decimal";
 import { useImageLightbox } from "@/app/image-lightbox";
-import { useT } from "@/lib/i18n/client";
+import { useI18n } from "@/lib/i18n/client";
+import { sortByName } from "@/lib/sort";
 import type { Translate } from "@/lib/i18n/translate";
 
 type Product = {
@@ -102,14 +103,16 @@ export default function ProductEditModal({
   onClose: () => void;
   onSaved?: () => void;
 }) {
-  const t = useT();
+  const { t, tag } = useI18n();
+  // Alfabético: es como se busca una categoría en un desplegable.
+  const sortedCategories = useMemo(() => sortByName(categories, tag), [categories, tag]);
   const parentCategories = useMemo(
-    () => categories.filter((c) => !c.parent_id),
-    [categories]
+    () => sortedCategories.filter((c) => !c.parent_id),
+    [sortedCategories]
   );
 
   function childrenOf(parentId: string) {
-    return categories.filter((c) => c.parent_id === parentId);
+    return sortedCategories.filter((c) => c.parent_id === parentId);
   }
 
   const [editName, setEditName] = useState(product.name);

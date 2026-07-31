@@ -6,7 +6,8 @@ import { submitOrder } from "./actions";
 import ScanButton from "@/app/scan-button";
 import { useImageLightbox } from "@/app/image-lightbox";
 import ModalPortal from "@/app/modal-portal";
-import { useT } from "@/lib/i18n/client";
+import { useI18n } from "@/lib/i18n/client";
+import { sortByName } from "@/lib/sort";
 
 export type Product = {
   id: string;
@@ -56,7 +57,7 @@ export default function ShopClient({
   lastOrderItems: { product_id: string; variant_id: string | null; quantity: number }[];
   variants: ProductVariant[];
 }) {
-  const t = useT();
+  const { t, tag } = useI18n();
   const lightbox = useImageLightbox();
 
   // ── 购物车 & 下单 ──
@@ -162,10 +163,12 @@ export default function ShopClient({
   }, [cart, cartHydrated]);
 
   // ── 分类派生 ──
-  const parentCategories = categories.filter((c) => !c.parent_id);
+  // Alfabético: las tiendas buscan la categoría por su nombre.
+  const sortedCategories = useMemo(() => sortByName(categories, tag), [categories, tag]);
+  const parentCategories = sortedCategories.filter((c) => !c.parent_id);
   const currentChildren =
     selectedParentId && selectedParentId !== UNCATEGORIZED
-      ? categories.filter((c) => c.parent_id === selectedParentId)
+      ? sortedCategories.filter((c) => c.parent_id === selectedParentId)
       : [];
 
   const variantsByProduct = useMemo(() => {

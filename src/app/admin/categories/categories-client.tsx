@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   addCategory,
@@ -14,7 +14,8 @@ import type { ProductCost, ProductVariant } from "@/app/admin/products/actions";
 import ProductEditModal from "@/app/admin/products/product-edit-modal";
 import ModalPortal from "@/app/modal-portal";
 import { getTotalStock, isLowStock } from "@/lib/stock";
-import { useT } from "@/lib/i18n/client";
+import { useI18n } from "@/lib/i18n/client";
+import { sortByName } from "@/lib/sort";
 
 export type Category = {
   id: string;
@@ -55,8 +56,15 @@ export default function CategoriesClient({
   brandOptions?: string[];
   supplierOptions?: string[];
 }) {
-  const t = useT();
+  const { t, tag } = useI18n();
   const router = useRouter();
+
+  // Alfabético, grandes y pequeñas: así se encuentra una categoría en esta
+  // pantalla y en el desplegable de «añadir subcategoría».
+  const sortedTree = useMemo(
+    () => sortByName(categoryTree, tag).map((p) => ({ ...p, children: sortByName(p.children, tag) })),
+    [categoryTree, tag]
+  );
   const [, startTransition] = useTransition();
 
   // ── 编辑商品弹窗 ──
@@ -297,7 +305,7 @@ export default function CategoriesClient({
                 className={inputCls}
               >
                 <option value="">{t("categories.selectParent")}</option>
-                {categoryTree.map((p) => (
+                {sortedTree.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
                   </option>
@@ -329,13 +337,13 @@ export default function CategoriesClient({
         </div>
 
         {/* ── 分类列表 ── */}
-        {categoryTree.length === 0 ? (
+        {sortedTree.length === 0 ? (
           <div className="rounded-xl border border-dashed border-paper-300 bg-white py-14 text-center">
             <p className="text-sm text-paper-500">{t("categories.empty")}</p>
           </div>
         ) : (
           <div className="space-y-3">
-            {categoryTree.map((parent) => {
+            {sortedTree.map((parent) => {
               const parentProductCount = countInParent(parent);
               return (
                 <div
@@ -606,7 +614,7 @@ export default function CategoriesClient({
       {editingProduct && (
         <ProductEditModal
           product={editingProduct}
-          categories={categoryTree.flatMap((p) => [
+          categories={sortedTree.flatMap((p) => [
             { id: p.id, name: p.name, parent_id: p.parent_id, sort_order: p.sort_order },
             ...p.children.map((c) => ({ id: c.id, name: c.name, parent_id: c.parent_id, sort_order: c.sort_order })),
           ])}

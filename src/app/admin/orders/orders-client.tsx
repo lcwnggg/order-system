@@ -286,6 +286,7 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
       // dónde cortar y el desglose se sale de la columna.
       const storeDetail = showStores
         ? [...p.stores.entries()]
+            .sort((a, b) => a[0].localeCompare(b[0], tag))
             .map(([s, q]) => `<span class="store-tag">${escapeHtml(s)}×${q}</span>`)
             .join(" ")
         : "";
