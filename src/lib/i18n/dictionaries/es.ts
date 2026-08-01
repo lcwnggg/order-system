@@ -90,6 +90,23 @@ const es = {
   "storeHero.subtitle": "Explora productos, añádelos al carrito y envía tu pedido.",
   "storeHero.enterShop": "Ir al catálogo →",
 
+  // ── inicio de tienda (panel) ──
+  "storeHome.subtitleIdle": "No tienes pedidos en curso. Revisa el catálogo o pide a otra tienda.",
+  "storeHome.subtitleInProgress": "Tienes {n} pedidos en curso con el almacén.",
+  "storeHome.askOtherStores": "Pedir a otra tienda",
+  "storeHome.statInProgress": "En curso",
+  "storeHome.statThisMonth": "Pedidos este mes",
+  "storeHome.statCatalog": "En catálogo",
+  "storeHome.statTransfers": "Traspasos abiertos",
+  "storeHome.lastOrderTitle": "Tu último pedido",
+  "storeHome.lastOrderLines": "{lines} productos · {units} uds.",
+  "storeHome.noOrders": "Todavía no has hecho ningún pedido.",
+  "storeHome.firstOrderCta": "Hacer el primero →",
+  "storeHome.transfersTitle": "Otras tiendas buscan",
+  "storeHome.transfersSubtitle": "Si lo tienes, avisa desde traspasos",
+  "storeHome.transfersHelp": "Lo tengo",
+  "storeHome.noTransfers": "Ninguna tienda está buscando nada ahora mismo.",
+
   // ── panel del almacén ──
   "dashboard.welcome": "Bienvenido de nuevo",
   "dashboard.console": "Consola del almacén",

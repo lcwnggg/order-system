@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type BoardRow = {
@@ -16,6 +16,9 @@ type BoardRow = {
  */
 export default function TransferNavBadge() {
   const [count, setCount] = useState(0);
+  // 频道名要每个实例唯一：同一页可能挂两个徽标（侧栏 + 页面按钮），
+  // 同名频道第二次 .on() 会在 subscribe() 之后注册，Supabase 直接抛错让整页崩掉
+  const channelId = useId();
 
   useEffect(() => {
     const supabase = createClient();
@@ -35,7 +38,7 @@ export default function TransferNavBadge() {
 
     recount();
     const channel = supabase
-      .channel("transfer_nav_badge")
+      .channel(`transfer_nav_badge:${channelId}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "transfer_requests" },
@@ -47,7 +50,7 @@ export default function TransferNavBadge() {
       cancelled = true;
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [channelId]);
 
   if (count === 0) return null;
 

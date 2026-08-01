@@ -4,7 +4,7 @@ import { isLowStock } from "@/lib/stock";
 import { getTransferBoard, getGroupStores } from "@/lib/transfers";
 import { getI18n } from "@/lib/i18n/server";
 import { LOCALE_TIME_ZONES } from "@/lib/i18n/config";
-import StoreHero from "./store-hero";
+import StoreHome, { type StoreHomeOrder, type StoreHomeTransfer } from "./store-home";
 import AppShell from "./app-shell";
 import WarehouseRosterCard from "./transfers/warehouse-roster-card";
 
@@ -84,6 +84,75 @@ export default async function Home() {
       getTransferBoard(supabase),
       getGroupStores(supabase),
     ]);
+  }
+
+  // ── 门店首页的数据：在途订单、本月单数、目录规模、别家店在求的货 ──
+  let storeInProgress = 0;
+  let storeMonthCount = 0;
+  let storeProductCount = 0;
+  let storeLastOrder: StoreHomeOrder | null = null;
+  let storeTransfers: StoreHomeTransfer[] = [];
+  let storeOpenTransfers = 0;
+
+  if (isStore && user) {
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    const [inProgress, month, prods, lastOrderRes, board] = await Promise.all([
+      supabase
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("store_id", user.id)
+        .in("status", ["pending", "preparing"]),
+      supabase
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("store_id", user.id)
+        .gte("created_at", monthStart.toISOString()),
+      supabase.from("products").select("id", { count: "exact", head: true }),
+      supabase
+        .from("orders")
+        .select("id, status, created_at, order_items ( quantity, unit_price, products ( price ) )")
+        .eq("store_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(1),
+      getTransferBoard(supabase),
+    ]);
+
+    storeInProgress = inProgress.count ?? 0;
+    storeMonthCount = month.count ?? 0;
+    storeProductCount = prods.count ?? 0;
+
+    const raw = lastOrderRes.data?.[0];
+    if (raw) {
+      const items = ((raw.order_items ?? []) as unknown[]) as {
+        quantity: number;
+        unit_price: number | null;
+        products: { price: number } | null;
+      }[];
+      storeLastOrder = {
+        id: raw.id as string,
+        status: raw.status as StoreHomeOrder["status"],
+        createdAt: raw.created_at as string,
+        lines: items.length,
+        units: items.reduce((s, it) => s + it.quantity, 0),
+        // 单价用下单时的快照，旧单没有就退回当前售价（和「我的订单」算法一致）
+        total: items.reduce((s, it) => s + (it.unit_price ?? it.products?.price ?? 0) * it.quantity, 0),
+      };
+    }
+
+    // 首页只展示「别人开的、我还没说没有的」求货，自己发的不算求助
+    const helpable = board.filter(
+      (r) => r.status === "open" && r.requesterStoreId !== user.id && !r.iDeclined
+    );
+    storeOpenTransfers = helpable.length;
+    storeTransfers = helpable.slice(0, 3).map((r) => ({
+      id: r.id,
+      itemText: r.itemText,
+      requesterName: r.requesterName,
+      createdAt: r.createdAt,
+    }));
   }
 
   const dateStr = new Date().toLocaleDateString(tag, {
@@ -250,14 +319,19 @@ export default async function Home() {
     );
   }
 
-  // ── Store 首页：编辑风 hero ──
+  // ── Store 首页：门店自己的小仪表盘（侧栏导航 + 在途单 + 互调） ──
   if (isStore) {
     return (
-      <div className="relative flex min-h-screen flex-col">
-        <div className="app-bg" />
-        <div className="app-grain" />
-        <StoreHero storeName={profile?.store_name ?? null} />
-      </div>
+      <StoreHome
+        storeName={profile?.store_name ?? null}
+        email={user?.email}
+        inProgressCount={storeInProgress}
+        monthCount={storeMonthCount}
+        productCount={storeProductCount}
+        openTransfers={storeOpenTransfers}
+        lastOrder={storeLastOrder}
+        transfers={storeTransfers}
+      />
     );
   }
 

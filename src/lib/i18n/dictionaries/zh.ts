@@ -87,6 +87,23 @@ const zh: Dictionary = {
   "storeHero.subtitle": "浏览商品，加入购物车，一键提交。",
   "storeHero.enterShop": "进入商城下单 →",
 
+  // ── 门店首页（小面板）──
+  "storeHome.subtitleIdle": "目前没有在途订单。去看看目录，或者向别家店调货。",
+  "storeHome.subtitleInProgress": "你有 {n} 个订单还在仓库那边。",
+  "storeHome.askOtherStores": "向别家店调货",
+  "storeHome.statInProgress": "在途订单",
+  "storeHome.statThisMonth": "本月下单",
+  "storeHome.statCatalog": "在售商品",
+  "storeHome.statTransfers": "待认领互调",
+  "storeHome.lastOrderTitle": "上一单",
+  "storeHome.lastOrderLines": "{lines} 种商品 · {units} 件",
+  "storeHome.noOrders": "你还没下过单。",
+  "storeHome.firstOrderCta": "下第一单 →",
+  "storeHome.transfersTitle": "别家店在找",
+  "storeHome.transfersSubtitle": "有货的话去互调看板回一声",
+  "storeHome.transfersHelp": "我有",
+  "storeHome.noTransfers": "现在没有门店在找货。",
+
   // ── 仓库仪表盘 ──
   "dashboard.welcome": "欢迎回来",
   "dashboard.console": "仓库控制台",
