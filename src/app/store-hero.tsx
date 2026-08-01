@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { signOut } from "@/app/actions/auth";
 import LanguageSwitcher from "@/app/language-switcher";
+import TransferNavBadge from "@/app/transfer-nav-badge";
 import { getI18n } from "@/lib/i18n/server";
 
 export default async function StoreHero({ storeName }: { storeName: string | null }) {
@@ -34,6 +35,14 @@ export default async function StoreHero({ storeName }: { storeName: string | nul
               className="rounded-full border border-white/60 bg-white/40 px-7 py-4 text-base font-medium text-paper-700 transition-colors duration-300 hover:bg-white/70"
             >
               {t("nav.myOrders")}
+            </Link>
+            {/* 互调看板：门店首页不走 AppShell，这里不放入口就等于没有入口 */}
+            <Link
+              href="/transfers"
+              className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/40 px-7 py-4 text-base font-medium text-paper-700 transition-colors duration-300 hover:bg-white/70"
+            >
+              {t("nav.transfers")}
+              <TransferNavBadge />
             </Link>
           </div>
 

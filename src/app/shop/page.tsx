@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/actions/auth";
 import LanguageSwitcher from "@/app/language-switcher";
+import TransferNavBadge from "@/app/transfer-nav-badge";
 import { getI18n } from "@/lib/i18n/server";
 import ShopClient from "./shop-client";
 
@@ -71,6 +72,13 @@ export default async function ShopPage() {
             <span className="text-sm font-semibold text-paper-900">{t("shop.title")}</span>
           </div>
           <div className="flex shrink-0 items-center gap-3">
+            <Link
+              href="/transfers"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/50 bg-white/40 px-3 py-1.5 text-sm text-paper-700 transition-colors hover:bg-white/70"
+            >
+              {t("nav.transfers")}
+              <TransferNavBadge />
+            </Link>
             <Link
               href="/shop/orders"
               className="rounded-lg border border-white/50 bg-white/40 px-3 py-1.5 text-sm text-paper-700 transition-colors hover:bg-white/70"
