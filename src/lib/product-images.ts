@@ -27,8 +27,16 @@ export function coverImage(p: ProductImageSource): string | null {
   return productImages(p)[0] ?? null;
 }
 
-/** Postgres: la columna no existe (falta ejecutar supabase/product_extra_images.sql). */
-const UNDEFINED_COLUMN = "42703";
+/**
+ * La columna no existe todavía (falta ejecutar supabase/product_extra_images.sql).
+ *
+ * Hay que mirar dos códigos: al leer, el error viene de Postgres (`42703`); al
+ * escribir, PostgREST corta antes y devuelve el suyo (`PGRST204`, "Could not
+ * find the 'image_urls' column of 'products' in the schema cache").
+ */
+export function isMissingColumnError(error: { code?: string } | null): boolean {
+  return error?.code === "42703" || error?.code === "PGRST204";
+}
 
 /**
  * Lanza una consulta pidiendo también `image_urls` y, si esa columna todavía no
@@ -44,7 +52,7 @@ export async function withExtraImagesColumn<T>(
   // El tipado de Supabase deduce las columnas del literal del `select`, y aquí
   // se arma en tiempo de ejecución: el tipo lo pone quien llama.
   const result = await run(", image_urls");
-  const final = result.error?.code === UNDEFINED_COLUMN ? await run("") : result;
+  const final = isMissingColumnError(result.error) ? await run("") : result;
   return { data: (final.data ?? null) as T | null, error: final.error };
 }
 

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isValidBarcodeFormat, normalizeBarcode } from "@/lib/barcode";
 import { parseDecimal } from "@/lib/decimal";
-import { splitImages } from "@/lib/product-images";
+import { splitImages, isMissingColumnError } from "@/lib/product-images";
 import { getT } from "@/lib/i18n/server";
 import type { Translate } from "@/lib/i18n/translate";
 
@@ -39,9 +39,6 @@ type CostInput = {
 
 /** Postgres: la tabla no existe (falta ejecutar supabase/product_costs.sql). */
 const UNDEFINED_TABLE = "42P01";
-
-/** Postgres: la columna no existe (falta ejecutar supabase/product_extra_images.sql). */
-const UNDEFINED_COLUMN = "42703";
 
 function isCostEmpty(cost: CostInput) {
   return cost.cost_price === null && !cost.supplier && !cost.note;
@@ -181,7 +178,7 @@ export async function addProduct(
   // La columna de fotos extra se crea a mano (supabase/product_extra_images.sql).
   // Mientras no exista: si no había fotos extra, se guarda igual; si las había,
   // mejor avisar que tragárselas en silencio.
-  if (insertErr?.code === UNDEFINED_COLUMN) {
+  if (isMissingColumnError(insertErr)) {
     if (image_urls.length > 0) return { error: t("err.extraImagesColumnMissing") };
     ({ data: product, error: insertErr } = await supabase
       .from("products")
@@ -264,7 +261,7 @@ export async function updateProduct(
   let { error } = await supabase.from("products").update(updateData).eq("id", id);
   // Mismo apaño que al crear: sin la columna todavía creada, se guarda el resto
   // salvo que se estuvieran intentando guardar fotos extra (ahí se avisa).
-  if (error?.code === UNDEFINED_COLUMN) {
+  if (isMissingColumnError(error)) {
     if (Array.isArray(updateData.image_urls) && updateData.image_urls.length > 0) {
       return { error: t("err.extraImagesColumnMissing") };
     }
