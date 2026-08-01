@@ -5,7 +5,8 @@ import { signOut } from "@/app/actions/auth";
 import LanguageSwitcher from "@/app/language-switcher";
 import TransferNavBadge from "@/app/transfer-nav-badge";
 import { getI18n } from "@/lib/i18n/server";
-import ShopClient from "./shop-client";
+import { withExtraImagesColumn } from "@/lib/product-images";
+import ShopClient, { type Product } from "./shop-client";
 
 export default async function ShopPage() {
   const { t } = await getI18n();
@@ -26,11 +27,15 @@ export default async function ShopPage() {
   if (profile?.role !== "store") redirect("/login");
 
   const [{ data: products }, { data: categoriesData }, { data: lastOrders }, { data: variantsData }] = await Promise.all([
-    supabase
-      .from("products")
-      .select("id, name, description, price, stock, image_url, category_id, has_variants, brand, created_at, barcode")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false }),
+    withExtraImagesColumn<Product[]>((img) =>
+      supabase
+        .from("products")
+        .select(
+          `id, name, description, price, stock, image_url, category_id, has_variants, brand, created_at, barcode${img}` as string
+        )
+        .eq("is_active", true)
+        .order("created_at", { ascending: false })
+    ),
     supabase
       .from("categories")
       .select("id, name, parent_id")

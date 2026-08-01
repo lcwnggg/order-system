@@ -34,6 +34,9 @@ export type ProductSummary = {
   stock: number;
   description: string | null;
   image_url: string | null;
+  // Necesario aunque esta pantalla no pinte fotos: abre el mismo modal de
+  // edición, y si no llegara la galería, guardar borraría las fotos extra.
+  image_urls: string[] | null;
   is_active: boolean;
   has_variants: boolean;
   brand: string | null;

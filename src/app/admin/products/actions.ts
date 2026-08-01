@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isValidBarcodeFormat, normalizeBarcode } from "@/lib/barcode";
 import { parseDecimal } from "@/lib/decimal";
+import { splitImages } from "@/lib/product-images";
 import { getT } from "@/lib/i18n/server";
 import type { Translate } from "@/lib/i18n/translate";
 
@@ -38,6 +39,9 @@ type CostInput = {
 
 /** Postgres: la tabla no existe (falta ejecutar supabase/product_costs.sql). */
 const UNDEFINED_TABLE = "42P01";
+
+/** Postgres: la columna no existe (falta ejecutar supabase/product_extra_images.sql). */
+const UNDEFINED_COLUMN = "42703";
 
 function isCostEmpty(cost: CostInput) {
   return cost.cost_price === null && !cost.supplier && !cost.note;
@@ -86,6 +90,20 @@ function readCostFromForm(formData: FormData): CostInput | { error: "invalidCost
   };
 }
 
+/**
+ * Lista de fotos extra que manda el formulario (JSON). Si viniera cualquier
+ * cosa rara, se ignora: perder una foto no justifica tumbar el alta entera.
+ */
+function readImageList(raw: string | null): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((u): u is string => typeof u === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 type VariantInput = {
   id?: string;
   color: string;
@@ -124,7 +142,12 @@ export async function addProduct(
   const price = parseDecimal(formData.get("price") as string);
   const has_variants = formData.get("has_variants") === "true";
   const stock = has_variants ? 0 : parseInt(formData.get("stock") as string, 10);
-  const image_url = (formData.get("image_url") as string) || null;
+  // Portada + fotos extra. Se normaliza todo junto para que la portada sea
+  // siempre la primera y no se cuele ninguna repetida.
+  const { image_url, image_urls } = splitImages([
+    (formData.get("image_url") as string) || "",
+    ...readImageList(formData.get("image_urls") as string | null),
+  ]);
   const category_id = (formData.get("category_id") as string) || null;
   const brand = (formData.get("brand") as string)?.trim() || null;
   const barcode = normalizeBarcode(formData.get("barcode") as string);
@@ -149,12 +172,25 @@ export async function addProduct(
     if (variants.some((v) => !v.color?.trim())) return { error: t("err.colorNameRequired") };
   }
 
-  const { data: product, error: insertErr } = await supabase
+  const base = { name, description: description || null, price, stock, image_url, category_id, has_variants, brand, barcode };
+  let { data: product, error: insertErr } = await supabase
     .from("products")
-    .insert({ name, description: description || null, price, stock, image_url, category_id, has_variants, brand, barcode })
+    .insert({ ...base, image_urls })
     .select("id")
     .single();
+  // La columna de fotos extra se crea a mano (supabase/product_extra_images.sql).
+  // Mientras no exista: si no había fotos extra, se guarda igual; si las había,
+  // mejor avisar que tragárselas en silencio.
+  if (insertErr?.code === UNDEFINED_COLUMN) {
+    if (image_urls.length > 0) return { error: t("err.extraImagesColumnMissing") };
+    ({ data: product, error: insertErr } = await supabase
+      .from("products")
+      .insert(base)
+      .select("id")
+      .single());
+  }
   if (insertErr) return { error: insertErr.message };
+  if (!product) return { error: t("err.productNotSaved") };
 
   const costErr = await saveCost(supabase, product.id, cost, t);
   if (costErr) return { error: costErr };
@@ -184,7 +220,8 @@ export async function updateProduct(
     description: string;
     price: number;
     stock: number;
-    newImageUrl?: string | null; // null = 删除图片，undefined = 保留原图
+    /** Galería completa (portada primero). `undefined` = no tocar las fotos. */
+    images?: string[];
     category_id?: string | null;
     has_variants?: boolean;
     brand?: string | null;
@@ -197,7 +234,7 @@ export async function updateProduct(
   const supabase = await requireWarehouse();
   if (!supabase) return { error: t("common.noPermission") };
 
-  const { name, description, price, stock, newImageUrl, category_id, has_variants, brand, barcode, cost } = fields;
+  const { name, description, price, stock, images, category_id, has_variants, brand, barcode, cost } = fields;
   if (!name) return { error: t("err.productNameRequired") };
   if (isNaN(price) || price < 0) return { error: t("err.invalidPrice") };
   if (has_variants !== true && (isNaN(stock) || stock < 0)) return { error: t("err.invalidStock") };
@@ -214,13 +251,26 @@ export async function updateProduct(
     price,
     stock,
   };
-  if (newImageUrl !== undefined) updateData.image_url = newImageUrl;
+  if (images !== undefined) {
+    const split = splitImages(images);
+    updateData.image_url = split.image_url;
+    updateData.image_urls = split.image_urls;
+  }
   if (category_id !== undefined) updateData.category_id = category_id;
   if (has_variants !== undefined) updateData.has_variants = has_variants;
   if (brand !== undefined) updateData.brand = brand;
   if (barcode !== undefined) updateData.barcode = normalizeBarcode(barcode);
 
-  const { error } = await supabase.from("products").update(updateData).eq("id", id);
+  let { error } = await supabase.from("products").update(updateData).eq("id", id);
+  // Mismo apaño que al crear: sin la columna todavía creada, se guarda el resto
+  // salvo que se estuvieran intentando guardar fotos extra (ahí se avisa).
+  if (error?.code === UNDEFINED_COLUMN) {
+    if (Array.isArray(updateData.image_urls) && updateData.image_urls.length > 0) {
+      return { error: t("err.extraImagesColumnMissing") };
+    }
+    delete updateData.image_urls;
+    ({ error } = await supabase.from("products").update(updateData).eq("id", id));
+  }
   if (error) return { error: error.message };
 
   if (cost !== undefined) {

@@ -113,7 +113,9 @@ export default function ProductForm({
 
   const [phase, setPhase] = useState<UploadPhase>("idle");
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  // Varias fotos por producto: hay modelos casi idénticos que solo se
+  // distinguen en la segunda foto. La primera de la lista es la portada.
+  const [images, setImages] = useState<string[]>([]);
   const [preview, setPreview] = useState<string | null>(null);
   const [selectedParentCatId, setSelectedParentCatId] = useState(
     () => readSavedCategory(categories).parentId
@@ -136,8 +138,15 @@ export default function ProductForm({
   const [dupAdded, setDupAdded] = useState(false);
   // 待裁剪的原图（选择/拍照后先弹裁剪框，确认后才压缩上传）
   const [pendingCrop, setPendingCrop] = useState<File | null>(null);
-  // 保留一份原图，"重新裁剪"时用原图而不是已裁剪过的图，避免越裁越小
-  const [originalFile, setOriginalFile] = useState<File | null>(null);
+  // 一次可以选好几张：第一张进裁剪框，其余排队，一张处理完接着下一张
+  const [cropQueue, setCropQueue] = useState<File[]>([]);
+  // 保留一份原图，"重新裁剪"时用原图而不是已裁剪过的图，避免越裁越小。
+  // 按图片 URL 存，因为现在同时可能有好几张。
+  const [originals, setOriginals] = useState<Record<string, File>>({});
+  // 正在裁剪的那张原图；确认后既要上传，也要记进 originals
+  const cropSourceRef = useRef<File | null>(null);
+  // 不为 null 时表示"重新裁剪某张已上传的图"，确认后替换它而不是新增
+  const recropTargetRef = useRef<string | null>(null);
 
   useEffect(() => {
     try {
@@ -168,7 +177,7 @@ export default function ProductForm({
       setPrice("");
       setCostPrice("");
       setCostNote("");
-      setImageUrl(null);
+      setImages([]);
       setPreview(null);
       setPhase("idle");
       setUploadError(null);
@@ -176,43 +185,70 @@ export default function ProductForm({
       setVariants([{ color: "", stock: "" }]);
       setBarcode("");
       setPendingCrop(null);
-      setOriginalFile(null);
+      setCropQueue([]);
+      setOriginals({});
       setDupStockQty("");
       setDupAdded(false);
       /* eslint-enable react-hooks/set-state-in-effect */
     }
   }, [state]);
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) {
-      setImageUrl(null);
-      setPreview(null);
-      setPhase("idle");
-      setUploadError(null);
-      return;
-    }
-    // 先弹裁剪框，确认之后再走压缩上传
-    setOriginalFile(file);
+  function startCrop(file: File, replacing: string | null) {
+    cropSourceRef.current = file;
+    recropTargetRef.current = replacing;
     setPendingCrop(file);
+  }
+
+  // Saca la siguiente foto de la cola (si se eligieron varias de golpe).
+  function cropNextInQueue() {
+    const [next, ...rest] = cropQueue;
+    if (!next) return;
+    setCropQueue(rest);
+    startCrop(next, null);
+  }
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    // Vaciar el input ya: si no, al volver a elegir el MISMO archivo el
+    // navegador no dispara `change`. Los File ya los tenemos en memoria.
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (files.length === 0) return;
+    const [first, ...rest] = files;
+    setCropQueue(rest);
+    // 先弹裁剪框，确认之后再走压缩上传
+    startCrop(first, null);
   }
 
   function handleCropCancel() {
     setPendingCrop(null);
-    // 清空 input 的值，这样用户重新选择同一张图片时浏览器仍会触发 change 事件
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    cropSourceRef.current = null;
+    recropTargetRef.current = null;
+    cropNextInQueue();
   }
 
-  function handleRecrop() {
-    if (originalFile) setPendingCrop(originalFile);
+  function handleRecrop(url: string) {
+    const original = originals[url];
+    if (original) startCrop(original, url);
+  }
+
+  async function removeFromStorage(url: string) {
+    try {
+      const fileName = url.split("/product-images/").pop();
+      if (fileName) {
+        await createClient().storage.from("product-images").remove([decodeURIComponent(fileName)]);
+      }
+    } catch { /* 忽略存储删除错误 */ }
   }
 
   async function handleCropConfirm(blob: Blob) {
     setPendingCrop(null);
+    const source = cropSourceRef.current;
+    const replacing = recropTargetRef.current;
+    cropSourceRef.current = null;
+    recropTargetRef.current = null;
     try {
       setPhase("compressing");
       setUploadError(null);
-      setImageUrl(null);
       setPreview(null);
       const compressed = await compressToJpeg(blob, t);
       setPreview(URL.createObjectURL(compressed));
@@ -224,29 +260,48 @@ export default function ProductForm({
         .upload(fileName, compressed, { contentType: "image/jpeg", upsert: false });
       if (error) throw new Error(error.message);
       const { data } = supabase.storage.from("product-images").getPublicUrl(fileName);
-      setImageUrl(data.publicUrl);
+      const url = data.publicUrl;
+
+      // Al recortar de nuevo, la foto nueva ocupa el mismo puesto que la vieja
+      // (importa: el primer puesto es la portada) y la vieja se borra: nunca
+      // llegó a guardarse en ningún producto, así que no deja rotos.
+      setImages((prev) =>
+        replacing ? prev.map((u) => (u === replacing ? url : u)) : [...prev, url]
+      );
+      if (source) {
+        setOriginals((prev) => {
+          const next = { ...prev, [url]: source };
+          if (replacing) delete next[replacing];
+          return next;
+        });
+      }
+      if (replacing) void removeFromStorage(replacing);
+      setPreview(null);
       setPhase("done");
     } catch (err) {
+      setPreview(null);
       setPhase("error");
       setUploadError(err instanceof Error ? err.message : t("common.uploadFailed"));
+    } finally {
+      cropNextInQueue();
     }
   }
 
-  async function handleDeleteImage() {
-    if (imageUrl) {
-      try {
-        const fileName = imageUrl.split("/product-images/").pop();
-        if (fileName) {
-          await createClient().storage.from("product-images").remove([decodeURIComponent(fileName)]);
-        }
-      } catch { /* 忽略存储删除错误 */ }
-    }
-    if (fileInputRef.current) fileInputRef.current.value = "";
-    setImageUrl(null);
-    setPreview(null);
-    setPhase("idle");
+  async function handleDeleteImage(url: string) {
+    setImages((prev) => prev.filter((u) => u !== url));
+    setOriginals((prev) => {
+      const next = { ...prev };
+      delete next[url];
+      return next;
+    });
     setUploadError(null);
-    setOriginalFile(null);
+    // Esta foto se subió ahora y aún no está en ningún producto: se puede
+    // borrar del almacenamiento sin dejar imágenes rotas por ahí.
+    await removeFromStorage(url);
+  }
+
+  function makeCover(url: string) {
+    setImages((prev) => [url, ...prev.filter((u) => u !== url)]);
   }
 
   const duplicateProduct = useMemo(() => {
@@ -292,12 +347,11 @@ export default function ProductForm({
   // 用户不该先看到"已上传"再自己去点「裁剪」。AI 识别在后台继续跑，互不影响；
   // 取消裁剪就保留原图。
   function handleAiImage(url: string, file: File) {
-    setImageUrl(url);
-    setPreview(url);
+    setImages((prev) => [...prev, url]);
+    setOriginals((prev) => ({ ...prev, [url]: file }));
     setPhase("done");
     setUploadError(null);
-    setOriginalFile(file);
-    setPendingCrop(file);
+    startCrop(file, url);
   }
 
   // AI 识别：把结果填入各字段（名称/品牌/描述为非受控输入，直接写 DOM 值）
@@ -347,7 +401,9 @@ export default function ProductForm({
       <h2 className="mb-5 text-base font-semibold text-paper-900">{t("form.addProduct")}</h2>
 
       <form ref={formRef} action={action} className="space-y-4">
-        {imageUrl && <input type="hidden" name="image_url" value={imageUrl} />}
+        {/* La primera foto es la portada; el resto viajan como lista aparte. */}
+        {images[0] && <input type="hidden" name="image_url" value={images[0]} />}
+        <input type="hidden" name="image_urls" value={JSON.stringify(images.slice(1))} />
         <input type="hidden" name="category_id" value={selectedChildCatId || selectedParentCatId} />
         <input type="hidden" name="has_variants" value={hasVariants ? "true" : "false"} />
         {hasVariants && <input type="hidden" name="variants" value={variantsJson} />}
@@ -586,13 +642,15 @@ export default function ProductForm({
           )}
         </div>
 
-        {/* 图片上传 */}
+        {/* 图片上传（可多张） */}
         <div>
           <label className="mb-1.5 block text-sm font-medium text-paper-700">{t("form.productImage")}</label>
+          <p className="mb-2 text-xs text-paper-500">{t("form.imagesHint")}</p>
           <input
             ref={fileInputRef}
             type="file"
             accept="image/*"
+            multiple
             onChange={handleFileChange}
             className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-600 outline-none file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-paper-100 file:px-2.5 file:py-1 file:text-xs file:font-medium file:text-paper-700 hover:file:bg-paper-200"
           />
@@ -601,31 +659,72 @@ export default function ProductForm({
           {phase === "error" && <p className="mt-1.5 text-xs text-red-500">{uploadError}</p>}
         </div>
 
-        {preview && (
-          <div className="flex items-center gap-3 rounded-lg border border-paper-100 bg-paper-100 p-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={preview} alt={t("form.previewAlt")} className="h-16 w-16 rounded-lg object-cover" />
-            <div className="flex-1 text-xs">
-              {phase === "done" && <p className="font-medium text-green-600">{t("form.imageUploaded")}</p>}
-              {uploading && <p className="text-paper-500">{t("common.processing")}</p>}
+        {(images.length > 0 || preview) && (
+          <div className="rounded-lg border border-paper-100 bg-paper-100 p-3">
+            <div className="flex flex-wrap gap-3">
+              {images.map((url, i) => (
+                <div key={url} className="w-20">
+                  <div className="relative">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={url}
+                      alt={t("form.imageNumberAlt", { n: i + 1 })}
+                      className="h-20 w-20 rounded-lg object-cover ring-1 ring-paper-300"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteImage(url)}
+                      title={t("form.deleteImage")}
+                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow hover:bg-red-600"
+                    >
+                      <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                    {i === 0 && (
+                      <span className="absolute bottom-0 left-0 right-0 rounded-b-lg bg-paper-900/70 py-0.5 text-center text-[10px] font-medium text-white">
+                        {t("form.coverBadge")}
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-1 flex flex-col items-start">
+                    {i > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => makeCover(url)}
+                        className="text-[10px] font-medium text-paper-500 hover:text-paper-900"
+                      >
+                        {t("form.makeCover")}
+                      </button>
+                    )}
+                    {originals[url] && (
+                      <button
+                        type="button"
+                        onClick={() => handleRecrop(url)}
+                        className="text-[10px] font-medium text-paper-500 hover:text-paper-900"
+                      >
+                        {t("form.crop")}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {preview && (
+                <div className="w-20">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={preview}
+                    alt={t("form.previewAlt")}
+                    className="h-20 w-20 rounded-lg object-cover opacity-50 ring-1 ring-paper-300"
+                  />
+                  <p className="mt-1 text-[10px] text-paper-500">{t("common.processing")}</p>
+                </div>
+              )}
             </div>
-            {phase === "done" && originalFile && (
-              <button
-                type="button"
-                onClick={handleRecrop}
-                className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-paper-700 hover:bg-paper-200"
-              >
-                {t("form.crop")}
-              </button>
-            )}
-            {phase === "done" && (
-              <button
-                type="button"
-                onClick={handleDeleteImage}
-                className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-red-500 hover:bg-red-50"
-              >
-                {t("form.deleteImage")}
-              </button>
+            {images.length > 0 && !preview && (
+              <p className="mt-2 text-xs font-medium text-green-600">
+                {t("common.photoCount", { n: images.length })}
+              </p>
             )}
           </div>
         )}

@@ -10,6 +10,7 @@ import PrivateCostFields from "./private-cost-fields";
 import ModalPortal from "@/app/modal-portal";
 import { parseDecimal, sanitizeDecimalText } from "@/lib/decimal";
 import { useImageLightbox } from "@/app/image-lightbox";
+import { productImages } from "@/lib/product-images";
 import { useI18n } from "@/lib/i18n/client";
 import { sortByName } from "@/lib/sort";
 import type { Translate } from "@/lib/i18n/translate";
@@ -21,6 +22,7 @@ type Product = {
   price: number;
   stock: number;
   image_url: string | null;
+  image_urls?: string[] | null;
   is_active: boolean;
   category_id: string | null;
   has_variants: boolean;
@@ -136,12 +138,21 @@ export default function ProductEditModal({
   );
   const [editSupplier, setEditSupplier] = useState(cost?.supplier ?? "");
   const [editCostNote, setEditCostNote] = useState(cost?.note ?? "");
-  const [newImageUrl, setNewImageUrl] = useState<string | null | undefined>(undefined);
+  // Galería completa del producto, portada primero. Se edita entera aquí y se
+  // guarda entera: así se pueden añadir, quitar y reordenar fotos de una vez.
+  const [images, setImages] = useState<string[]>(() => productImages(product));
   const [preview, setPreview] = useState<string | null>(null);
   const [phase, setPhase] = useState<UploadPhase>("idle");
   const [uploadError, setUploadError] = useState<string | null>(null);
   // Foto elegida pendiente de recortar (se sube después de aceptar el recorte)
   const [pendingCrop, setPendingCrop] = useState<File | null>(null);
+  // Si se eligen varias a la vez, las demás esperan turno aquí.
+  const [cropQueue, setCropQueue] = useState<File[]>([]);
+  // Original de cada foto subida en esta sesión, para poder recortarla otra vez
+  // sin partir de la ya recortada (si no, cada recorte encoge un poco más).
+  const [originals, setOriginals] = useState<Record<string, File>>({});
+  const cropSourceRef = useRef<File | null>(null);
+  const recropTargetRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [saveResult, setSaveResult] = useState<ActionResult | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -160,26 +171,61 @@ export default function ProductEditModal({
   const [, startTransition] = useTransition();
 
   const uploading = phase === "compressing" || phase === "uploading";
-  const displayImage = preview ?? (newImageUrl === null ? null : product.image_url ?? null);
   const visibleEditVariants = editVariants.filter((v) => !v._delete);
+
+  function startCrop(file: File, replacing: string | null) {
+    cropSourceRef.current = file;
+    recropTargetRef.current = replacing;
+    setPendingCrop(file);
+  }
+
+  function cropNextInQueue() {
+    const [next, ...rest] = cropQueue;
+    if (!next) return;
+    setCropQueue(rest);
+    startCrop(next, null);
+  }
 
   // Igual que al añadir un producto: la foto elegida pasa primero por el
   // recorte y solo se sube lo que se acepte ahí.
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) { setNewImageUrl(undefined); setPreview(null); setPhase("idle"); return; }
-    setPendingCrop(file);
+    const files = Array.from(e.target.files ?? []);
+    // Vaciar el input: si no, al volver a elegir la MISMA foto el navegador no
+    // dispara `change` y no pasa nada.
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (files.length === 0) return;
+    const [first, ...rest] = files;
+    setCropQueue(rest);
+    startCrop(first, null);
   }
 
   function handleCropCancel() {
     setPendingCrop(null);
-    // Vaciar el input: si no, al volver a elegir la MISMA foto el navegador no
-    // dispara `change` y no pasa nada.
-    if (fileInputRef.current) fileInputRef.current.value = "";
+    cropSourceRef.current = null;
+    recropTargetRef.current = null;
+    cropNextInQueue();
+  }
+
+  function handleRecrop(url: string) {
+    const original = originals[url];
+    if (original) startCrop(original, url);
+  }
+
+  async function removeFromStorage(url: string) {
+    try {
+      const fileName = url.split("/product-images/").pop();
+      if (fileName) {
+        await createClient().storage.from("product-images").remove([decodeURIComponent(fileName)]);
+      }
+    } catch { /* 忽略存储错误 */ }
   }
 
   async function handleCropConfirm(cropped: Blob) {
     setPendingCrop(null);
+    const source = cropSourceRef.current;
+    const replacing = recropTargetRef.current;
+    cropSourceRef.current = null;
+    recropTargetRef.current = null;
     try {
       setPhase("compressing"); setUploadError(null);
       const blob = await compressToJpeg(cropped, t);
@@ -192,31 +238,54 @@ export default function ProductEditModal({
         .upload(fileName, blob, { contentType: "image/jpeg", upsert: false });
       if (error) throw new Error(error.message);
       const { data } = supabase.storage.from("product-images").getPublicUrl(fileName);
-      setNewImageUrl(data.publicUrl);
+      const url = data.publicUrl;
+
+      setImages((prev) =>
+        replacing && prev.includes(replacing)
+          ? prev.map((u) => (u === replacing ? url : u))
+          : [...prev, url]
+      );
+      if (source) {
+        setOriginals((prev) => {
+          const next = { ...prev, [url]: source };
+          if (replacing) delete next[replacing];
+          return next;
+        });
+      }
+      // La foto reemplazada solo se borra del almacenamiento si se había subido
+      // en esta misma sesión (`originals` la conoce); si era una foto ya
+      // guardada del producto, ver más abajo por qué no se toca.
+      if (replacing && originals[replacing]) void removeFromStorage(replacing);
+      setPreview(null);
       setPhase("done");
     } catch (err) {
+      setPreview(null);
       setPhase("error");
       setUploadError(err instanceof Error ? err.message : t("common.uploadFailed"));
+    } finally {
+      cropNextInQueue();
     }
   }
 
-  async function handleDeleteImage() {
+  async function handleDeleteImage(url: string) {
+    setImages((prev) => prev.filter((u) => u !== url));
+    setUploadError(null);
     // 只删「这次刚传上来、还没保存」的那张：它没有别的引用，删掉即回收。
     // 商品原有的图片在这里【不能】真删——用户点完 ✕ 再点「取消」，商品行里的
     // image_url 还指着这个文件，结果就是一张永久裂图，且无法恢复。
-    // 保存时把 image_url 置空即可，存储里留个孤儿文件远比丢图划算。
-    if (typeof newImageUrl === "string") {
-      try {
-        const fileName = newImageUrl.split("/product-images/").pop();
-        if (fileName) {
-          await createClient().storage.from("product-images").remove([decodeURIComponent(fileName)]);
-        }
-      } catch { /* 忽略存储错误 */ }
+    // 保存时把它从列表里去掉即可，存储里留个孤儿文件远比丢图划算。
+    if (originals[url]) {
+      setOriginals((prev) => {
+        const next = { ...prev };
+        delete next[url];
+        return next;
+      });
+      await removeFromStorage(url);
     }
-    setNewImageUrl(null);
-    setPreview(null);
-    setPhase("idle");
-    setUploadError(null);
+  }
+
+  function makeCover(url: string) {
+    setImages((prev) => [url, ...prev.filter((u) => u !== url)]);
   }
 
   function addVariantRow() {
@@ -242,7 +311,7 @@ export default function ProductEditModal({
         description: editDescription,
         price: parseDecimal(editPrice),
         stock: editHasVariants ? 0 : parseInt(editStock, 10),
-        newImageUrl,
+        images,
         category_id: editChildCatId || editParentCatId || null,
         has_variants: editHasVariants,
         brand: canonicalTag(editBrand, brandOptions) || null,
@@ -482,53 +551,91 @@ export default function ProductEditModal({
               </div>
             )}
 
-            {/* 图片 */}
+            {/* 图片（可多张） */}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-paper-700">
                 {t("form.productImage")}
-                <span className="ml-1.5 font-normal text-paper-500">{t("edit.imageKeepHint")}</span>
               </label>
-              <div className="flex items-start gap-3">
-                {displayImage && (
-                  <div className="relative flex-shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
+              <p className="mb-2 text-xs text-paper-500">{t("form.imagesHint")}</p>
+
+              {(images.length > 0 || preview) && (
+                <div className="mb-2 flex flex-wrap gap-3">
+                  {images.map((url, i) => (
+                    <div key={url} className="w-16">
+                      <div className="relative">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={url}
+                          alt={t("form.imageNumberAlt", { n: i + 1 })}
+                          onClick={() => lightbox.open(images, product.name, i)}
+                          title={t("edit.clickToZoom")}
+                          className="h-16 w-16 cursor-zoom-in rounded-lg object-cover ring-1 ring-paper-300 transition hover:ring-paper-400"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteImage(url)}
+                          title={t("form.deleteImage")}
+                          className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow hover:bg-red-600"
+                        >
+                          <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                        {i === 0 && (
+                          <span className="absolute bottom-0 left-0 right-0 rounded-b-lg bg-paper-900/70 py-0.5 text-center text-[10px] font-medium text-white">
+                            {t("form.coverBadge")}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1 flex flex-col items-start">
+                        {i > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => makeCover(url)}
+                            className="text-[10px] font-medium text-paper-500 hover:text-paper-900"
+                          >
+                            {t("form.makeCover")}
+                          </button>
+                        )}
+                        {originals[url] && (
+                          <button
+                            type="button"
+                            onClick={() => handleRecrop(url)}
+                            className="text-[10px] font-medium text-paper-500 hover:text-paper-900"
+                          >
+                            {t("form.crop")}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {preview && (
+                    /* eslint-disable-next-line @next/next/no-img-element */
                     <img
-                      src={displayImage}
+                      src={preview}
                       alt={t("edit.imagePreviewAlt")}
-                      onClick={() => lightbox.open(displayImage, product.name)}
-                      title={t("edit.clickToZoom")}
-                      className="h-16 w-16 cursor-zoom-in rounded-lg object-cover ring-1 ring-paper-300 transition hover:ring-paper-400"
+                      className="h-16 w-16 rounded-lg object-cover opacity-50 ring-1 ring-paper-300"
                     />
-                    <button
-                      type="button"
-                      onClick={handleDeleteImage}
-                      title={t("form.deleteImage")}
-                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white shadow hover:bg-red-600"
-                    >
-                      <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-600 outline-none file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-paper-100 file:px-2.5 file:py-1 file:text-xs file:font-medium file:text-paper-700 hover:file:bg-paper-200"
-                  />
-                  {phase === "compressing" && <p className="mt-1 text-xs text-paper-500">{t("edit.compressing")}</p>}
-                  {phase === "uploading" && <p className="mt-1 text-xs text-paper-500">{t("edit.uploading")}</p>}
-                  {phase === "done" && <p className="mt-1 text-xs text-green-600">{t("edit.uploaded")}</p>}
-                  {phase === "error" && <p className="mt-1 text-xs text-red-500">{uploadError}</p>}
+                  )}
                 </div>
-              </div>
-              {!displayImage && newImageUrl !== null && (
+              )}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleFileChange}
+                className="w-full rounded-lg border border-paper-300 px-3 py-2 text-sm text-paper-600 outline-none file:mr-3 file:cursor-pointer file:rounded file:border-0 file:bg-paper-100 file:px-2.5 file:py-1 file:text-xs file:font-medium file:text-paper-700 hover:file:bg-paper-200"
+              />
+              {phase === "compressing" && <p className="mt-1 text-xs text-paper-500">{t("edit.compressing")}</p>}
+              {phase === "uploading" && <p className="mt-1 text-xs text-paper-500">{t("edit.uploading")}</p>}
+              {phase === "done" && <p className="mt-1 text-xs text-green-600">{t("edit.uploaded")}</p>}
+              {phase === "error" && <p className="mt-1 text-xs text-red-500">{uploadError}</p>}
+              {images.length === 0 && !preview && (
                 <p className="mt-1 text-xs text-paper-500">{t("edit.noImageHint")}</p>
               )}
-              {newImageUrl === null && (
+              {images.length === 0 && productImages(product).length > 0 && (
                 <p className="mt-1 text-xs text-amber-600">{t("edit.imageWillDelete")}</p>
               )}
             </div>

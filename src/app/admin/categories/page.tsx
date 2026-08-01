@@ -4,6 +4,7 @@ import AppShell from "@/app/app-shell";
 import { getI18n } from "@/lib/i18n/server";
 import CategoriesClient, { type Category, type CategoryTree, type ProductSummary } from "./categories-client";
 import type { ProductCost, ProductVariant } from "@/app/admin/products/actions";
+import { withExtraImagesColumn } from "@/lib/product-images";
 
 export default async function AdminCategoriesPage() {
   const { t } = await getI18n();
@@ -29,10 +30,14 @@ export default async function AdminCategoriesPage() {
     .order("created_at");
 
   const [{ data: productsData }, { data: variantsData }, { data: costsData }] = await Promise.all([
-    supabase
-      .from("products")
-      .select("id, name, category_id, price, stock, description, image_url, is_active, has_variants, brand, barcode, created_at")
-      .order("name"),
+    withExtraImagesColumn<ProductSummary[]>((img) =>
+      supabase
+        .from("products")
+        .select(
+          `id, name, category_id, price, stock, description, image_url, is_active, has_variants, brand, barcode, created_at${img}` as string
+        )
+        .order("name")
+    ),
     supabase
       .from("product_variants")
       .select("id, product_id, color, stock, sort_order")

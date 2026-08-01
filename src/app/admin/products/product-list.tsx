@@ -15,6 +15,7 @@ import ProductEditModal from "./product-edit-modal";
 import { getTotalStock, isLowStock as isLowStockOf } from "@/lib/stock";
 import ScanButton from "@/app/scan-button";
 import { useImageLightbox } from "@/app/image-lightbox";
+import { productImages } from "@/lib/product-images";
 import { useI18n } from "@/lib/i18n/client";
 import { sortByName } from "@/lib/sort";
 
@@ -25,6 +26,7 @@ export type Product = {
   price: number;
   stock: number;
   image_url: string | null;
+  image_urls: string[] | null;
   is_active: boolean;
   category_id: string | null;
   has_variants: boolean;
@@ -348,6 +350,7 @@ export default function ProductList({
     const isDeleting = deletingId === product.id;
     const isToggling = togglingId === product.id;
     const pvs = variantsFor(product.id);
+    const photos = productImages(product);
 
     return (
       <tr
@@ -358,20 +361,29 @@ export default function ProductList({
       >
         {/* 图片（点击看大图，不触发整行编辑） */}
         <td className="px-3 py-1.5" onClick={(e) => e.stopPropagation()}>
-          {product.image_url ? (
+          {photos.length > 0 ? (
             <button
               type="button"
-              onClick={() => lightbox.open(product.image_url, product.name)}
-              title={t("common.viewPhoto", { name: product.name })}
-              className="block h-10 w-10 cursor-zoom-in overflow-hidden rounded-md ring-1 ring-transparent transition hover:ring-paper-400"
+              onClick={() => lightbox.open(photos, product.name)}
+              title={
+                photos.length > 1
+                  ? t("common.viewPhotos", { n: photos.length, name: product.name })
+                  : t("common.viewPhoto", { name: product.name })
+              }
+              className="relative block h-10 w-10 cursor-zoom-in overflow-hidden rounded-md ring-1 ring-transparent transition hover:ring-paper-400"
             >
               <Image
-                src={product.image_url}
+                src={photos[0]}
                 alt={product.name}
                 width={40}
                 height={40}
                 className="h-10 w-10 object-cover"
               />
+              {photos.length > 1 && (
+                <span className="absolute bottom-0 right-0 rounded-tl-md bg-paper-900/70 px-1 font-mono text-[9px] leading-4 text-white">
+                  {photos.length}
+                </span>
+              )}
             </button>
           ) : (
             <div className="flex h-10 w-10 items-center justify-center rounded-md bg-paper-100 text-paper-400">
@@ -535,6 +547,7 @@ export default function ProductList({
     const isDeleting = deletingId === product.id;
     const isToggling = togglingId === product.id;
     const pvs = variantsFor(product.id);
+    const photos = productImages(product);
 
     return (
       <div
@@ -543,15 +556,24 @@ export default function ProductList({
       >
         {/* 主信息行 */}
         <div className="flex items-start gap-3 p-3">
-          {product.image_url ? (
+          {photos.length > 0 ? (
             <button
               type="button"
-              onClick={() => lightbox.open(product.image_url, product.name)}
-              title={t("common.viewPhoto", { name: product.name })}
-              className="h-14 w-14 shrink-0 cursor-zoom-in overflow-hidden rounded-lg"
+              onClick={() => lightbox.open(photos, product.name)}
+              title={
+                photos.length > 1
+                  ? t("common.viewPhotos", { n: photos.length, name: product.name })
+                  : t("common.viewPhoto", { name: product.name })
+              }
+              className="relative h-14 w-14 shrink-0 cursor-zoom-in overflow-hidden rounded-lg"
             >
-              <Image src={product.image_url} alt={product.name} width={56} height={56}
+              <Image src={photos[0]} alt={product.name} width={56} height={56}
                 className="h-full w-full object-cover" />
+              {photos.length > 1 && (
+                <span className="absolute bottom-0 right-0 rounded-tl-md bg-paper-900/70 px-1 font-mono text-[9px] leading-4 text-white">
+                  {photos.length}
+                </span>
+              )}
             </button>
           ) : (
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-paper-100 text-paper-400">

@@ -5,6 +5,7 @@ import { useTransition, useState, useMemo, useEffect, useRef } from "react";
 import { submitOrder } from "./actions";
 import ScanButton from "@/app/scan-button";
 import { useImageLightbox } from "@/app/image-lightbox";
+import { productImages } from "@/lib/product-images";
 import ModalPortal from "@/app/modal-portal";
 import { useI18n } from "@/lib/i18n/client";
 import { sortByName } from "@/lib/sort";
@@ -16,6 +17,7 @@ export type Product = {
   price: number;
   stock: number;
   image_url: string | null;
+  image_urls: string[] | null;
   category_id: string | null;
   has_variants: boolean;
   brand: string | null;
@@ -602,6 +604,7 @@ export default function ShopClient({
                 const qty = inputQty[product.id] ?? 0;
                 const isNew = Date.now() - new Date(product.created_at).getTime() < 14 * 864e5;
                 const catName = product.category_id ? catNameById[product.category_id] : null;
+                const photos = productImages(product);
 
                 return (
                   <div key={product.id} className="group flex flex-col overflow-hidden rounded-xl glass-strong transition-colors duration-200 hover:border-paper-400">
@@ -622,24 +625,43 @@ export default function ShopClient({
                     </div>
                     {/* 图片：白底 + 细线分隔，无阴影无徽章 */}
                     <div className="relative aspect-square w-full overflow-hidden border-b border-paper-100 bg-white">
-                      {product.image_url ? (
+                      {photos.length > 0 ? (
                         <Image
-                          src={product.image_url}
+                          src={photos[0]}
                           alt={product.name}
                           fill
                           sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
                           className={`object-cover transition-transform duration-300 group-hover:scale-[1.03] ${outOfStock ? "opacity-60 grayscale" : ""}`}
                         />
                       ) : imgPlaceholder("lg")}
-                      {product.image_url && (
+                      {photos.length > 0 && (
                         <button
                           type="button"
-                          onClick={() => lightbox.open(product.image_url, product.name)}
-                          title={t("common.viewPhoto", { name: product.name })}
+                          onClick={() => lightbox.open(photos, product.name)}
+                          title={
+                            photos.length > 1
+                              ? t("common.viewPhotos", { n: photos.length, name: product.name })
+                              : t("common.viewPhoto", { name: product.name })
+                          }
                           className="absolute inset-0 cursor-zoom-in"
                         >
-                          <span className="sr-only">{t("common.viewPhoto", { name: product.name })}</span>
+                          <span className="sr-only">
+                            {photos.length > 1
+                              ? t("common.viewPhotos", { n: photos.length, name: product.name })
+                              : t("common.viewPhoto", { name: product.name })}
+                          </span>
                         </button>
+                      )}
+                      {/* Con dos productos casi iguales, este contador es la
+                          pista de que hay otra foto donde se ve la diferencia. */}
+                      {photos.length > 1 && (
+                        <span className="pointer-events-none absolute right-2 top-2 inline-flex items-center gap-1 rounded-full bg-paper-900/70 px-2 py-0.5 font-mono text-[10px] text-white">
+                          <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          {photos.length}
+                        </span>
                       )}
                     </div>
 
@@ -712,33 +734,47 @@ export default function ShopClient({
                 const effectiveStock = isVariant ? (chosenVariant?.stock ?? 0) : product.stock;
                 const outOfStock = effectiveStock === 0;
                 const qty = inputQty[product.id] ?? 0;
+                const photos = productImages(product);
 
                 return (
                   <div key={product.id} className="group flex flex-col overflow-hidden rounded-xl glass-strong transition duration-200 hover:border-paper-300">
                     {/* 图片（正方形，紧凑） */}
                     <div className="relative aspect-square w-full overflow-hidden bg-paper-100">
-                      {product.image_url ? (
+                      {photos.length > 0 ? (
                         <Image
-                          src={product.image_url}
+                          src={photos[0]}
                           alt={product.name}
                           fill
                           sizes="(max-width: 640px) 50vw, (max-width: 1280px) 33vw, 20vw"
                           className="object-cover transition-transform duration-300 group-hover:scale-105"
                         />
                       ) : imgPlaceholder("sm")}
+                      {photos.length > 1 && (
+                        <span className="pointer-events-none absolute right-1.5 top-1.5 rounded-full bg-paper-900/70 px-1.5 py-0.5 font-mono text-[9px] text-white">
+                          {photos.length}
+                        </span>
+                      )}
                       {outOfStock && (
                         <div className="absolute inset-0 flex items-center justify-center bg-paper-900/55">
                           <span className="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-paper-700">{t("shop.outOfStockShort")}</span>
                         </div>
                       )}
-                      {product.image_url && (
+                      {photos.length > 0 && (
                         <button
                           type="button"
-                          onClick={() => lightbox.open(product.image_url, product.name)}
-                          title={t("common.viewPhoto", { name: product.name })}
+                          onClick={() => lightbox.open(photos, product.name)}
+                          title={
+                            photos.length > 1
+                              ? t("common.viewPhotos", { n: photos.length, name: product.name })
+                              : t("common.viewPhoto", { name: product.name })
+                          }
                           className="absolute inset-0 cursor-zoom-in"
                         >
-                          <span className="sr-only">{t("common.viewPhoto", { name: product.name })}</span>
+                          <span className="sr-only">
+                            {photos.length > 1
+                              ? t("common.viewPhotos", { n: photos.length, name: product.name })
+                              : t("common.viewPhoto", { name: product.name })}
+                          </span>
                         </button>
                       )}
                     </div>
@@ -819,14 +855,14 @@ export default function ShopClient({
                 <ul className="space-y-3">
                   {cartEntries.map(([key, { product, variant, quantity }]) => (
                     <li key={key} className="flex items-center gap-3">
-                      {product.image_url ? (
+                      {productImages(product).length > 0 ? (
                         <button
                           type="button"
-                          onClick={() => lightbox.open(product.image_url, product.name)}
+                          onClick={() => lightbox.open(productImages(product), product.name)}
                           title={t("common.viewPhoto", { name: product.name })}
                           className="h-10 w-10 shrink-0 cursor-zoom-in overflow-hidden rounded-lg"
                         >
-                          <Image src={product.image_url} alt={product.name} width={40} height={40} className="h-full w-full object-cover" />
+                          <Image src={productImages(product)[0]} alt={product.name} width={40} height={40} className="h-full w-full object-cover" />
                         </button>
                       ) : (
                         <div className="h-10 w-10 rounded-lg bg-paper-100" />
@@ -948,14 +984,14 @@ export default function ShopClient({
                 <ul className="divide-y divide-paper-100">
                   {cartEntries.map(([key, { product, variant, quantity }]) => (
                     <li key={key} className="flex items-start gap-3 py-3">
-                      {product.image_url ? (
+                      {productImages(product).length > 0 ? (
                         <button
                           type="button"
-                          onClick={() => lightbox.open(product.image_url, product.name)}
+                          onClick={() => lightbox.open(productImages(product), product.name)}
                           title={t("common.viewPhoto", { name: product.name })}
                           className="h-14 w-14 shrink-0 cursor-zoom-in overflow-hidden rounded-lg"
                         >
-                          <Image src={product.image_url} alt={product.name} width={56} height={56} className="h-full w-full object-cover" />
+                          <Image src={productImages(product)[0]} alt={product.name} width={56} height={56} className="h-full w-full object-cover" />
                         </button>
                       ) : (
                         <div className="h-14 w-14 shrink-0 rounded-lg bg-paper-100" />
