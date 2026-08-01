@@ -17,7 +17,15 @@ type Product = {
   image_url: string | null;
 };
 type CategoryItem = { id: string; name: string; parent_id: string | null };
-export type OrderItem = { id: string; quantity: number; product: Product; unitPrice: number; variantColor: string | null };
+export type OrderItem = {
+  id: string;
+  quantity: number;
+  product: Product;
+  unitPrice: number;
+  /** Coste de compra del momento del pedido; null si no estaba apuntado. */
+  unitCost: number | null;
+  variantColor: string | null;
+};
 export type Order = {
   id: string;
   store_id: string;
@@ -71,6 +79,31 @@ function displayTitle(order: Order, t: Translate): string {
 // un vistazo es lo que queda por preparar.
 function defaultOpen(status: Order["status"]): boolean {
   return status === "pending" || status === "preparing";
+}
+
+/**
+ * Cuentas de un pedido: lo que paga la tienda, lo que costó comprar la
+ * mercancía y la diferencia.
+ *
+ * `missing` cuenta las líneas sin precio de compra apuntado. Esas no suman al
+ * coste, así que la ganancia sale más alta de lo real: hay que decirlo en
+ * pantalla en vez de dar un número redondo que engaña.
+ */
+function orderMoney(items: OrderItem[]) {
+  let revenue = 0;
+  let cost = 0;
+  let missing = 0;
+  for (const item of items) {
+    revenue += item.unitPrice * item.quantity;
+    if (item.unitCost === null) missing++;
+    else cost += item.unitCost * item.quantity;
+  }
+  return { revenue, cost, profit: revenue - cost, missing };
+}
+
+/** Margen sobre la venta, en %. 0 cuando no hay venta que repartir. */
+function marginPct(revenue: number, profit: number) {
+  return revenue > 0 ? (profit / revenue) * 100 : 0;
 }
 
 // 商品名（带颜色变体），用于明细展示与按商品聚合
@@ -150,6 +183,9 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
   // Plegado: solo se guardan los pedidos cuya visibilidad se ha tocado a mano;
   // el resto sigue la regla por estado (defaultOpen).
   const [openOverrides, setOpenOverrides] = useState<Record<string, boolean>>({});
+  // Las cifras de compra empiezan ocultas: la pantalla se abre a menudo con
+  // alguien mirando por encima del hombro, y son datos privados.
+  const [showCost, setShowCost] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const lightbox = useImageLightbox();
@@ -464,9 +500,17 @@ h1{font-size:13px;margin:0;letter-spacing:-.01em}
     });
   }
 
-  function orderTotal(items: OrderItem[]) {
-    return items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
-  }
+  // Cuentas del bloque que se está viendo (respeta el filtro de estado: si se
+  // mira «Completados», el resumen es de los completados).
+  // Los anulados quedan fuera aunque el filtro los muestre: esa mercancía no se
+  // ha vendido, sumarla daría unas ganancias que no existen.
+  const filteredMoney = useMemo(
+    () =>
+      orderMoney(
+        filtered.filter((o) => o.status !== "cancelled").flatMap((o) => o.items)
+      ),
+    [filtered]
+  );
 
   const filterTabs: { value: FilterValue; label: string }[] = [
     { value: "all", label: t("common.all") },
@@ -608,25 +652,82 @@ h1{font-size:13px;margin:0;letter-spacing:-.01em}
             );
           })}
         </div>
-        {filtered.length > 0 && (
-          <div className="flex gap-1.5">
-            <button
-              type="button"
-              onClick={() => setAllOpen(true)}
-              className="rounded-lg border border-paper-200 bg-white px-3 py-1.5 text-xs font-medium text-paper-600 hover:text-paper-900"
-            >
-              {t("adminOrders.expandAll")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setAllOpen(false)}
-              className="rounded-lg border border-paper-200 bg-white px-3 py-1.5 text-xs font-medium text-paper-600 hover:text-paper-900"
-            >
-              {t("adminOrders.collapseAll")}
-            </button>
-          </div>
-        )}
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={() => setShowCost((v) => !v)}
+            aria-pressed={showCost}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+              showCost
+                ? "border-amber-300 bg-amber-100 text-amber-900"
+                : "border-amber-200 bg-white text-amber-700 hover:bg-amber-50"
+            }`}
+          >
+            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            {showCost ? t("adminOrders.hideCost") : t("adminOrders.showCost")}
+          </button>
+          {filtered.length > 0 && (
+            <>
+              <button
+                type="button"
+                onClick={() => setAllOpen(true)}
+                className="rounded-lg border border-paper-200 bg-white px-3 py-1.5 text-xs font-medium text-paper-600 hover:text-paper-900"
+              >
+                {t("adminOrders.expandAll")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setAllOpen(false)}
+                className="rounded-lg border border-paper-200 bg-white px-3 py-1.5 text-xs font-medium text-paper-600 hover:text-paper-900"
+              >
+                {t("adminOrders.collapseAll")}
+              </button>
+            </>
+          )}
+        </div>
       </div>
+
+      {/* ── Cuentas privadas del bloque que se está viendo ── */}
+      {showCost && (
+        <div className="rounded-xl border border-amber-200/70 bg-amber-50/60 px-5 py-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <h2 className="text-sm font-semibold text-amber-900">
+              {t("money.summaryTitle")}
+              <span className="ml-1.5 font-normal text-amber-700">{t("cost.onlyYou")}</span>
+            </h2>
+            <span className="text-xs text-amber-700">{t("money.excludesCancelled")}</span>
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-lg bg-white/70 px-3 py-2">
+              <p className="text-xs text-paper-500">{t("money.revenue")}</p>
+              <p className="text-lg font-bold text-paper-900">€{filteredMoney.revenue.toFixed(2)}</p>
+            </div>
+            <div className="rounded-lg bg-white/70 px-3 py-2">
+              <p className="text-xs text-paper-500">{t("money.spent")}</p>
+              <p className="text-lg font-bold text-paper-900">€{filteredMoney.cost.toFixed(2)}</p>
+            </div>
+            <div className="rounded-lg bg-white/70 px-3 py-2">
+              <p className="text-xs text-paper-500">{t("money.profit")}</p>
+              <p className={`text-lg font-bold ${filteredMoney.profit >= 0 ? "text-green-700" : "text-red-600"}`}>
+                €{filteredMoney.profit.toFixed(2)}
+                <span className="ml-1.5 text-xs font-medium">
+                  {t("money.marginPct", {
+                    pct: marginPct(filteredMoney.revenue, filteredMoney.profit).toFixed(0),
+                  })}
+                </span>
+              </p>
+            </div>
+          </div>
+          {filteredMoney.missing > 0 && (
+            <p className="mt-2 text-xs text-amber-800">
+              {t("money.missingLines", { n: filteredMoney.missing })}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* ── 订单列表 ── */}
       {filtered.length === 0 ? (
@@ -640,7 +741,8 @@ h1{font-size:13px;margin:0;letter-spacing:-.01em}
       ) : (
         <div className="space-y-3">
           {filtered.map((order) => {
-            const total = orderTotal(order.items);
+            const money = orderMoney(order.items);
+            const total = money.revenue;
             const isThisPending = pendingId === order.id;
             const isOpen = openOverrides[order.id] ?? defaultOpen(order.status);
             const isRenaming = renamingId === order.id;
@@ -723,6 +825,27 @@ h1{font-size:13px;margin:0;letter-spacing:-.01em}
                       más se pulsa, no tiene sentido tenerlo al final del pedido. */}
                   <div className="flex shrink-0 flex-col items-end gap-2">
                     <span className="text-base font-bold text-paper-900">€{total.toFixed(2)}</span>
+                    {showCost && (
+                      <span className="text-right text-[11px] leading-tight text-amber-800">
+                        {t("money.costShort", { amount: money.cost.toFixed(2) })}
+                        <br />
+                        <span className={`font-semibold ${money.profit >= 0 ? "text-green-700" : "text-red-600"}`}>
+                          {t("money.profitShort", { amount: money.profit.toFixed(2) })}
+                          {" · "}
+                          {t("money.marginPct", {
+                            pct: marginPct(money.revenue, money.profit).toFixed(0),
+                          })}
+                        </span>
+                        {money.missing > 0 && (
+                          <>
+                            <br />
+                            <span className="text-amber-700">
+                              {t("money.missingLines", { n: money.missing })}
+                            </span>
+                          </>
+                        )}
+                      </span>
+                    )}
                     {order.status === "pending" && (
                       <button
                         type="button"
@@ -806,11 +929,29 @@ h1{font-size:13px;margin:0;letter-spacing:-.01em}
                             </span>
                           )}
                         </span>
-                        <span className="shrink-0 text-paper-500">
+                        <span className="shrink-0 text-right text-paper-500">
                           €{Number(item.unitPrice).toFixed(2)} × {item.quantity}
+                          {showCost && (
+                            <span className="block text-[11px] text-amber-700">
+                              {item.unitCost === null
+                                ? t("money.noCost")
+                                : t("money.costEach", { cost: item.unitCost.toFixed(2) })}
+                            </span>
+                          )}
                         </span>
                         <span className="w-20 shrink-0 text-right font-medium text-paper-900">
                           €{(item.unitPrice * item.quantity).toFixed(2)}
+                          {showCost && item.unitCost !== null && (
+                            <span
+                              className={`block text-[11px] font-semibold ${
+                                item.unitPrice - item.unitCost >= 0 ? "text-green-700" : "text-red-600"
+                              }`}
+                            >
+                              {t("money.profitShort", {
+                                amount: ((item.unitPrice - item.unitCost) * item.quantity).toFixed(2),
+                              })}
+                            </span>
+                          )}
                         </span>
                       </div>
                     ))}

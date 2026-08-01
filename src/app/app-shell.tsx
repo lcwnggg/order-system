@@ -15,6 +15,7 @@ const ADMIN_NAV: NavItem[] = [
   { href: "/", labelKey: "nav.dashboard", d: "M4 6h16M4 12h16M4 18h7" },
   { href: "/admin/products", labelKey: "nav.products", d: "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10" },
   { href: "/admin/orders", labelKey: "nav.orders", d: "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" },
+  { href: "/admin/margin", labelKey: "nav.margin", d: "M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" },
   { href: "/admin/stores", labelKey: "nav.stores", d: "M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0H5m4-14h1m-1 4h1m4-4h1m-1 4h1" },
   { href: "/admin/categories", labelKey: "nav.categories", d: "M7 7h.01M7 3h5a2 2 0 011.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z" },
   { href: "/admin/products/import", labelKey: "nav.import", d: "M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" },

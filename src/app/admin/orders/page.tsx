@@ -60,6 +60,19 @@ export default async function AdminOrdersPage() {
     (variantRows ?? []).map((v) => [v.id as string, v.color as string])
   );
 
+  // Coste de compra de cada línea (foto del momento del pedido). Vive en
+  // `order_item_costs`, tabla con RLS de solo-almacén: la tienda no recibe ni
+  // una fila. Esta página ya es exclusiva del almacén, así que aquí sí se lee.
+  // Si el script supabase/order_costs.sql todavía no se ha ejecutado, la
+  // consulta falla y `data` viene vacío: la página sigue funcionando igual,
+  // simplemente sin cifras de coste.
+  const { data: costRows } = await supabase
+    .from("order_item_costs")
+    .select("order_item_id, unit_cost");
+  const unitCostMap = new Map(
+    (costRows ?? []).map((c) => [c.order_item_id as string, Number(c.unit_cost)])
+  );
+
   // 拉取下单门店的 profile（store_name）+ email（via RPC）
   const storeIds = [...new Set((rawOrders ?? []).map((o) => o.store_id as string))];
   const { data: storeProfiles } =
@@ -115,6 +128,9 @@ export default async function AdminOrdersPage() {
         product: item.products,
         // 下单时的价格快照；旧订单可能为空，回退到当前商品价
         unitPrice: item.unit_price ?? item.products.price,
+        // Coste de compra: null cuando el producto no lo tenía apuntado. No se
+        // rellena con 0, que daría una ganancia falsa.
+        unitCost: unitCostMap.get(item.id) ?? null,
         variantColor: item.variant_id ? variantColorMap.get(item.variant_id) ?? null : null,
       } satisfies OrderItem;
     }),
