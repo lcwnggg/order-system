@@ -162,13 +162,24 @@ const zh: Dictionary = {
   "shop.sortPriceDesc": "价格从高到低",
   "shop.sortName": "名称 A→Z",
   "shop.noMatch": "未找到匹配的商品",
-  "shop.new": "新品",
   "shop.stockN": "库存 {n}",
   "shop.outOfStockBtn": "暂时缺货",
   "shop.addToCart": "加入购物车",
   "shop.outOfStockShort": "缺货",
   "shop.addShort": "加入",
   "shop.unitsShort": "{n}件",
+
+  // ── 新品专区（New in） ──
+  // 「New in」是专区名称，中西文界面保持一致，不翻译。
+  "newIn.label": "New in",
+  "newIn.badge": "New in",
+  "newIn.empty": "当前没有新品",
+  "newIn.formToggle": "标记为新品（New in）",
+  "newIn.formHint": "会在「New in」专区展示 {n} 天，到期自动下架。",
+  "newIn.daysLeft": "还能在新品专区停留 {n} 天",
+  "newIn.lastDay": "今天是它在新品专区的最后一天",
+  "newIn.restart": "重新计时 {n} 天",
+  "newIn.markShort": "新品",
 
   // ── 购物车 ──
   "cart.title": "购物车",
@@ -367,6 +378,7 @@ const zh: Dictionary = {
   "err.invalidCostPrice": "请输入有效进货价",
   "err.costTableMissing": "商品已保存，但进货价没有：请先在 Supabase 执行 supabase/product_costs.sql。",
   "err.extraImagesColumnMissing": "暂时无法保存多张图片：请先在 Supabase 执行 supabase/product_extra_images.sql。",
+  "err.newInColumnMissing": "暂时无法标记新品：请先在 Supabase 执行 supabase/new_in.sql。",
   "err.productNotSaved": "商品保存失败，请重试",
   "err.barcodeInvalid": "条码格式无效（只允许数字、字母、连字符）",
   "err.variantJson": "颜色变体数据格式错误",

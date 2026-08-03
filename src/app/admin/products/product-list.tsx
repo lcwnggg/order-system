@@ -7,6 +7,7 @@ import {
   toggleProductActive,
   adjustStock,
   adjustVariantStock,
+  setProductNewIn,
   type ProductCost,
   type ProductVariant,
 } from "./actions";
@@ -16,6 +17,7 @@ import { getTotalStock, isLowStock as isLowStockOf } from "@/lib/stock";
 import ScanButton from "@/app/scan-button";
 import { useImageLightbox } from "@/app/image-lightbox";
 import { productImages } from "@/lib/product-images";
+import { NEW_IN_DAYS, isNewIn, newInDaysLeft } from "@/lib/new-in";
 import { useI18n } from "@/lib/i18n/client";
 import { sortByName } from "@/lib/sort";
 
@@ -33,10 +35,12 @@ export type Product = {
   brand: string | null;
   barcode: string | null;
   created_at: string;
+  /** Fin del periodo «New in»; null/ausente = no es novedad. */
+  new_until?: string | null;
 };
 
 type Tab = "recent" | "by-category";
-type StatusFilter = "all" | "active" | "inactive" | "low-stock";
+type StatusFilter = "all" | "active" | "inactive" | "low-stock" | "new-in";
 
 
 export default function ProductList({
@@ -132,6 +136,8 @@ export default function ProductList({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [markingNewInId, setMarkingNewInId] = useState<string | null>(null);
+  const [newInError, setNewInError] = useState<string | null>(null);
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
   const [adjustQty, setAdjustQty] = useState<Record<string, string>>({});
   const [adjustErrors, setAdjustErrors] = useState<Record<string, string>>({});
@@ -161,6 +167,7 @@ export default function ProductList({
       if (filterStatus === "active" && !p.is_active) return false;
       if (filterStatus === "inactive" && p.is_active) return false;
       if (filterStatus === "low-stock" && !isLowStock(p)) return false;
+      if (filterStatus === "new-in" && !isNewIn(p)) return false;
       const lt = parseInt(stockLessThan, 10);
       if (!isNaN(lt) && lt > 0 && totalStockOf(p) >= lt) return false;
       return true;
@@ -215,12 +222,14 @@ export default function ProductList({
     let active = 0;
     let inactive = 0;
     let low = 0;
+    let newIn = 0;
     for (const p of products) {
       if (p.is_active) active++;
       else inactive++;
       if (isLowStock(p)) low++;
+      if (isNewIn(p)) newIn++;
     }
-    return { active, inactive, low };
+    return { active, inactive, low, newIn };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products, variants]);
 
@@ -268,6 +277,17 @@ export default function ProductList({
     startTransition(async () => {
       await toggleProductActive(product.id, !product.is_active);
       setTogglingId(null);
+    });
+  }
+
+  // ── 加入/移出「New in」──
+  function handleToggleNewIn(product: Product) {
+    setMarkingNewInId(product.id);
+    setNewInError(null);
+    startTransition(async () => {
+      const result = await setProductNewIn(product.id, !isNewIn(product));
+      setMarkingNewInId(null);
+      if ("error" in result) setNewInError(result.error);
     });
   }
 
@@ -346,6 +366,30 @@ export default function ProductList({
     );
   }
 
+  // «New in»: la misma chapa sirve de indicador y de interruptor. Encendida
+  // dice cuántos días le quedan; apagada es el atajo para marcar la novedad
+  // sin abrir la ficha (marcar de nuevo reinicia el plazo).
+  function renderNewInChip(product: Product) {
+    const active = isNewIn(product);
+    const busy = markingNewInId === product.id;
+    const daysLeft = newInDaysLeft(product);
+    return (
+      <button
+        type="button"
+        disabled={busy}
+        onClick={(e) => { e.stopPropagation(); handleToggleNewIn(product); }}
+        title={active ? t("newIn.restart", { n: NEW_IN_DAYS }) : t("newIn.formHint", { n: NEW_IN_DAYS })}
+        className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+          active
+            ? "bg-accent-50 text-accent-600 hover:bg-accent-100"
+            : "text-paper-400 hover:bg-paper-100 hover:text-paper-600"
+        }`}
+      >
+        {busy ? "…" : active ? `${t("newIn.badge")} · ${daysLeft}d` : t("newIn.markShort")}
+      </button>
+    );
+  }
+
   function renderRow(product: Product) {
     const isDeleting = deletingId === product.id;
     const isToggling = togglingId === product.id;
@@ -410,6 +454,7 @@ export default function ProductList({
             {product.has_variants && pvs.length > 0 && (
               <span className="text-xs text-blue-500">{t("list.colorsCount", { n: pvs.length })}</span>
             )}
+            <span onClick={(e) => e.stopPropagation()}>{renderNewInChip(product)}</span>
           </div>
           {renderPrivateInfo(product)}
         </td>
@@ -595,6 +640,7 @@ export default function ProductList({
               {product.has_variants && pvs.length > 0 && (
                 <span className="text-xs text-blue-500">{t("list.colorsCount", { n: pvs.length })}</span>
               )}
+              {renderNewInChip(product)}
             </div>
             <p className="mt-1 text-sm font-bold text-paper-900">€{Number(product.price).toFixed(2)}</p>
             {renderPrivateInfo(product)}
@@ -758,6 +804,13 @@ export default function ProductList({
         </div>
       )}
 
+      {newInError && (
+        <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700">
+          {newInError}
+          <button type="button" onClick={() => setNewInError(null)} className="ml-3 text-red-400 hover:text-red-600">×</button>
+        </div>
+      )}
+
       {/* ── 分类/状态抽屉：默认收起，鼠标靠近左边缘自动展开，点击把手也可展开/收起 ── */}
       <div
         onMouseEnter={openSidebarOnHover}
@@ -798,6 +851,7 @@ export default function ProductList({
               <SidebarItem active={filterStatus === "active"} onClick={() => setFilterStatus("active")} label={t("list.statusActive")} count={statusCounts.active} dotClassName="bg-paper-400" />
               <SidebarItem active={filterStatus === "inactive"} onClick={() => setFilterStatus("inactive")} label={t("list.statusInactive")} count={statusCounts.inactive} dotClassName="bg-paper-300" />
               <SidebarItem active={filterStatus === "low-stock"} onClick={() => setFilterStatus("low-stock")} label={t("list.statusLow")} count={statusCounts.low} dotClassName="bg-ember-500" />
+              <SidebarItem active={filterStatus === "new-in"} onClick={() => setFilterStatus("new-in")} label={t("newIn.label")} count={statusCounts.newIn} dotClassName="bg-accent-500" />
             </nav>
           </div>
         </div>

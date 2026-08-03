@@ -9,6 +9,7 @@ import { productImages } from "@/lib/product-images";
 import ModalPortal from "@/app/modal-portal";
 import { useI18n } from "@/lib/i18n/client";
 import { sortByName } from "@/lib/sort";
+import { isNewIn } from "@/lib/new-in";
 
 export type Product = {
   id: string;
@@ -23,6 +24,8 @@ export type Product = {
   brand: string | null;
   created_at: string;
   barcode: string | null;
+  /** Fin del periodo «New in»; null/ausente = no es novedad. */
+  new_until?: string | null;
 };
 
 export type ProductVariant = {
@@ -45,6 +48,8 @@ type CartMap = Record<string, CartEntry>;
 type ViewMode = "grid" | "compact";
 
 const UNCATEGORIZED = "__uncategorized__";
+/** Apartado «New in»: no es una categoría de verdad, se filtra por `new_until`. */
+const NEW_IN = "__new_in__";
 const VIEW_MODE_KEY = "shopViewMode";
 const CART_KEY = "shopCart";
 
@@ -169,7 +174,7 @@ export default function ShopClient({
   const sortedCategories = useMemo(() => sortByName(categories, tag), [categories, tag]);
   const parentCategories = sortedCategories.filter((c) => !c.parent_id);
   const currentChildren =
-    selectedParentId && selectedParentId !== UNCATEGORIZED
+    selectedParentId && selectedParentId !== UNCATEGORIZED && selectedParentId !== NEW_IN
       ? sortedCategories.filter((c) => c.parent_id === selectedParentId)
       : [];
 
@@ -223,9 +228,18 @@ export default function ShopClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [products, variantsByProduct]);
 
+  // Novedades del catálogo. Se calcula una vez por render: la fecha de corte
+  // es «ahora», y así todas las tarjetas de la pantalla coinciden.
+  const newInIds = useMemo(() => {
+    const now = Date.now();
+    return new Set(products.filter((p) => isNewIn(p, now)).map((p) => p.id));
+  }, [products]);
+
   const filteredProducts = products
     .filter((p) => {
-      if (selectedChildId) {
+      if (selectedParentId === NEW_IN) {
+        if (!newInIds.has(p.id)) return false;
+      } else if (selectedChildId) {
         if (p.category_id !== selectedChildId) return false;
       } else if (selectedParentId === UNCATEGORIZED) {
         if (p.category_id !== null) return false;
@@ -420,6 +434,15 @@ export default function ShopClient({
             <p className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-paper-400">{t("shop.filterCategory")}</p>
             <nav className="space-y-0.5">
               <CatSidebarItem active={selectedParentId === null} onClick={() => selectParent(null)} label={t("common.all")} count={products.length} />
+              {newInIds.size > 0 && (
+                <CatSidebarItem
+                  active={selectedParentId === NEW_IN}
+                  onClick={() => selectParent(NEW_IN)}
+                  label={t("newIn.label")}
+                  count={newInIds.size}
+                  dotClassName="bg-accent-500"
+                />
+              )}
               {parentCategories.map((c) => (
                 <CatSidebarItem
                   key={c.id}
@@ -569,6 +592,22 @@ export default function ShopClient({
               {searchQuery && <span className="ml-1 text-paper-400">{t("shop.searchTag", { q: searchQuery })}</span>}
             </p>
             <div className="flex items-center gap-2">
+              {/* Acceso directo a las novedades: el cajón de filtros vive
+                  escondido en el lateral y esto se ve sin buscarlo. */}
+              {newInIds.size > 0 && (
+                <button
+                  type="button"
+                  onClick={() => selectParent(selectedParentId === NEW_IN ? null : NEW_IN)}
+                  className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                    selectedParentId === NEW_IN
+                      ? "bg-accent-500 text-white"
+                      : "border border-accent-200 bg-accent-50 text-accent-600 hover:bg-accent-100"
+                  }`}
+                >
+                  {t("newIn.label")}
+                  <span className="ml-1.5 font-mono tabular-nums opacity-70">{newInIds.size}</span>
+                </button>
+              )}
               <div className="relative">
                 <select
                   value={sortBy}
@@ -589,7 +628,13 @@ export default function ShopClient({
 
           {filteredProducts.length === 0 ? (
             <div className="rounded-xl border border-dashed border-paper-300 bg-white py-20 text-center">
-              <p className="text-sm text-paper-500">{searchQuery ? t("shop.noMatch") : t("shop.noProducts")}</p>
+              <p className="text-sm text-paper-500">
+                {searchQuery
+                  ? t("shop.noMatch")
+                  : selectedParentId === NEW_IN
+                    ? t("newIn.empty")
+                    : t("shop.noProducts")}
+              </p>
             </div>
           ) : viewMode === "grid" ? (
             /* ── 大图模式 ── */
@@ -602,7 +647,9 @@ export default function ShopClient({
                 const effectiveStock = isVariant ? (chosenVariant?.stock ?? 0) : product.stock;
                 const outOfStock = effectiveStock === 0;
                 const qty = inputQty[product.id] ?? 0;
-                const isNew = Date.now() - new Date(product.created_at).getTime() < 14 * 864e5;
+                // Novedad porque el almacén lo ha marcado, no por su fecha de
+                // alta: es lo que sale en el apartado «New in».
+                const isNew = newInIds.has(product.id);
                 const catName = product.category_id ? catNameById[product.category_id] : null;
                 const photos = productImages(product);
 
@@ -612,7 +659,7 @@ export default function ShopClient({
                     <div className="flex items-center justify-between gap-2 border-b border-paper-100 px-3.5 py-2.5">
                       <span className="truncate font-mono text-[10px] uppercase tracking-[0.14em] text-paper-500">
                         {product.brand ?? catName ?? "—"}
-                        {isNew && <span className="ml-2 text-ember-600">{t("shop.new")}</span>}
+                        {isNew && <span className="ml-2 text-accent-600">{t("newIn.badge")}</span>}
                       </span>
                       {outOfStock ? (
                         <span className="shrink-0 font-mono text-[10px] tracking-[0.08em] text-ember-600">{t("common.soldOut")}</span>
@@ -752,6 +799,11 @@ export default function ShopClient({
                       {photos.length > 1 && (
                         <span className="pointer-events-none absolute right-1.5 top-1.5 rounded-full bg-paper-900/70 px-1.5 py-0.5 font-mono text-[9px] text-white">
                           {photos.length}
+                        </span>
+                      )}
+                      {newInIds.has(product.id) && (
+                        <span className="pointer-events-none absolute left-1.5 top-1.5 rounded-full bg-accent-500 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wide text-white">
+                          {t("newIn.badge")}
                         </span>
                       )}
                       {outOfStock && (

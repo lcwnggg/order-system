@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { isValidBarcodeFormat, normalizeBarcode } from "@/lib/barcode";
 import { parseDecimal } from "@/lib/decimal";
-import { splitImages, isMissingColumnError } from "@/lib/product-images";
+import { splitImages } from "@/lib/product-images";
+import { isMissingColumnError, saveWithOptionalColumns } from "@/lib/optional-columns";
+import { newUntilFromNow } from "@/lib/new-in";
 import { getT } from "@/lib/i18n/server";
 import type { Translate } from "@/lib/i18n/translate";
 
@@ -101,6 +103,17 @@ function readImageList(raw: string | null): string[] {
   }
 }
 
+/**
+ * Aviso para una columna que se añade a mano en Supabase y todavía no existe.
+ * Solo se llega aquí si se estaban guardando datos suyos: sin datos, se guarda
+ * el resto del producto y no se molesta a nadie.
+ */
+function missingColumnMessage(column: string, t: Translate): string {
+  return column === "new_until"
+    ? t("err.newInColumnMissing")
+    : t("err.extraImagesColumnMissing");
+}
+
 type VariantInput = {
   id?: string;
   color: string;
@@ -149,6 +162,8 @@ export async function addProduct(
   const brand = (formData.get("brand") as string)?.trim() || null;
   const barcode = normalizeBarcode(formData.get("barcode") as string);
   const variantsJson = (formData.get("variants") as string) || "[]";
+  // «New in»: se guarda la fecha de caducidad de la novedad, no un sí/no.
+  const new_until = formData.get("new_in") === "true" ? newUntilFromNow() : null;
 
   if (!name) return { error: t("err.productNameRequired") };
   if (isNaN(price) || price < 0) return { error: t("err.invalidPrice") };
@@ -170,23 +185,17 @@ export async function addProduct(
   }
 
   const base = { name, description: description || null, price, stock, image_url, category_id, has_variants, brand, barcode };
-  let { data: product, error: insertErr } = await supabase
-    .from("products")
-    .insert({ ...base, image_urls })
-    .select("id")
-    .single();
-  // La columna de fotos extra se crea a mano (supabase/product_extra_images.sql).
-  // Mientras no exista: si no había fotos extra, se guarda igual; si las había,
-  // mejor avisar que tragárselas en silencio.
-  if (isMissingColumnError(insertErr)) {
-    if (image_urls.length > 0) return { error: t("err.extraImagesColumnMissing") };
-    ({ data: product, error: insertErr } = await supabase
-      .from("products")
-      .insert(base)
-      .select("id")
-      .single());
-  }
-  if (insertErr) return { error: insertErr.message };
+  // `image_urls` y `new_until` se crean a mano (supabase/product_extra_images.sql
+  // y supabase/new_in.sql). Mientras no existan: si iban vacías, el producto se
+  // guarda igual; si llevaban datos, mejor avisar que tragárselos en silencio.
+  const insert = await saveWithOptionalColumns<{ id: string }>(
+    { image_urls, new_until },
+    (column) => (column === "new_until" ? new_until !== null : image_urls.length > 0),
+    (optional) => supabase.from("products").insert({ ...base, ...optional }).select("id").single()
+  );
+  if ("blockedColumn" in insert) return { error: missingColumnMessage(insert.blockedColumn, t) };
+  const { data: product, error: insertErr } = insert;
+  if (insertErr) return { error: insertErr.message ?? t("err.productNotSaved") };
   if (!product) return { error: t("err.productNotSaved") };
 
   const costErr = await saveCost(supabase, product.id, cost, t);
@@ -223,6 +232,11 @@ export async function updateProduct(
     has_variants?: boolean;
     brand?: string | null;
     barcode?: string | null;
+    /**
+     * Fin del periodo «New in» (ISO), `null` para quitarlo del apartado.
+     * `undefined` = no tocar lo que hubiera.
+     */
+    new_until?: string | null;
     /** Datos privados; `undefined` = no tocar lo que ya hubiera guardado. */
     cost?: { cost_price: number | null; supplier: string | null; note: string | null };
   }
@@ -231,7 +245,7 @@ export async function updateProduct(
   const supabase = await requireWarehouse();
   if (!supabase) return { error: t("common.noPermission") };
 
-  const { name, description, price, stock, images, category_id, has_variants, brand, barcode, cost } = fields;
+  const { name, description, price, stock, images, category_id, has_variants, brand, barcode, new_until, cost } = fields;
   if (!name) return { error: t("err.productNameRequired") };
   if (isNaN(price) || price < 0) return { error: t("err.invalidPrice") };
   if (has_variants !== true && (isNaN(stock) || stock < 0)) return { error: t("err.invalidStock") };
@@ -248,27 +262,31 @@ export async function updateProduct(
     price,
     stock,
   };
+  // Columnas que se añaden a mano: van aparte para poder reintentar sin ellas.
+  const optional: Record<string, unknown> = {};
   if (images !== undefined) {
     const split = splitImages(images);
     updateData.image_url = split.image_url;
-    updateData.image_urls = split.image_urls;
+    optional.image_urls = split.image_urls;
   }
+  if (new_until !== undefined) optional.new_until = new_until;
   if (category_id !== undefined) updateData.category_id = category_id;
   if (has_variants !== undefined) updateData.has_variants = has_variants;
   if (brand !== undefined) updateData.brand = brand;
   if (barcode !== undefined) updateData.barcode = normalizeBarcode(barcode);
 
-  let { error } = await supabase.from("products").update(updateData).eq("id", id);
   // Mismo apaño que al crear: sin la columna todavía creada, se guarda el resto
-  // salvo que se estuvieran intentando guardar fotos extra (ahí se avisa).
-  if (isMissingColumnError(error)) {
-    if (Array.isArray(updateData.image_urls) && updateData.image_urls.length > 0) {
-      return { error: t("err.extraImagesColumnMissing") };
-    }
-    delete updateData.image_urls;
-    ({ error } = await supabase.from("products").update(updateData).eq("id", id));
-  }
-  if (error) return { error: error.message };
+  // salvo que se estuvieran guardando datos suyos (ahí se avisa).
+  const saved = await saveWithOptionalColumns<null>(
+    optional,
+    (column) =>
+      column === "new_until"
+        ? new_until != null
+        : Array.isArray(optional.image_urls) && optional.image_urls.length > 0,
+    (columns) => supabase.from("products").update({ ...updateData, ...columns }).eq("id", id).then((r) => ({ data: null, error: r.error }))
+  );
+  if ("blockedColumn" in saved) return { error: missingColumnMessage(saved.blockedColumn, t) };
+  if (saved.error) return { error: saved.error.message ?? t("err.productNotSaved") };
 
   if (cost !== undefined) {
     const costErr = await saveCost(supabase, id, cost, t);
@@ -345,6 +363,31 @@ export async function toggleProductActive(id: string, isActive: boolean): Promis
 
   revalidatePath("/admin/products");
   revalidatePath("/admin/stock-alert");
+  revalidatePath("/shop");
+  return { success: true };
+}
+
+/**
+ * Marca o quita un producto del apartado «New in».
+ *
+ * Marcarlo siempre reinicia el contador a NEW_IN_DAYS días: si se vuelve a
+ * pulsar sobre algo que ya era novedad, es justo lo que se quiere (ha llegado
+ * remesa nueva y se quiere que la vean otros diez días).
+ */
+export async function setProductNewIn(id: string, isNew: boolean): Promise<ActionResult> {
+  const t = await getT();
+  const supabase = await requireWarehouse();
+  if (!supabase) return { error: t("common.noPermission") };
+
+  const { error } = await supabase
+    .from("products")
+    .update({ new_until: isNew ? newUntilFromNow() : null })
+    .eq("id", id);
+  if (error) {
+    return { error: isMissingColumnError(error) ? t("err.newInColumnMissing") : error.message };
+  }
+
+  revalidatePath("/admin/products");
   revalidatePath("/shop");
   return { success: true };
 }

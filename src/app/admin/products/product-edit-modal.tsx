@@ -11,6 +11,7 @@ import ModalPortal from "@/app/modal-portal";
 import { parseDecimal, sanitizeDecimalText } from "@/lib/decimal";
 import { useImageLightbox } from "@/app/image-lightbox";
 import { productImages } from "@/lib/product-images";
+import { NEW_IN_DAYS, isNewIn, newInDaysLeft, newUntilFromNow } from "@/lib/new-in";
 import { useI18n } from "@/lib/i18n/client";
 import { sortByName } from "@/lib/sort";
 import type { Translate } from "@/lib/i18n/translate";
@@ -29,6 +30,7 @@ type Product = {
   brand: string | null;
   barcode: string | null;
   created_at: string;
+  new_until?: string | null;
 };
 
 type Category = {
@@ -124,6 +126,12 @@ export default function ProductEditModal({
   const [editPrice, setEditPrice] = useState(String(product.price));
   const [editStock, setEditStock] = useState(String(product.stock));
   const [editHasVariants, setEditHasVariants] = useState(product.has_variants);
+  // «New in». Se guarda la fecha de fin, no un sí/no: si ya era novedad se
+  // respeta la fecha que tenía (para no regalarle otros diez días sin querer)
+  // y hay un botón aparte para reiniciar el plazo a propósito.
+  const [editNewUntil, setEditNewUntil] = useState<string | null>(() =>
+    isNewIn(product) ? product.new_until ?? null : null
+  );
   const [editVariants, setEditVariants] = useState<VariantDraft[]>(() =>
     variantsForProduct.map((v) => ({
       id: v.id,
@@ -316,6 +324,7 @@ export default function ProductEditModal({
         has_variants: editHasVariants,
         brand: canonicalTag(editBrand, brandOptions) || null,
         barcode: editBarcode,
+        new_until: editNewUntil,
         cost: managesCost
           ? {
               cost_price: editCostPrice.trim() === "" ? null : parseDecimal(editCostPrice),
@@ -424,6 +433,38 @@ export default function ProductEditModal({
               salePrice={editPrice}
             />
             )}
+
+            {/* «New in» */}
+            <div className="rounded-lg border border-paper-200 bg-paper-50/60 p-3">
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={editNewUntil !== null}
+                  onClick={() => setEditNewUntil((v) => (v === null ? newUntilFromNow() : null))}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${editNewUntil !== null ? "bg-paper-700" : "bg-paper-300"}`}
+                >
+                  <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${editNewUntil !== null ? "translate-x-6" : "translate-x-1"}`} />
+                </button>
+                <span className="text-sm font-medium text-paper-700">{t("newIn.formToggle")}</span>
+              </div>
+              {editNewUntil !== null && (
+                <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <p className="text-xs text-paper-500">
+                    {newInDaysLeft({ new_until: editNewUntil }) <= 1
+                      ? t("newIn.lastDay")
+                      : t("newIn.daysLeft", { n: newInDaysLeft({ new_until: editNewUntil }) })}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setEditNewUntil(newUntilFromNow())}
+                    className="text-xs font-medium text-paper-600 underline-offset-2 hover:text-paper-900 hover:underline"
+                  >
+                    {t("newIn.restart", { n: NEW_IN_DAYS })}
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* 颜色变体开关 + 库存 */}
             <div>

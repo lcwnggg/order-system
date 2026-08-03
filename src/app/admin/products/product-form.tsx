@@ -13,6 +13,7 @@ import TagPicker from "./tag-picker";
 import { sanitizeDecimalText } from "@/lib/decimal";
 import PrivateCostFields from "./private-cost-fields";
 import { normalizeBarcode } from "@/lib/barcode";
+import { NEW_IN_DAYS } from "@/lib/new-in";
 import { useI18n } from "@/lib/i18n/client";
 import { sortByName } from "@/lib/sort";
 import type { Translate } from "@/lib/i18n/translate";
@@ -126,6 +127,9 @@ export default function ProductForm({
   const [hasVariants, setHasVariants] = useState(false);
   const [variants, setVariants] = useState<VariantDraft[]>([{ color: "", stock: "" }]);
   const [barcode, setBarcode] = useState("");
+  // «New in»: si se marca, el producto sale en el apartado de novedades y se
+  // cae solo de él a los NEW_IN_DAYS días.
+  const [isNewIn, setIsNewIn] = useState(false);
   const [brand, setBrand] = useState("");
   const [price, setPrice] = useState("");
   // Datos privados de compra (van a `product_costs`, invisible para las tiendas)
@@ -169,7 +173,7 @@ export default function ProductForm({
 
   useEffect(() => {
     if (state && "success" in state) {
-      // 分类、品牌、供应商大概率与下一件商品相同（同一批进货），特意不清空，
+      // 分类、品牌、供应商、「New in」大概率与下一件商品相同（同一批进货），特意不清空，
       // 减少连续添加时的重复选择/输入；其余字段（名称/价格/库存/图片等）逐件都不同，正常清空。
       formRef.current?.reset();
       // 提交成功后清空表单：响应 action state 变化，属于正当的副作用重置
@@ -406,6 +410,7 @@ export default function ProductForm({
         <input type="hidden" name="image_urls" value={JSON.stringify(images.slice(1))} />
         <input type="hidden" name="category_id" value={selectedChildCatId || selectedParentCatId} />
         <input type="hidden" name="has_variants" value={hasVariants ? "true" : "false"} />
+        <input type="hidden" name="new_in" value={isNewIn ? "true" : "false"} />
         {hasVariants && <input type="hidden" name="variants" value={variantsJson} />}
 
         {/* AI 自动识别（可选）：拍照 → 自动填字段 + 首图作商品图 */}
@@ -550,6 +555,31 @@ export default function ProductForm({
             </div>
           </div>
         )}
+
+        {/* «New in»: novedad durante NEW_IN_DAYS días */}
+        <div className="rounded-lg border border-paper-200 bg-paper-50/60 p-3">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isNewIn}
+              onClick={() => setIsNewIn((v) => !v)}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors ${
+                isNewIn ? "bg-paper-700" : "bg-paper-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                  isNewIn ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+            <span className="text-sm font-medium text-paper-700">{t("newIn.formToggle")}</span>
+          </div>
+          {isNewIn && (
+            <p className="mt-2 text-xs text-paper-500">{t("newIn.formHint", { n: NEW_IN_DAYS })}</p>
+          )}
+        </div>
 
         {/* 颜色变体开关 + 库存/变体区域 */}
         <div>

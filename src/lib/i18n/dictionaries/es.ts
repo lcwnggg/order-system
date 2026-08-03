@@ -165,13 +165,25 @@ const es = {
   "shop.sortPriceDesc": "Precio: de mayor a menor",
   "shop.sortName": "Nombre A→Z",
   "shop.noMatch": "No se han encontrado productos",
-  "shop.new": "Nuevo",
   "shop.stockN": "Stock {n}",
   "shop.outOfStockBtn": "Sin stock por ahora",
   "shop.addToCart": "Añadir al carrito",
   "shop.outOfStockShort": "Sin stock",
   "shop.addShort": "Añadir",
   "shop.unitsShort": "{n} uds.",
+
+  // ── novedades («New in») ──
+  // «New in» se deja sin traducir a propósito: es el nombre del apartado y se
+  // ve igual en las dos versiones del catálogo.
+  "newIn.label": "New in",
+  "newIn.badge": "New in",
+  "newIn.empty": "Ahora mismo no hay novedades",
+  "newIn.formToggle": "Marcar como novedad («New in»)",
+  "newIn.formHint": "Saldrá en el apartado «New in» durante {n} días y se quitará solo.",
+  "newIn.daysLeft": "Le quedan {n} días como novedad",
+  "newIn.lastDay": "Hoy es su último día como novedad",
+  "newIn.restart": "Volver a empezar los {n} días",
+  "newIn.markShort": "Novedad",
 
   // ── carrito ──
   "cart.title": "Carrito",
@@ -377,6 +389,7 @@ const es = {
   "err.invalidCostPrice": "Introduce un precio de compra válido",
   "err.costTableMissing": "Producto guardado, pero el precio de compra no: falta ejecutar supabase/product_costs.sql en Supabase.",
   "err.extraImagesColumnMissing": "No se pueden guardar varias fotos todavía: falta ejecutar supabase/product_extra_images.sql en Supabase.",
+  "err.newInColumnMissing": "No se puede marcar como novedad todavía: falta ejecutar supabase/new_in.sql en Supabase.",
   "err.productNotSaved": "No se pudo guardar el producto, inténtalo de nuevo",
   "err.barcodeInvalid": "Código de barras no válido (solo números, letras y guiones)",
   "err.variantJson": "El formato de las variantes de color no es válido",

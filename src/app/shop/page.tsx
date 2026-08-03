@@ -5,7 +5,7 @@ import { signOut } from "@/app/actions/auth";
 import LanguageSwitcher from "@/app/language-switcher";
 import TransferNavBadge from "@/app/transfer-nav-badge";
 import { getI18n } from "@/lib/i18n/server";
-import { withExtraImagesColumn } from "@/lib/product-images";
+import { withOptionalColumns } from "@/lib/optional-columns";
 import ShopClient, { type Product } from "./shop-client";
 
 export default async function ShopPage() {
@@ -27,11 +27,13 @@ export default async function ShopPage() {
   if (profile?.role !== "store") redirect("/login");
 
   const [{ data: products }, { data: categoriesData }, { data: lastOrders }, { data: variantsData }] = await Promise.all([
-    withExtraImagesColumn<Product[]>((img) =>
+    // `image_urls` y `new_until` se añaden a mano en Supabase: si alguna falta
+    // todavía, el catálogo se sirve igual (sin fotos extra / sin «New in»).
+    withOptionalColumns<Product[]>(["image_urls", "new_until"], (extra) =>
       supabase
         .from("products")
         .select(
-          `id, name, description, price, stock, image_url, category_id, has_variants, brand, created_at, barcode${img}` as string
+          `id, name, description, price, stock, image_url, category_id, has_variants, brand, created_at, barcode${extra}` as string
         )
         .eq("is_active", true)
         .order("created_at", { ascending: false })
