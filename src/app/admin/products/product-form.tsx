@@ -127,9 +127,10 @@ export default function ProductForm({
   const [hasVariants, setHasVariants] = useState(false);
   const [variants, setVariants] = useState<VariantDraft[]>([{ color: "", stock: "" }]);
   const [barcode, setBarcode] = useState("");
-  // «New in»: si se marca, el producto sale en el apartado de novedades y se
-  // cae solo de él a los NEW_IN_DAYS días.
-  const [isNewIn, setIsNewIn] = useState(false);
+  // «New in»: sale en el apartado de novedades y se cae solo de él a los
+  // NEW_IN_DAYS días. Viene marcado: lo que se acaba de dar de alta casi
+  // siempre es género recién llegado, y apagarlo es un clic para el caso raro.
+  const [isNewIn, setIsNewIn] = useState(true);
   const [brand, setBrand] = useState("");
   const [price, setPrice] = useState("");
   // Datos privados de compra (van a `product_costs`, invisible para las tiendas)
