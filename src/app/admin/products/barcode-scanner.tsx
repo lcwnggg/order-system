@@ -157,7 +157,8 @@ export function ScannerOverlay({
 
   return (
     <ModalPortal>
-    <div className="fixed inset-0 z-[70] flex flex-col bg-black">
+    {/* z 必须高于商品编辑弹窗（z-80），否则从"编辑"里点扫码，摄像头画面被弹窗盖住，看起来像没反应 */}
+    <div className="fixed inset-0 z-[100] flex flex-col bg-black">
       {/* 顶部栏 */}
       <div className="flex shrink-0 items-center justify-between px-4 py-3">
         <span className="text-sm font-medium text-white/90">{t("scanner.title")}</span>

@@ -350,8 +350,10 @@ export default function ImageCropModal({
     // a la vista, el 100 % de toda la vida es MÁS ALTO que lo que se ve, así que
     // los botones de abajo acababan tapados por la barra de Safari — y como la
     // capa es fija, tampoco se podía desplazar para llegar a ellos.
+    // El z queda por encima del modal de editar producto (z-80): el recorte se
+    // abre desde dentro de ese modal y, si no, quedaba tapado por él.
     <div
-      className="fixed inset-x-0 top-0 z-[70] flex h-[100dvh] touch-none flex-col overscroll-none bg-black/95"
+      className="fixed inset-x-0 top-0 z-[100] flex h-[100dvh] touch-none flex-col overscroll-none bg-black/95"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <div className="flex shrink-0 items-center justify-between px-4 py-2">
