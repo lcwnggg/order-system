@@ -1,45 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { guardMessage, requireRole } from "@/lib/supabase/guard";
 import { getT } from "@/lib/i18n/server";
 import { translateDbError } from "@/lib/i18n/db-errors";
 
 // 门店角色校验（服务端动作可被直接 POST，必须逐个校验）
-async function requireStore(): Promise<SupabaseClient | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role !== "store") return null;
-  return supabase;
+async function requireStore() {
+  return requireRole("store");
 }
 
 // 认领 / 流转状态：门店和仓库老板都可（仓库万一自己有货也能接）；具体归属由 RPC 内部校验
-async function requireStoreOrWarehouse(): Promise<SupabaseClient | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role !== "store" && profile?.role !== "warehouse") return null;
-  return supabase;
+async function requireStoreOrWarehouse() {
+  return requireRole("store", "warehouse");
 }
 
 function revalidate() {
@@ -54,8 +27,9 @@ export async function createTransferRequest(input: {
   note?: string | null;
 }): Promise<{ error?: string }> {
   const t = await getT();
-  const supabase = await requireStore();
-  if (!supabase) return { error: t("common.noPermission") };
+  const guard = await requireStore();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { supabase } = guard;
 
   const { error } = await supabase.rpc("create_transfer_request", {
     p_item_text: input.itemText,
@@ -71,8 +45,9 @@ export async function createTransferRequest(input: {
 
 export async function claimTransferRequest(id: string): Promise<{ error?: string }> {
   const t = await getT();
-  const supabase = await requireStoreOrWarehouse();
-  if (!supabase) return { error: t("common.noPermission") };
+  const guard = await requireStoreOrWarehouse();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { supabase } = guard;
 
   const { error } = await supabase.rpc("claim_transfer_request", { p_id: id });
   if (error) return { error: translateDbError(error.message, t) };
@@ -83,8 +58,9 @@ export async function claimTransferRequest(id: string): Promise<{ error?: string
 
 export async function declineTransferRequest(id: string): Promise<{ error?: string }> {
   const t = await getT();
-  const supabase = await requireStore();
-  if (!supabase) return { error: t("common.noPermission") };
+  const guard = await requireStore();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { supabase } = guard;
 
   const { error } = await supabase.rpc("decline_transfer_request", { p_id: id });
   if (error) return { error: translateDbError(error.message, t) };
@@ -98,8 +74,9 @@ export async function setTransferStatus(
   status: "done" | "open" | "cancelled"
 ): Promise<{ error?: string }> {
   const t = await getT();
-  const supabase = await requireStoreOrWarehouse();
-  if (!supabase) return { error: t("common.noPermission") };
+  const guard = await requireStoreOrWarehouse();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { supabase } = guard;
 
   const { error } = await supabase.rpc("update_transfer_status", {
     p_id: id,

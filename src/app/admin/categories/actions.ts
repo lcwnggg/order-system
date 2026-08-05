@@ -1,26 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { guardMessage, requireRole } from "@/lib/supabase/guard";
 import { getT } from "@/lib/i18n/server";
 
 export type ActionResult = { error: string } | { success: true };
 
 async function requireWarehouse() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role !== "warehouse") return null;
-  return supabase;
+  return requireRole("warehouse");
 }
 
 function revalidateAll() {
@@ -33,8 +20,9 @@ export async function addCategory(
   parentId: string | null
 ): Promise<ActionResult> {
   const t = await getT();
-  const supabase = await requireWarehouse();
-  if (!supabase) return { error: t("common.noPermission") };
+  const guard = await requireWarehouse();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { supabase } = guard;
 
   const trimmed = name.trim();
   if (!trimmed) return { error: t("err.categoryNameRequired") };
@@ -51,8 +39,9 @@ export async function addCategory(
 
 export async function renameCategory(id: string, name: string): Promise<ActionResult> {
   const t = await getT();
-  const supabase = await requireWarehouse();
-  if (!supabase) return { error: t("common.noPermission") };
+  const guard = await requireWarehouse();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { supabase } = guard;
 
   const trimmed = name.trim();
   if (!trimmed) return { error: t("err.categoryNameRequired") };
@@ -71,8 +60,9 @@ export async function renameCategory(id: string, name: string): Promise<ActionRe
 
 export async function deleteCategory(id: string): Promise<ActionResult> {
   const t = await getT();
-  const supabase = await requireWarehouse();
-  if (!supabase) return { error: t("common.noPermission") };
+  const guard = await requireWarehouse();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { supabase } = guard;
 
   const { count } = await supabase
     .from("categories")
@@ -109,8 +99,9 @@ export async function assignProductsToCategory(
   productIds: string[]
 ): Promise<ActionResult> {
   const t = await getT();
-  const supabase = await requireWarehouse();
-  if (!supabase) return { error: t("common.noPermission") };
+  const guard = await requireWarehouse();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { supabase } = guard;
   if (!productIds.length) return { error: t("err.selectAtLeastOneProduct") };
 
   const { error } = await supabase
@@ -129,8 +120,9 @@ export async function removeProductFromCategory(
   productId: string
 ): Promise<ActionResult> {
   const t = await getT();
-  const supabase = await requireWarehouse();
-  if (!supabase) return { error: t("common.noPermission") };
+  const guard = await requireWarehouse();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { supabase } = guard;
 
   const { error } = await supabase
     .from("products")

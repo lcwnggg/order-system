@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { denyPage, requireRole } from "@/lib/supabase/guard";
 import AppShell from "@/app/app-shell";
 import { getTransferBoard, getGroupStores } from "@/lib/transfers";
 import { getI18n } from "@/lib/i18n/server";
@@ -8,22 +8,12 @@ import TransferAlerts from "./transfer-alerts";
 
 export default async function TransfersPage() {
   const { t } = await getI18n();
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role, store_name")
-    .eq("id", user.id)
-    .single();
+  const guard = await requireRole("store", "warehouse");
+  if ("error" in guard) denyPage(guard, t);
+  const { supabase, user, profile } = guard;
 
   // 仓库老板从订单管理页看互调，这里只服务门店
-  if (profile?.role === "warehouse") redirect("/admin/orders");
-  if (profile?.role !== "store") redirect("/login");
+  if (profile.role === "warehouse") redirect("/admin/orders");
 
   const [requests, stores] = await Promise.all([
     getTransferBoard(supabase),

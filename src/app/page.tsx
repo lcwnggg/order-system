@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { checkUser } from "@/lib/supabase/auth";
 import { isLowStock } from "@/lib/stock";
 import { getTransferBoard, getGroupStores } from "@/lib/transfers";
 import { getI18n } from "@/lib/i18n/server";
@@ -11,17 +12,26 @@ import WarehouseRosterCard from "./transfers/warehouse-roster-card";
 export default async function Home() {
   const { locale, tag, t } = await getI18n();
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const auth = await checkUser(supabase);
 
-  const { data: profile } = user
+  // Esta pantalla no echa a nadie: si no hay sesión, enseña la portada. Por eso
+  // un fallo pasajero al comprobarla no puede tratarse como «no hay sesión»,
+  // porque quien estaba trabajando vería la portada de acceso y daría por hecho
+  // que se le ha caído la sesión. Se corta con un error, que sí se reintenta.
+  if (auth.status === "unavailable") throw new Error(t("common.authUnavailable"));
+  const user = auth.user;
+
+  const { data: profile, error: profileError } = user
     ? await supabase
         .from("profiles")
         .select("role, store_name")
         .eq("id", user.id)
-        .single()
-    : { data: null };
+        .maybeSingle()
+    : { data: null, error: null };
+
+  // Mismo motivo: sin el perfil no se sabe si es almacén o tienda, y caer a la
+  // portada sería enseñarle la puerta a alguien que ya está dentro.
+  if (profileError) throw new Error(t("common.authUnavailable"));
 
   const isWarehouse = profile?.role === "warehouse";
   const isStore = profile?.role === "store";

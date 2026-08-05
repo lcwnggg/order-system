@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import type { createClient } from "@/lib/supabase/server";
+import { guardMessage, requireRole } from "@/lib/supabase/guard";
 import { isValidBarcodeFormat, normalizeBarcode } from "@/lib/barcode";
 import { parseDecimal } from "@/lib/decimal";
 import { splitImages } from "@/lib/product-images";
@@ -10,7 +11,16 @@ import { newUntilFromNow } from "@/lib/new-in";
 import { getT } from "@/lib/i18n/server";
 import type { Translate } from "@/lib/i18n/translate";
 
-export type ActionResult = { error: string } | { success: true };
+/**
+ * `warning` = se guardó, pero algo secundario no.
+ *
+ * Importa la diferencia con `error`: devolver un error después de haber creado
+ * ya la fila del producto deja el formulario lleno y al usuario convencido de
+ * que no se ha guardado nada, así que le da a «Añadir» otra vez y acaba con el
+ * producto duplicado. Si el producto está dentro, esto es un éxito con un
+ * aviso, no un fallo.
+ */
+export type ActionResult = { error: string } | { success: true; warning?: string };
 
 export type ProductVariant = {
   id: string;
@@ -123,20 +133,7 @@ type VariantInput = {
 };
 
 async function requireWarehouse() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role !== "warehouse") return null;
-  return supabase;
+  return requireRole("warehouse");
 }
 
 export async function addProduct(
@@ -144,8 +141,9 @@ export async function addProduct(
   formData: FormData
 ): Promise<ActionResult> {
   const t = await getT();
-  const supabase = await requireWarehouse();
-  if (!supabase) return { error: t("common.noPermission") };
+  const guard = await requireWarehouse();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { supabase } = guard;
 
   const name = (formData.get("name") as string)?.trim();
   const description = (formData.get("description") as string)?.trim();
@@ -198,8 +196,12 @@ export async function addProduct(
   if (insertErr) return { error: insertErr.message ?? t("err.productNotSaved") };
   if (!product) return { error: t("err.productNotSaved") };
 
+  // A partir de aquí el producto YA existe: lo que falle se avisa, pero no se
+  // devuelve como error (ver ActionResult) o el usuario lo añadiría dos veces.
+  const warnings: string[] = [];
+
   const costErr = await saveCost(supabase, product.id, cost, t);
-  if (costErr) return { error: costErr };
+  if (costErr) warnings.push(costErr);
 
   if (has_variants && variants.length > 0) {
     const { error: varErr } = await supabase.from("product_variants").insert(
@@ -210,13 +212,15 @@ export async function addProduct(
         sort_order: i,
       }))
     );
-    if (varErr) return { error: varErr.message };
+    if (varErr) warnings.push(t("err.variantsNotSaved", { message: varErr.message }));
   }
 
   revalidatePath("/admin/products");
   revalidatePath("/admin/stock-alert");
   revalidatePath("/shop");
-  return { success: true };
+  return warnings.length > 0
+    ? { success: true, warning: warnings.join(" ") }
+    : { success: true };
 }
 
 export async function updateProduct(
@@ -242,8 +246,9 @@ export async function updateProduct(
   }
 ): Promise<ActionResult> {
   const t = await getT();
-  const supabase = await requireWarehouse();
-  if (!supabase) return { error: t("common.noPermission") };
+  const guard = await requireWarehouse();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { supabase } = guard;
 
   const { name, description, price, stock, images, category_id, has_variants, brand, barcode, new_until, cost } = fields;
   if (!name) return { error: t("err.productNameRequired") };
@@ -304,8 +309,9 @@ export async function upsertVariants(
   variants: VariantInput[]
 ): Promise<ActionResult> {
   const t = await getT();
-  const supabase = await requireWarehouse();
-  if (!supabase) return { error: t("common.noPermission") };
+  const guard = await requireWarehouse();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { supabase } = guard;
 
   for (const v of variants) {
     if (v._delete && v.id) {
@@ -336,8 +342,9 @@ export async function upsertVariants(
 
 export async function adjustVariantStock(variantId: string, delta: number): Promise<ActionResult> {
   const t = await getT();
-  const supabase = await requireWarehouse();
-  if (!supabase) return { error: t("common.noPermission") };
+  const guard = await requireWarehouse();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { supabase } = guard;
   if (!Number.isInteger(delta) || delta <= 0) return { error: t("err.deltaPositiveInt") };
 
   // 原子自增，避免读-改-写竞态（两人同时 +N 会丢更新）
@@ -355,8 +362,9 @@ export async function adjustVariantStock(variantId: string, delta: number): Prom
 
 export async function toggleProductActive(id: string, isActive: boolean): Promise<ActionResult> {
   const t = await getT();
-  const supabase = await requireWarehouse();
-  if (!supabase) return { error: t("common.noPermission") };
+  const guard = await requireWarehouse();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { supabase } = guard;
 
   const { error } = await supabase.from("products").update({ is_active: isActive }).eq("id", id);
   if (error) return { error: error.message };
@@ -376,8 +384,9 @@ export async function toggleProductActive(id: string, isActive: boolean): Promis
  */
 export async function setProductNewIn(id: string, isNew: boolean): Promise<ActionResult> {
   const t = await getT();
-  const supabase = await requireWarehouse();
-  if (!supabase) return { error: t("common.noPermission") };
+  const guard = await requireWarehouse();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { supabase } = guard;
 
   const { error } = await supabase
     .from("products")
@@ -394,8 +403,9 @@ export async function setProductNewIn(id: string, isNew: boolean): Promise<Actio
 
 export async function deleteProduct(id: string): Promise<ActionResult> {
   const t = await getT();
-  const supabase = await requireWarehouse();
-  if (!supabase) return { error: t("common.noPermission") };
+  const guard = await requireWarehouse();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { supabase } = guard;
 
   // 保护历史：被历史订单引用过的商品禁止硬删除（会破坏订单明细/金额）。
   // 这类商品应「下架」（is_active=false）而不是删除。仅从未被下单过的商品可真正删除。
@@ -418,8 +428,9 @@ export async function deleteProduct(id: string): Promise<ActionResult> {
 
 export async function adjustStock(id: string, delta: number): Promise<ActionResult> {
   const t = await getT();
-  const supabase = await requireWarehouse();
-  if (!supabase) return { error: t("common.noPermission") };
+  const guard = await requireWarehouse();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { supabase } = guard;
   if (!Number.isInteger(delta) || delta <= 0) return { error: t("err.deltaPositiveInt") };
 
   // 原子自增，避免读-改-写竞态（两人同时 +N 会丢更新）
@@ -461,8 +472,9 @@ export async function bulkImportProducts(
   mode: BulkImportMode
 ): Promise<BulkImportResult> {
   const t = await getT();
-  const supabase = await requireWarehouse();
-  if (!supabase) return { error: t("common.noPermission") };
+  const guard = await requireWarehouse();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { supabase } = guard;
   if (rows.length === 0) return { error: t("err.nothingToImport") };
 
   let imported = 0;

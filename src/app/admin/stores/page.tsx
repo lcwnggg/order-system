@@ -1,5 +1,4 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { denyPage, requireRole } from "@/lib/supabase/guard";
 import AppShell from "@/app/app-shell";
 import { getI18n } from "@/lib/i18n/server";
 import { nameCollator } from "@/lib/sort";
@@ -7,20 +6,9 @@ import StoresClient, { type StoreUser } from "./stores-client";
 
 export default async function AdminStoresPage() {
   const { t, tag } = await getI18n();
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role !== "warehouse") redirect("/login");
+  const guard = await requireRole("warehouse");
+  if ("error" in guard) denyPage(guard, t);
+  const { supabase, user } = guard;
 
   // get_store_users() 是一个 SECURITY DEFINER RPC，能读到 auth.users.email
   const { data: rpcStores, error: rpcError } = await supabase.rpc("get_store_users");

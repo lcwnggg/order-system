@@ -39,6 +39,8 @@ const es = {
   // ── errores genéricos ──
   "common.noPermission": "Sin permiso",
   "common.notLoggedIn": "No has iniciado sesión",
+  "common.sessionExpired": "Tu sesión ha caducado. Vuelve a entrar y repite la operación.",
+  "common.authUnavailable": "No se ha podido comprobar tu sesión. No se ha guardado nada: inténtalo otra vez.",
   "common.uploadFailed": "No se pudo subir el archivo",
   "common.compressFailed": "No se pudo comprimir la imagen",
   "common.imageLoadFailed": "No se pudo cargar la imagen",
@@ -391,6 +393,8 @@ const es = {
   "err.extraImagesColumnMissing": "No se pueden guardar varias fotos todavía: falta ejecutar supabase/product_extra_images.sql en Supabase.",
   "err.newInColumnMissing": "No se puede marcar como novedad todavía: falta ejecutar supabase/new_in.sql en Supabase.",
   "err.productNotSaved": "No se pudo guardar el producto, inténtalo de nuevo",
+  "err.variantsNotSaved":
+    "Producto guardado, pero sus colores no: {message}. Añádelos desde «Editar» (no vuelvas a crearlo).",
   "err.barcodeInvalid": "Código de barras no válido (solo números, letras y guiones)",
   "err.variantJson": "El formato de las variantes de color no es válido",
   "err.variantAtLeastOne": "Añade al menos un color al activar las variantes",

@@ -1,5 +1,4 @@
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { denyPage, requireRole } from "@/lib/supabase/guard";
 import AppShell from "@/app/app-shell";
 import { getI18n } from "@/lib/i18n/server";
 import CategoriesClient, { type Category, type CategoryTree, type ProductSummary } from "./categories-client";
@@ -8,20 +7,9 @@ import { withOptionalColumns } from "@/lib/optional-columns";
 
 export default async function AdminCategoriesPage() {
   const { t } = await getI18n();
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) redirect("/login");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role !== "warehouse") redirect("/login");
+  const guard = await requireRole("warehouse");
+  if ("error" in guard) denyPage(guard, t);
+  const { supabase, user } = guard;
 
   const { data: allCategories } = await supabase
     .from("categories")

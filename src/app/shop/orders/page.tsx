@@ -1,27 +1,17 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { denyPage, requireRole } from "@/lib/supabase/guard";
 import AppShell from "@/app/app-shell";
 import { getI18n } from "@/lib/i18n/server";
 import OrdersHistoryClient, { type StoreOrder } from "./orders-history-client";
 
 export default async function ShopOrdersPage() {
   const { t } = await getI18n();
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const guard = await requireRole("store", "warehouse");
+  if ("error" in guard) denyPage(guard, t);
+  const { supabase, user, profile } = guard;
 
-  if (!user) redirect("/login");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role === "warehouse") redirect("/admin/orders");
-  if (profile?.role !== "store") redirect("/login");
+  if (profile.role === "warehouse") redirect("/admin/orders");
 
   const { data: rawOrders } = await supabase
     .from("orders")

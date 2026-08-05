@@ -37,6 +37,8 @@ const zh: Dictionary = {
   // ── 通用错误 ──
   "common.noPermission": "无权限",
   "common.notLoggedIn": "未登录",
+  "common.sessionExpired": "登录状态已过期，请重新登录后再操作一次。",
+  "common.authUnavailable": "暂时无法确认登录状态，什么都没保存，请再试一次。",
   "common.uploadFailed": "上传失败",
   "common.compressFailed": "压缩失败",
   "common.imageLoadFailed": "图片加载失败",
@@ -380,6 +382,7 @@ const zh: Dictionary = {
   "err.extraImagesColumnMissing": "暂时无法保存多张图片：请先在 Supabase 执行 supabase/product_extra_images.sql。",
   "err.newInColumnMissing": "暂时无法标记新品：请先在 Supabase 执行 supabase/new_in.sql。",
   "err.productNotSaved": "商品保存失败，请重试",
+  "err.variantsNotSaved": "商品已保存，但颜色没存上：{message}。请到「编辑」里补，不要重新创建。",
   "err.barcodeInvalid": "条码格式无效（只允许数字、字母、连字符）",
   "err.variantJson": "颜色变体数据格式错误",
   "err.variantAtLeastOne": "开启颜色变体时至少添加一种颜色",

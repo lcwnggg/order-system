@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { denyPage, requireRole } from "@/lib/supabase/guard";
 import { signOut } from "@/app/actions/auth";
 import LanguageSwitcher from "@/app/language-switcher";
 import TransferNavBadge from "@/app/transfer-nav-badge";
@@ -10,21 +10,11 @@ import ShopClient, { type Product } from "./shop-client";
 
 export default async function ShopPage() {
   const { t } = await getI18n();
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const guard = await requireRole("store", "warehouse");
+  if ("error" in guard) denyPage(guard, t);
+  const { supabase, user, profile } = guard;
 
-  if (!user) redirect("/login");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role === "warehouse") redirect("/admin/products");
-  if (profile?.role !== "store") redirect("/login");
+  if (profile.role === "warehouse") redirect("/admin/products");
 
   const [{ data: products }, { data: categoriesData }, { data: lastOrders }, { data: variantsData }] = await Promise.all([
     // `image_urls` y `new_until` se añaden a mano en Supabase: si alguna falta

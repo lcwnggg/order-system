@@ -1,27 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { guardMessage, requireRole } from "@/lib/supabase/guard";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getT } from "@/lib/i18n/server";
 
 export type ActionResult = { error: string } | { success: true };
 
 async function requireWarehouse() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profile?.role !== "warehouse") return null;
-  return supabase;
+  return requireRole("warehouse");
 }
 
 export async function updateStoreName(
@@ -29,8 +16,9 @@ export async function updateStoreName(
   storeName: string
 ): Promise<ActionResult> {
   const t = await getT();
-  const supabase = await requireWarehouse();
-  if (!supabase) return { error: t("common.noPermission") };
+  const guard = await requireWarehouse();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { supabase } = guard;
 
   const name = storeName.trim();
 
@@ -54,18 +42,9 @@ export async function createStoreAccount(
   storeName: string
 ): Promise<ActionResult> {
   const t = await getT();
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: t("common.notLoggedIn") };
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-  if (profile?.role !== "warehouse") return { error: t("common.noPermission") };
+  const guard = await requireWarehouse();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { user } = guard;
 
   const cleanEmail = email.trim().toLowerCase();
   if (!cleanEmail || !cleanEmail.includes("@")) return { error: t("err.emailInvalid") };
