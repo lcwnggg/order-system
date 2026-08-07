@@ -7,6 +7,8 @@ type BoardRow = {
   requester_store_id: string;
   status: string;
   i_declined: boolean;
+  mode?: string | null;
+  my_claim_status?: string | null;
 };
 
 /**
@@ -32,7 +34,14 @@ export default function TransferNavBadge() {
       if (cancelled) return;
       const rows = (data as BoardRow[] | null) ?? [];
       setCount(
-        rows.filter((r) => r.status === "open" && r.requester_store_id !== uid && !r.i_declined).length
+        rows.filter(
+          (r) =>
+            r.status === "open" &&
+            r.requester_store_id !== uid &&
+            !r.i_declined &&
+            // 多店收集里我已经报过名的，不再提醒
+            !(r.mode === "multi" && r.my_claim_status)
+        ).length
       );
     }
 
@@ -42,6 +51,11 @@ export default function TransferNavBadge() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "transfer_requests" },
+        () => recount()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "transfer_claims" },
         () => recount()
       )
       .subscribe();

@@ -4,10 +4,10 @@ import { useMemo, useRef, useState, useTransition } from "react";
 // Alias: este archivo también usa `new Image()` (DOM) para leer dimensiones al comprimir fotos
 import NextImage from "next/image";
 import { createClient } from "@/lib/supabase/client";
-import type { GroupStore, TransferRequest, TransferStatus } from "@/lib/transfers";
+import type { GroupStore, TransferMode, TransferRequest, TransferStatus } from "@/lib/transfers";
 import { useTransferRealtime } from "./use-transfer-realtime";
 import { StoreRoster } from "./store-roster";
-import { createTransferRequest, setTransferStatus } from "./actions";
+import { createTransferRequest, setTransferStatus, updateTransferClaim } from "./actions";
 import { useImageLightbox } from "@/app/image-lightbox";
 import { useT } from "@/lib/i18n/client";
 import type { TranslationKey } from "@/lib/i18n/dictionaries";
@@ -119,12 +119,22 @@ export default function TransfersClient({
   const board = useMemo(
     () =>
       requests.filter(
-        (r) => r.status === "open" && r.requesterStoreId !== currentStoreId && !r.iDeclined
+        (r) =>
+          r.status === "open" &&
+          r.requesterStoreId !== currentStoreId &&
+          !r.iDeclined &&
+          // 收集模式里我已经报过名的，归到「我要备的货」，不再算待回应
+          !(r.mode === "multi" && r.myClaimStatus)
       ),
     [requests, currentStoreId]
   );
   const myClaims = useMemo(
-    () => requests.filter((r) => r.claimedBy === currentStoreId && r.status === "claimed"),
+    () =>
+      requests.filter((r) =>
+        r.mode === "multi"
+          ? r.myClaimStatus === "claimed" && r.status === "open"
+          : r.claimedBy === currentStoreId && r.status === "claimed"
+      ),
     [requests, currentStoreId]
   );
   const myRequests = useMemo(
@@ -197,6 +207,7 @@ function NewRequestForm() {
   const t = useT();
   const [open, setOpen] = useState(false);
   const [itemText, setItemText] = useState("");
+  const [mode, setMode] = useState<TransferMode>("single");
   const [quantity, setQuantity] = useState("");
   const [note, setNote] = useState("");
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
@@ -229,6 +240,7 @@ function NewRequestForm() {
 
   function reset() {
     setItemText("");
+    setMode("single");
     setQuantity("");
     setNote("");
     setPhotoUrl(null);
@@ -249,6 +261,7 @@ function NewRequestForm() {
         photoUrl,
         quantity: quantity.trim() ? Number(quantity) : null,
         note: note.trim() || null,
+        mode,
       });
       if (res.error) {
         setError(res.error);
@@ -293,15 +306,42 @@ function NewRequestForm() {
           />
         </div>
 
+        {/* 一家店给 vs 所有店都给（例：这个型号的壳，谁有多少我都要） */}
+        <div>
+          <label className="mb-1 block text-xs font-medium text-paper-600">{t("transfers.modeLabel")}</label>
+          <div className="grid grid-cols-2 gap-2">
+            <ModeCard
+              active={mode === "single"}
+              onClick={() => setMode("single")}
+              title={t("transfers.modeSingle")}
+              hint={t("transfers.modeSingleHint")}
+              icon={
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              }
+            />
+            <ModeCard
+              active={mode === "multi"}
+              onClick={() => setMode("multi")}
+              title={t("transfers.modeMulti")}
+              hint={t("transfers.modeMultiHint")}
+              icon={
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              }
+            />
+          </div>
+        </div>
+
         <div className="flex gap-3">
           <div className="w-28">
-            <label className="mb-1 block text-xs font-medium text-paper-600">{t("transfers.quantity")}</label>
+            <label className="mb-1 block text-xs font-medium text-paper-600">
+              {mode === "multi" ? t("transfers.quantityMax") : t("transfers.quantity")}
+            </label>
             <input
               type="number"
               min={1}
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
-              placeholder={t("transfers.quantityPlaceholder")}
+              placeholder={mode === "multi" ? t("transfers.quantityAll") : t("transfers.quantityPlaceholder")}
               className="w-full rounded-xl border border-paper-200 bg-white/70 px-3 py-2 text-sm text-paper-900 outline-none transition-colors placeholder:text-paper-400 focus:border-accent-500"
             />
           </div>
@@ -354,10 +394,55 @@ function NewRequestForm() {
           onClick={handleSubmit}
           className="w-full rounded-xl bg-accent-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-accent-600 disabled:opacity-50"
         >
-          {pending ? t("transfers.sending") : t("transfers.broadcast")}
+          {pending
+            ? t("transfers.sending")
+            : mode === "multi"
+              ? t("transfers.broadcastMulti")
+              : t("transfers.broadcast")}
         </button>
       </div>
     </div>
+  );
+}
+
+// 发起时选「一家店 / 所有店」的卡片
+function ModeCard({
+  active,
+  onClick,
+  title,
+  hint,
+  icon,
+}: {
+  active: boolean;
+  onClick: () => void;
+  title: string;
+  hint: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`flex items-start gap-2 rounded-xl border p-2.5 text-left transition-colors ${
+        active
+          ? "border-accent-500 bg-accent-50/70 text-paper-900"
+          : "border-paper-200 bg-white/60 text-paper-600 hover:border-paper-300"
+      }`}
+    >
+      <svg
+        className={`mt-0.5 h-4 w-4 shrink-0 ${active ? "text-accent-600" : "text-paper-400"}`}
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        {icon}
+      </svg>
+      <span className="min-w-0">
+        <span className="block text-xs font-semibold">{title}</span>
+        <span className="mt-0.5 block text-[10.5px] leading-tight text-paper-500">{hint}</span>
+      </span>
+    </button>
   );
 }
 
@@ -366,11 +451,15 @@ function ClaimRow({ req }: { req: TransferRequest }) {
   const t = useT();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const isMulti = req.mode === "multi";
 
   function act(status: "done" | "open") {
     setError(null);
     startTransition(async () => {
-      const res = await setTransferStatus(req.id, status);
+      // 收集模式里「已交货 / 退回」只动我自己报的那一份，请求对别家继续开放
+      const res = isMulti
+        ? await updateTransferClaim(req.id, status === "done" ? "done" : "withdraw")
+        : await setTransferStatus(req.id, status);
       if (res.error) setError(res.error);
     });
   }
@@ -383,7 +472,18 @@ function ClaimRow({ req }: { req: TransferRequest }) {
         <p className="mt-0.5 text-[11.5px] text-paper-500">
           {t("transfers.forStore")}{" "}
           <span className="font-medium text-paper-700">{req.requesterName ?? t("transfers.someStore")}</span>
-          {req.quantity ? ` · ${t("transfers.qtyUnits", { n: req.quantity })}` : ""}
+          {isMulti && (
+            <span className="ml-1 rounded-full bg-accent-50 px-1.5 py-0.5 text-[10px] font-medium text-accent-600">
+              {t("transfers.modeMultiTag")}
+            </span>
+          )}
+          {isMulti
+            ? req.myClaimQuantity
+              ? ` · ${t("transfers.iOffered", { n: req.myClaimQuantity })}`
+              : ` · ${t("transfers.iOfferedNoQty")}`
+            : req.quantity
+              ? ` · ${t("transfers.qtyUnits", { n: req.quantity })}`
+              : ""}
           {req.note ? ` · ${req.note}` : ""}
         </p>
         {error && <p className="mt-1 text-[11px] text-red-500">{error}</p>}
@@ -395,7 +495,7 @@ function ClaimRow({ req }: { req: TransferRequest }) {
           onClick={() => act("open")}
           className="rounded-lg px-2 py-1.5 text-[11px] font-medium text-paper-400 transition-colors hover:text-paper-700 disabled:opacity-50"
         >
-          {t("transfers.giveBack")}
+          {isMulti ? t("transfers.withdraw") : t("transfers.giveBack")}
         </button>
         <button
           type="button"
@@ -416,39 +516,56 @@ function MyRequestRow({ req }: { req: TransferRequest }) {
   const t = useT();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const isMulti = req.mode === "multi";
 
-  function cancel() {
+  function act(status: "cancelled" | "done") {
     setError(null);
     startTransition(async () => {
-      const res = await setTransferStatus(req.id, "cancelled");
+      const res = await setTransferStatus(req.id, status);
       if (res.error) setError(res.error);
     });
   }
 
   const dim = req.status === "done" || req.status === "cancelled";
+  // 收集模式：谁报了名、各能给几件；总数用来判断「够了没」
+  const offeredTotal = req.claims.reduce((sum, c) => sum + (c.quantity ?? 0), 0);
 
   return (
-    <div className={`flex items-center gap-3 rounded-xl p-3 ring-1 ring-paper-900/10 ${dim ? "bg-white/50" : "glass-flat"}`}>
+    <div className={`rounded-xl p-3 ring-1 ring-paper-900/10 ${dim ? "bg-white/50" : "glass-flat"}`}>
+      <div className="flex items-center gap-3">
       <ItemThumb req={req} size="h-10 w-10" />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <p className="truncate text-sm font-medium text-paper-900">{req.itemText}</p>
           <StatusPill status={req.status} />
+          {isMulti && (
+            <span className="rounded-full bg-accent-50 px-1.5 py-0.5 text-[10px] font-medium text-accent-600">
+              {t("transfers.modeMultiTag")}
+            </span>
+          )}
         </div>
         <p className="mt-0.5 text-[11.5px] text-paper-500">
-          {req.status === "open" && t("transfers.stateOpen")}
+          {req.status === "open" &&
+            (isMulti
+              ? req.claims.length === 0
+                ? t("transfers.stateCollectingEmpty")
+                : t("transfers.stateCollecting", { n: req.claims.length })
+              : t("transfers.stateOpen"))}
           {req.status === "claimed" && (
             <>
               <span className="font-medium text-blue-700">{req.claimerName ?? t("transfers.someStore")}</span>
               {t("transfers.stateClaimedSuffix")}
             </>
           )}
-          {req.status === "done" && (
-            <>
-              <span className="font-medium text-mint-600">{req.claimerName ?? t("transfers.someStore")}</span>
-              {t("transfers.stateDoneSuffix")}
-            </>
-          )}
+          {req.status === "done" &&
+            (isMulti ? (
+              t("transfers.stateCollectedDone", { n: req.claims.length })
+            ) : (
+              <>
+                <span className="font-medium text-mint-600">{req.claimerName ?? t("transfers.someStore")}</span>
+                {t("transfers.stateDoneSuffix")}
+              </>
+            ))}
           {req.status === "cancelled" && t("transfers.stateCancelled")}
           {req.quantity ? ` · ${t("transfers.qtyUnits", { n: req.quantity })}` : ""}
         </p>
@@ -458,11 +575,55 @@ function MyRequestRow({ req }: { req: TransferRequest }) {
         <button
           type="button"
           disabled={pending}
-          onClick={cancel}
+          onClick={() => act("cancelled")}
           className="shrink-0 rounded-lg border border-paper-200 px-2.5 py-1.5 text-[11px] font-medium text-paper-400 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
         >
           {pending ? "…" : t("transfers.cancel")}
         </button>
+      )}
+      </div>
+
+      {/* 收集模式：谁有几件的清单 + 「ya está, cerrar」 */}
+      {isMulti && req.claims.length > 0 && (
+        <div className="mt-2.5 rounded-xl bg-white/60 p-2.5 ring-1 ring-paper-900/5">
+          <div className="mb-1.5 flex items-baseline justify-between gap-2">
+            <p className="text-[11px] font-semibold text-paper-700">
+              {t("transfers.offersTitle", { n: req.claims.length })}
+            </p>
+            {offeredTotal > 0 && (
+              <p className="text-[11px] text-paper-500">{t("transfers.offersTotal", { n: offeredTotal })}</p>
+            )}
+          </div>
+          <ul className="space-y-1">
+            {req.claims.map((c) => (
+              <li key={c.storeId} className="flex items-center gap-2 text-[11.5px]">
+                <span
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${c.status === "done" ? "bg-mint-500" : "bg-blue-500"}`}
+                />
+                <span className="min-w-0 flex-1 truncate text-paper-700">
+                  {c.storeName ?? t("transfers.someStore")}
+                </span>
+                <span className="shrink-0 text-paper-500">
+                  {c.quantity ? t("transfers.qtyUnits", { n: c.quantity }) : t("transfers.qtyUnknown")}
+                </span>
+                <span className={`shrink-0 ${c.status === "done" ? "text-mint-600" : "text-blue-600"}`}>
+                  {c.status === "done" ? t("transferStatus.done") : t("transferStatus.claimed")}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {req.status === "open" && (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => act("done")}
+              className="mt-2 inline-flex items-center gap-1 rounded-lg bg-mint-500 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-mint-600 disabled:opacity-50"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+              {pending ? "…" : t("transfers.closeCollection")}
+            </button>
+          )}
+        </div>
       )}
     </div>
   );

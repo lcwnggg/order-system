@@ -154,7 +154,12 @@ export default async function Home() {
 
     // 首页只展示「别人开的、我还没说没有的」求货，自己发的不算求助
     const helpable = board.filter(
-      (r) => r.status === "open" && r.requesterStoreId !== user.id && !r.iDeclined
+      (r) =>
+        r.status === "open" &&
+        r.requesterStoreId !== user.id &&
+        !r.iDeclined &&
+        // 多店收集里我已经报过名的，不再算「等我回应」
+        !(r.mode === "multi" && r.myClaimStatus)
     );
     storeOpenTransfers = helpable.length;
     storeTransfers = helpable.slice(0, 3).map((r) => ({

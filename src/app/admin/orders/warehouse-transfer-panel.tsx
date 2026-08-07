@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import type { TransferRequest, TransferStatus } from "@/lib/transfers";
 import { useTransferRealtime } from "@/app/transfers/use-transfer-realtime";
-import { claimTransferRequest, setTransferStatus } from "@/app/transfers/actions";
+import { claimTransferRequest, setTransferStatus, updateTransferClaim } from "@/app/transfers/actions";
 import TransferAlerts from "@/app/transfers/transfer-alerts";
 import { useImageLightbox } from "@/app/image-lightbox";
 import { useT } from "@/lib/i18n/client";
@@ -103,7 +103,10 @@ function PanelCard({ req, currentUserId }: { req: TransferRequest; currentUserId
   const lightbox = useImageLightbox();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const minedByMe = req.claimedBy === currentUserId;
+  const [qty, setQty] = useState("");
+  const isMulti = req.mode === "multi";
+  // 收集模式里「我在备」看的是仓库自己报的那一份，不是请求上的独占认领
+  const minedByMe = isMulti ? req.myClaimStatus === "claimed" : req.claimedBy === currentUserId;
 
   function act(fn: () => Promise<{ error?: string }>) {
     setError(null);
@@ -136,11 +139,17 @@ function PanelCard({ req, currentUserId }: { req: TransferRequest; currentUserId
             <span className="text-paper-700">{req.requesterName ?? t("transfers.someStore")}</span>{" "}
             {t("whTransfer.asks")}
             {req.quantity ? ` ${t("transfers.qtyUnits", { n: req.quantity })}` : ""}
-            {req.status === "claimed" && !minedByMe && (
+            {req.status === "claimed" && !isMulti && !minedByMe && (
               <>
                 {" · "}
                 <span className="text-blue-700">{req.claimerName ?? t("transfers.someStore")}</span>{" "}
                 {t("whTransfer.claimerPreparing")}
+              </>
+            )}
+            {isMulti && req.claims.length > 0 && (
+              <>
+                {" · "}
+                <span className="text-blue-700">{t("roster.alreadyOffered", { n: req.claims.length })}</span>
               </>
             )}
             {" · "}
@@ -159,31 +168,52 @@ function PanelCard({ req, currentUserId }: { req: TransferRequest; currentUserId
       {error && <p className="text-[11px] text-red-500">{error}</p>}
 
       {/* 仓库操作：open 可「我有」认领；自己认领的可「已交货 / 退回」 */}
-      {req.status === "open" && (
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => act(() => claimTransferRequest(req.id))}
-          className="inline-flex items-center justify-center gap-1.5 self-start rounded-lg bg-mint-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-mint-600 disabled:opacity-50"
-        >
-          <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-          {t("whTransfer.warehouseHas")}
-        </button>
+      {req.status === "open" && !minedByMe && (
+        <div className="flex items-center gap-1.5 self-start">
+          {isMulti && (
+            <input
+              type="number"
+              min={1}
+              value={qty}
+              onChange={(e) => setQty(e.target.value)}
+              placeholder={t("roster.qtyPlaceholder")}
+              aria-label={t("roster.qtyAria")}
+              className="w-16 rounded-lg border border-paper-200 bg-white/80 px-2 py-1.5 text-xs text-paper-900 outline-none transition-colors placeholder:text-paper-400 focus:border-accent-500"
+            />
+          )}
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => act(() => claimTransferRequest(req.id, isMulti && qty.trim() ? Number(qty) : null))}
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-mint-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-mint-600 disabled:opacity-50"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
+            {t("whTransfer.warehouseHas")}
+          </button>
+        </div>
       )}
-      {req.status === "claimed" && minedByMe && (
+      {minedByMe && (req.status === "claimed" || (isMulti && req.status === "open")) && (
         <div className="flex items-center gap-1.5 self-start">
           <button
             type="button"
             disabled={pending}
-            onClick={() => act(() => setTransferStatus(req.id, "open"))}
+            onClick={() =>
+              act(() =>
+                isMulti ? updateTransferClaim(req.id, "withdraw") : setTransferStatus(req.id, "open")
+              )
+            }
             className="rounded-lg px-2 py-1.5 text-[11px] font-medium text-paper-400 transition-colors hover:text-paper-700 disabled:opacity-50"
           >
-            {t("transfers.giveBack")}
+            {isMulti ? t("transfers.withdraw") : t("transfers.giveBack")}
           </button>
           <button
             type="button"
             disabled={pending}
-            onClick={() => act(() => setTransferStatus(req.id, "done"))}
+            onClick={() =>
+              act(() =>
+                isMulti ? updateTransferClaim(req.id, "done") : setTransferStatus(req.id, "done")
+              )
+            }
             className="inline-flex items-center gap-1 rounded-lg bg-mint-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-mint-600 disabled:opacity-50"
           >
             <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>

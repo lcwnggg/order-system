@@ -2,6 +2,20 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type TransferStatus = "open" | "claimed" | "done" | "cancelled";
 
+/**
+ * single = 只要一家店（第一个说「我有」的独占认领）
+ * multi  = 想把所有门店手上有的都收上来，请求一直开放，谁有谁报名
+ */
+export type TransferMode = "single" | "multi";
+
+/** multi 模式下的一条报名（哪家店、能给几件、备好了没）。 */
+export type TransferClaim = {
+  storeId: string;
+  storeName: string | null;
+  quantity: number | null;
+  status: "claimed" | "done";
+};
+
 // 看板一行（get_transfer_board RPC 返回）
 export type TransferRequest = {
   id: string;
@@ -12,10 +26,23 @@ export type TransferRequest = {
   quantity: number | null;
   note: string | null;
   status: TransferStatus;
+  mode: TransferMode;
   claimedBy: string | null;
   claimerName: string | null;
   createdAt: string;
   iDeclined: boolean;
+  /** multi 模式下已报名的门店（single 恒为空数组） */
+  claims: TransferClaim[];
+  /** 我在这条 multi 请求里报的那一份；没报名为 null */
+  myClaimStatus: "claimed" | "done" | null;
+  myClaimQuantity: number | null;
+};
+
+type RpcClaim = {
+  store_id: string;
+  store_name: string | null;
+  quantity: number | null;
+  status: "claimed" | "done";
 };
 
 type RpcRow = {
@@ -27,10 +54,14 @@ type RpcRow = {
   quantity: number | null;
   note: string | null;
   status: TransferStatus;
+  mode: TransferMode | null;
   claimed_by: string | null;
   claimer_name: string | null;
   created_at: string;
   i_declined: boolean;
+  claims: RpcClaim[] | null;
+  my_claim_status: "claimed" | "done" | null;
+  my_claim_quantity: number | null;
 };
 
 export type GroupStore = { id: string; name: string | null };
@@ -63,9 +94,19 @@ export async function getTransferBoard(
     quantity: r.quantity,
     note: r.note,
     status: r.status,
+    // 还没跑 transfer_multi_store.sql 时 RPC 不返回 mode，退回旧的独占模式
+    mode: r.mode === "multi" ? "multi" : "single",
     claimedBy: r.claimed_by,
     claimerName: r.claimer_name,
     createdAt: r.created_at,
     iDeclined: r.i_declined,
+    claims: (r.claims ?? []).map((c) => ({
+      storeId: c.store_id,
+      storeName: c.store_name,
+      quantity: c.quantity,
+      status: c.status,
+    })),
+    myClaimStatus: r.my_claim_status ?? null,
+    myClaimQuantity: r.my_claim_quantity ?? null,
   }));
 }

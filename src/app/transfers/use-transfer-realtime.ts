@@ -24,6 +24,14 @@ export function useTransferRealtime(onChange?: () => void) {
           onChange?.();
         }
       )
+      // 「多店收集」的报名单独存一张表：别家报名时请求行不一定变，得单独订阅
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "transfer_claims" },
+        () => {
+          router.refresh();
+        }
+      )
       .subscribe();
 
     return () => {

@@ -150,6 +150,8 @@ function StoreNode({
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  // 「多店收集」模式下每条请求填的件数（本店能给几件）
+  const [qty, setQty] = useState<Record<string, string>>({});
 
   const active = reqs.length > 0;
   const name = store.name ?? t("transfers.someStore");
@@ -245,16 +247,53 @@ function StoreNode({
                   </div>
                 </div>
                 {req.note && <p className="mt-1 line-clamp-1 text-[10.5px] text-paper-500">📝 {req.note}</p>}
-                {actionable && (
+                {req.mode === "multi" && (
+                  <p className="mt-1 flex flex-wrap items-center gap-1 text-[10.5px] text-accent-600">
+                    <span className="rounded-full bg-accent-50 px-1.5 py-0.5 font-medium">
+                      {t("transfers.modeMultiTag")}
+                    </span>
+                    {req.claims.length > 0 && (
+                      <span className="text-paper-400">{t("roster.alreadyOffered", { n: req.claims.length })}</span>
+                    )}
+                  </p>
+                )}
+                {/* 收集模式下已经报过名：不再给按钮，只提示一句，管理放在「我要备的货」里 */}
+                {actionable && req.mode === "multi" && req.myClaimStatus && (
+                  <p className="mt-2 rounded-lg bg-blue-50 px-2 py-1 text-[10.5px] font-medium text-blue-700">
+                    {req.myClaimQuantity
+                      ? t("roster.youOffered", { n: req.myClaimQuantity })
+                      : t("roster.youOfferedNoQty")}
+                  </p>
+                )}
+                {actionable && !(req.mode === "multi" && req.myClaimStatus) && (
                   <div className="mt-2 flex gap-1.5">
+                    {req.mode === "multi" && (
+                      <input
+                        type="number"
+                        min={1}
+                        value={qty[req.id] ?? ""}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => setQty((q) => ({ ...q, [req.id]: e.target.value }))}
+                        placeholder={t("roster.qtyPlaceholder")}
+                        aria-label={t("roster.qtyAria")}
+                        className="w-14 shrink-0 rounded-lg border border-paper-200 bg-white/80 px-1.5 py-1.5 text-[11px] text-paper-900 outline-none transition-colors placeholder:text-paper-400 focus:border-accent-500"
+                      />
+                    )}
                     <button
                       type="button"
                       disabled={pendingId === req.id}
-                      onClick={() => act(req.id, () => claimTransferRequest(req.id))}
+                      onClick={() =>
+                        act(req.id, () =>
+                          claimTransferRequest(
+                            req.id,
+                            req.mode === "multi" && qty[req.id]?.trim() ? Number(qty[req.id]) : null
+                          )
+                        )
+                      }
                       className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-mint-500 px-2 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-mint-600 disabled:opacity-50"
                     >
                       <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                      {t("roster.iHave")}
+                      {req.mode === "multi" ? t("roster.iHaveSome") : t("roster.iHave")}
                     </button>
                     {canDecline && (
                       <button
