@@ -16,6 +16,7 @@ import { normalizeBarcode } from "@/lib/barcode";
 import { NEW_IN_DAYS } from "@/lib/new-in";
 import { useI18n } from "@/lib/i18n/client";
 import { sortByName } from "@/lib/sort";
+import { supabaseImageUrl } from "@/lib/supabase-image-loader";
 import type { Translate } from "@/lib/i18n/translate";
 
 function compressToJpeg(
@@ -698,7 +699,7 @@ export default function ProductForm({
                   <div className="relative">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
-                      src={url}
+                      src={supabaseImageUrl(url, 160)}
                       alt={t("form.imageNumberAlt", { n: i + 1 })}
                       className="h-20 w-20 rounded-lg object-cover ring-1 ring-paper-300"
                     />

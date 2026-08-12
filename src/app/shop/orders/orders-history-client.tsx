@@ -7,6 +7,7 @@ import { useImageLightbox } from "@/app/image-lightbox";
 import { useI18n } from "@/lib/i18n/client";
 import { formatDateTime } from "@/lib/i18n/datetime";
 import type { TranslationKey } from "@/lib/i18n/dictionaries";
+import { supabaseImageUrl } from "@/lib/supabase-image-loader";
 
 type StoreOrderItem = {
   id: string;
@@ -159,7 +160,7 @@ export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={item.imageUrl}
+                          src={supabaseImageUrl(item.imageUrl, 96)}
                           alt={item.name}
                           loading="lazy"
                           className="h-full w-full object-cover"

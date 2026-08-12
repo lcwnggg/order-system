@@ -12,6 +12,7 @@ import { useImageLightbox } from "@/app/image-lightbox";
 import { useT } from "@/lib/i18n/client";
 import type { TranslationKey } from "@/lib/i18n/dictionaries";
 import type { Translate } from "@/lib/i18n/translate";
+import { supabaseImageUrl } from "@/lib/supabase-image-loader";
 
 // 与商品图一致的前端压缩（沿用项目里的做法）
 function compressToJpeg(file: File, t: Translate, maxWidth = 1200, quality = 0.8): Promise<Blob> {
@@ -362,7 +363,7 @@ function NewRequestForm() {
             {photoUrl ? (
               <div className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={photoUrl} alt="" className="h-16 w-16 rounded-xl object-cover ring-1 ring-paper-900/10" />
+                <img src={supabaseImageUrl(photoUrl, 128)} alt="" className="h-16 w-16 rounded-xl object-cover ring-1 ring-paper-900/10" />
                 <button
                   type="button"
                   onClick={() => { setPhotoUrl(null); if (fileRef.current) fileRef.current.value = ""; }}

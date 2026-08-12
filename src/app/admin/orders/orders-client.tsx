@@ -7,6 +7,7 @@ import { useI18n } from "@/lib/i18n/client";
 import { formatDateTime } from "@/lib/i18n/datetime";
 import type { TranslationKey } from "@/lib/i18n/dictionaries";
 import type { Translate } from "@/lib/i18n/translate";
+import { supabaseImageUrl } from "@/lib/supabase-image-loader";
 
 type Product = {
   id: string;
@@ -157,14 +158,14 @@ function ProductThumb({
         aria-label={alt}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt={alt} className="h-full w-full object-cover" loading="lazy" />
+        <img src={supabaseImageUrl(url, 96)} alt={alt} className="h-full w-full object-cover" loading="lazy" />
       </button>
       {/* Vista ampliada al pasar por encima. pointer-events-none para que no
           se coma el clic del propio botón que la ha abierto. */}
       <div className="pointer-events-none absolute left-full top-0 z-30 ml-2 hidden group-hover:block">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={url}
+          src={supabaseImageUrl(url, 384)}
           alt={alt}
           className="h-48 w-48 rounded-xl bg-white object-contain shadow-2xl ring-1 ring-paper-200"
         />

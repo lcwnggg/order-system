@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useT } from "@/lib/i18n/client";
+import { supabaseImageUrl } from "@/lib/supabase-image-loader";
 import ModalPortal from "./modal-portal";
+
+/** Ancho de la foto grande: las fotos se suben a 1200 px, pedir más no da nada. */
+const FULL_WIDTH = 1200;
+/** Ancho de la tira de miniaturas de abajo (48 px en pantalla, el doble en retina). */
+const STRIP_WIDTH = 96;
 
 export type ZoomedImage = { urls: string[]; index: number; label: string };
 
@@ -87,7 +93,7 @@ export function ImageLightbox({
       {failed && <p className="text-sm text-white/80">{t("common.imageLoadFailed")}</p>}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={url}
+        src={supabaseImageUrl(url, FULL_WIDTH)}
         alt={image.label}
         onClick={(e) => e.stopPropagation()}
         onLoad={() => setLoaded(true)}
@@ -154,7 +160,11 @@ export function ImageLightbox({
               }`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={thumb} alt="" className="h-full w-full bg-white object-cover" />
+              <img
+                src={supabaseImageUrl(thumb, STRIP_WIDTH)}
+                alt=""
+                className="h-full w-full bg-white object-cover"
+              />
             </button>
           ))}
         </div>

@@ -11,6 +11,7 @@ import ModalPortal from "@/app/modal-portal";
 import { parseDecimal, sanitizeDecimalText } from "@/lib/decimal";
 import { useImageLightbox } from "@/app/image-lightbox";
 import { productImages } from "@/lib/product-images";
+import { supabaseImageUrl } from "@/lib/supabase-image-loader";
 import { NEW_IN_DAYS, isNewIn, newInDaysLeft, newUntilFromNow } from "@/lib/new-in";
 import { useI18n } from "@/lib/i18n/client";
 import { sortByName } from "@/lib/sort";
@@ -606,7 +607,7 @@ export default function ProductEditModal({
                       <div className="relative">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
-                          src={url}
+                          src={supabaseImageUrl(url, 128)}
                           alt={t("form.imageNumberAlt", { n: i + 1 })}
                           onClick={() => lightbox.open(images, product.name, i)}
                           title={t("edit.clickToZoom")}
