@@ -1,23 +1,14 @@
 import type { NextConfig } from "next";
 
-// El hostname de Supabase se deriva de NEXT_PUBLIC_SUPABASE_URL para no tener
-// que mantenerlo sincronizado a mano aquí y en el .env. Si cambias de proyecto
-// o de entorno Supabase, next/image se ajusta solo. Falla claro si falta la var.
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-if (!supabaseUrl) {
-  throw new Error("Falta NEXT_PUBLIC_SUPABASE_URL (necesaria para next/image remotePatterns)");
-}
-const supabaseHost = new URL(supabaseUrl).hostname;
-
 const nextConfig: NextConfig = {
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: supabaseHost,
-        pathname: "/storage/v1/object/public/**",
-      },
-    ],
+    // Las miniaturas las encoge Supabase, no el optimizador de Vercel: ese
+    // tiene cuota mensual y al agotarse devolvía 402 dejando toda la web sin
+    // fotos. El porqué y el cómo, en src/lib/supabase-image-loader.ts.
+    // (Con loader propio `remotePatterns` deja de usarse: no hay dominio que
+    // autorizar porque las URLs ya no pasan por Next.)
+    loader: "custom",
+    loaderFile: "./src/lib/supabase-image-loader.ts",
   },
   async headers() {
     return [
