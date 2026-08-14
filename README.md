@@ -1,17 +1,13 @@
 # Sistema B2B de pedidos y control de inventario multi-tienda
 
-Plataforma interna de pedidos, control de stock y traslados entre tiendas para una **cadena de 7 tiendas con almacén central**. En producción desde julio de 2026, con ~260 productos catalogados y uso diario por parte de las tiendas.
+Plataforma interna de pedidos, control de stock y traslados entre tiendas para una **cadena de 7 tiendas con almacén central**. En producción desde julio de 2026, con ~300 productos catalogados y uso diario por parte de las tiendas.
 
-**Stack:** Next.js · TypeScript · Supabase (PostgreSQL) · Vercel
+**Stack:** Next.js · TypeScript · Supabase (PostgreSQL + PL/pgSQL) · Vercel
 
 > Proyecto desarrollado de forma individual: análisis del problema, diseño del modelo de datos, desarrollo, despliegue e implantación con usuarios reales.
 
-<!-- Sube tus capturas al repositorio y descomenta estas líneas -->
-<!--
-![Catálogo de productos](catalogo.png)
-![Pantalla de pedido](pedido.png)
-![Tablón de traspasos](traspasos.png)
--->
+<img width="1351" height="759" alt="catalogo" src="https://github.com/user-attachments/assets/ce639b50-5c11-4397-bec7-ef212b01f9b9" />
+
 
 ---
 
@@ -34,35 +30,52 @@ Los traslados entre tiendas (una necesita un artículo que otra sí tiene) se pe
 **Preparación de pedidos fragmentada.**
 Los pedidos llegaban a lo largo del día y sin agrupar: un artículo por la mañana, otro por la tarde. La persona de almacén tenía que volver a entrar a preparar pedidos continuamente, e identificar cada artículo a partir de fotos sueltas enviadas por chat. Con siete tiendas, el coste de coordinación se multiplicaba.
 
-**Sin datos de rotación.**
-No existía registro de qué se vendía bien en cada tienda, así que las decisiones de compra se tomaban a ciegas.
+**Sin datos de rotación ni de margen.**
+No existía registro de qué se vendía bien en cada tienda, ni forma rápida de saber el margen real de un producto. Las decisiones de compra se tomaban a ciegas.
 
 ---
 
 ## 2. La solución
 
-### Catálogo con precios visibles por tienda
-Cada tienda tiene su propia cuenta y accede al catálogo completo organizado por categorías, con el precio de venta de cada artículo. Elimina por completo las consultas de precio: la información está donde se necesita, en el momento en que se necesita.
+El sistema tiene dos caras: una **consola de almacén** para la dirección y una **interfaz de tienda** para cada punto de venta, con datos y permisos distintos.
 
-### Pedidos al almacén central
-Cada tienda compone su pedido sobre el catálogo real, viendo lo que existe. La reposición pasa de estimarse desde dirección a solicitarse por quien conoce la demanda.
+### Interfaz de tienda
 
-### Exportación de pedidos a PDF, agrupada
-Los pedidos se exportan agrupados **por tienda** o **por tipo de producto**, según convenga a la preparación. Un pedido consolidado sustituye al goteo de peticiones a lo largo del día: quien prepara el pedido lo hace de una vez, con una lista clara, en lugar de reaccionar a mensajes sueltos.
+**Catálogo con precios de venta.** Cada tienda accede al catálogo completo por categorías, con el precio de venta de cada artículo y el stock disponible. Elimina las consultas de precio: la información está donde se necesita, en el momento en que se necesita.
 
-### Traslados entre tiendas con trazabilidad
-Las peticiones de artículos entre tiendas dejan de vivir en un chat. Cada solicitud queda registrada, con estado y con historial: no se pierde ninguna y puede consultarse qué se pidió, a quién y cuándo. Una misma petición puede lanzarse a varias tiendas a la vez.
+**Pedidos al almacén.** La tienda compone su pedido sobre el catálogo real, viendo lo que existe, y puede añadir una nota al pedido ("urgente", "entregar el viernes"). La reposición pasa de estimarse desde dirección a solicitarse por quien conoce la demanda.
 
-### Sección "New In" como herramienta comercial
-Espacio destacado donde la dirección selecciona qué productos mostrar en primer plano. Cumple dos funciones: dar a conocer las novedades, y **dar salida de forma dirigida a existencias paradas en almacén**. Es la respuesta directa al problema de capital inmovilizado: en lugar de esperar a que las tiendas pidan un artículo que han olvidado que existe, se les pone delante.
+**Tablón de traspasos entre tiendas.** Cuando ni la tienda ni el almacén tienen un artículo, se lanza una solicitud visible para todas las demás, que responden con «lo tengo» o «no lo tengo». Cada solicitud queda registrada con estado e historial. Sustituye al grupo de WhatsApp donde las peticiones se perdían.
 
-### Control de stock y rotación
-El sistema mantiene el stock por producto y registra el consumo de cada tienda, lo que permite ver qué rota en cada punto de venta y ajustar las compras con datos en lugar de por intuición.
+**Búsqueda por escaneo.** Localización de producto escaneando su código de barras, sin teclear.
 
-### Alta de productos por tres vías
-- **Importación masiva desde Excel**, para cargas grandes
-- **Alta manual**, para artículos sueltos
-- **Reconocimiento de imagen**, para digitalizar producto a partir de fotografías
+<img width="1352" height="760" alt="traspasostienda" src="https://github.com/user-attachments/assets/db4ff41e-1291-4523-abe0-fd2574eb8379" />
+
+
+### Consola de almacén
+
+**Panel de stock en tiempo real.** Productos totales, referencias con stock bajo, roturas de stock y porcentaje de stock saludable, con el detalle de qué productos requieren atención.
+
+<img width="1352" height="760" alt="截屏2026-08-13 19 18 22" src="https://github.com/user-attachments/assets/6377d175-344a-4f32-b0eb-66df50a67480" />
+
+
+**Gestión de pedidos con hoja de preparación.** Los pedidos pendientes se consolidan en una hoja imprimible agrupada **por producto** (para recorrer el almacén una sola vez) o **por tienda** (para preparar bulto a bulto), con foto de cada referencia. Un pedido consolidado sustituye al goteo de peticiones a lo largo del día.
+
+<img width="1352" height="760" alt="pedidos" src="https://github.com/user-attachments/assets/0bea09d3-a670-4bbc-86cd-cbdcbe2c6e35" />
+<img width="1352" height="761" alt="截屏2026-08-13 19 19 37" src="https://github.com/user-attachments/assets/8b3e03be-6312-45a2-b578-e07e0a9a8fd0" />
+
+
+**Avisos push al móvil** en cada pedido nuevo, para no tener que estar mirando la pantalla.
+
+**Calculadora de margen.** Precio de compra almacenado de forma privada —visible solo para la dirección, nunca para las tiendas— con cálculo de coste, ingreso y margen sobre cualquier selección de productos.
+
+**Alta de productos por tres vías:** importación masiva desde CSV/Excel con revisión celda a celda antes de confirmar, alta manual, y **reconocimiento por IA** a partir de una o dos fotos del producto, que rellena nombre, marca, categoría y descripción.
+<img width="1351" height="760" alt="截屏2026-08-13 19 18 43" src="https://github.com/user-attachments/assets/1c045bce-2759-4495-9559-ecc7c63f04fb" />
+
+**Sección "New In" con caducidad automática.** Los productos marcados como novedad aparecen destacados durante 10 días y se retiran solos. Cumple dos funciones: dar a conocer las novedades, y **dar salida de forma dirigida a existencias paradas en almacén**. Es la respuesta directa al problema de capital inmovilizado: en lugar de esperar a que las tiendas pidan un artículo que han olvidado que existe, se les pone delante.
+<img width="1351" height="759" alt="catalogo" src="https://github.com/user-attachments/assets/2101293a-93c0-4bb0-80b3-e8208658df12" />
+
+**Gestión de categorías en dos niveles** y **gestión de cuentas de tienda**, con nombres legibles en lugar de correos.
 
 ---
 
@@ -72,9 +85,10 @@ El sistema mantiene el stock por producto y registra el consumo de cada tienda, 
 |---|---|
 | Frontend | Next.js (App Router), TypeScript |
 | Base de datos | PostgreSQL en Supabase |
-| Autenticación | Supabase Auth, una cuenta por tienda |
 | Lógica en base de datos | PL/pgSQL |
+| Autenticación y roles | Supabase Auth: cuenta por tienda + rol de almacén |
 | Almacenamiento de imágenes | Supabase Storage |
+| Notificaciones | Web Push |
 | Despliegue | Vercel (despliegue continuo desde `main`) |
 | Idiomas de la interfaz | Español y chino |
 
@@ -84,17 +98,15 @@ El sistema mantiene el stock por producto y registra el consumo de cada tienda, 
 
 - **En producción desde julio de 2026**
 - **7 tiendas** operando con el sistema
-- **~260 productos** catalogados
-- **Más de 80 despliegues** a producción
-- Ciclos de pedido y traslados entre tiendas en uso regular
-
-Retorno de los usuarios: los pedidos se componen de forma más directa y con menos consultas previas, y el proceso de reposición se ha simplificado respecto a la operativa anterior por WhatsApp.
+- **~300 productos** en 13 categorías
+- **18 pedidos** procesados y traspasos entre tiendas en uso regular
+- **Más de 85 despliegues** a producción
 
 ---
 
 ## 5. Trabajo en curso
 
-- Refuerzo de las políticas de acceso a datos a nivel de base de datos (Row Level Security), para garantizar el aislamiento estricto entre tiendas
+- Refuerzo de las políticas de acceso a datos a nivel de base de datos (Row Level Security), para garantizar el aislamiento estricto entre tiendas y la confidencialidad de los precios de compra
 - Persistencia del precio en el momento del pedido, de modo que los pedidos históricos conserven el importe con el que se emitieron aunque el precio de catálogo cambie después
 - Control de concurrencia en las actualizaciones de stock mediante transacciones, para pedidos simultáneos sobre el mismo artículo
 - Informes de rotación por tienda y por categoría
