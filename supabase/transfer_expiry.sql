@@ -35,8 +35,11 @@ ALTER TABLE public.transfer_requests
   CHECK (status IN ('open', 'claimed', 'done', 'cancelled', 'expired'));
 
 -- 清扫用的索引：按老板范围 + 状态过滤
+-- El DROP es necesario para quien ya ejecutó la primera versión de este
+-- script: el índice llevaba updated_at y «IF NOT EXISTS» no lo rehace.
+DROP INDEX IF EXISTS public.idx_transfer_requests_sweep;
 CREATE INDEX IF NOT EXISTS idx_transfer_requests_sweep
-  ON public.transfer_requests(warehouse_id, status, updated_at);
+  ON public.transfer_requests(warehouse_id, status, created_at);
 
 
 -- ───────────────────────────────────────────────
@@ -56,14 +59,16 @@ BEGIN
   IF v_scope IS NULL THEN RETURN; END IF;
 
   -- 3 天没人理 → 收回给发起店
-  --   updated_at 是计时起点：发起时 = created_at，「再发一次」会重置它。
+  --   计时起点是【最后一次「问出去」的时间】：created_at，或者「再发一次」的
+  --   reopened_at。不能用 updated_at：那个字段任何动作都会动（有人报名又撤回、
+  --   认领的门店把货退回看板…），一条 14 天前的请求会因此永远不过期。
   --   注意不要在这里改 updated_at，否则 7 天倒计时的判断会被自己搅乱。
   UPDATE public.transfer_requests t
   SET status = 'expired', expired_at = now()
   WHERE t.warehouse_id = v_scope
     AND t.status = 'open'
     AND t.claimed_by IS NULL
-    AND t.updated_at < now() - interval '3 days'
+    AND COALESCE(t.reopened_at, t.created_at) < now() - interval '3 days'
     AND NOT EXISTS (
       SELECT 1 FROM public.transfer_claims c WHERE c.request_id = t.id
     );
