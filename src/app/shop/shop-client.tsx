@@ -10,6 +10,7 @@ import ModalPortal from "@/app/modal-portal";
 import { useI18n } from "@/lib/i18n/client";
 import { sortByName } from "@/lib/sort";
 import { isNewIn } from "@/lib/new-in";
+import WrittenOrderPanel, { type WrittenEntry } from "./written-order-panel";
 
 export type Product = {
   id: string;
@@ -52,17 +53,22 @@ const UNCATEGORIZED = "__uncategorized__";
 const NEW_IN = "__new_in__";
 const VIEW_MODE_KEY = "shopViewMode";
 const CART_KEY = "shopCart";
+/** Líneas escritas a mano pendientes de enviar (ver written-order-panel). */
+const WRITTEN_KEY = "shopWrittenLines";
 
 export default function ShopClient({
   products,
   categories,
   lastOrderItems,
   variants,
+  writtenSuggestions,
 }: {
   products: Product[];
   categories: CategoryItem[];
   lastOrderItems: { product_id: string; variant_id: string | null; quantity: number }[];
   variants: ProductVariant[];
+  /** Cosas escritas a mano en pedidos anteriores, para autocompletar. */
+  writtenSuggestions: string[];
 }) {
   const { t, tag } = useI18n();
   const lightbox = useImageLightbox();
@@ -74,9 +80,11 @@ export default function ShopClient({
   );
   const [selectedVariantId, setSelectedVariantId] = useState<Record<string, string>>({});
   const [note, setNote] = useState("");
+  // Líneas escritas a mano (artículos que no están en el catálogo)
+  const [written, setWritten] = useState<WrittenEntry[]>([]);
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<
-    null | { success: true; orderId: string } | { error: string }
+    null | { success: true; orderId: string; warning?: string } | { error: string }
   >(null);
 
   // ── 分类 & 搜索 ──
@@ -153,6 +161,16 @@ export default function ShopClient({
     } catch {
       // 解析失败忽略
     }
+    try {
+      const savedWritten = localStorage.getItem(WRITTEN_KEY);
+      if (savedWritten) {
+        const rows = JSON.parse(savedWritten) as WrittenEntry[];
+        // Misma hidratación desde localStorage que el carrito de arriba
+        if (Array.isArray(rows) && rows.length) setWritten(rows);
+      }
+    } catch {
+      // 解析失败忽略
+    }
     setCartHydrated(true);
     // 仅在挂载时水合一次
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -168,6 +186,13 @@ export default function ShopClient({
     }));
     localStorage.setItem(CART_KEY, JSON.stringify(rows));
   }, [cart, cartHydrated]);
+
+  // Las líneas escritas se guardan igual que el carrito: si se cierra la página
+  // a media lista, no se pierde lo ya escrito.
+  useEffect(() => {
+    if (!cartHydrated) return;
+    localStorage.setItem(WRITTEN_KEY, JSON.stringify(written));
+  }, [written, cartHydrated]);
 
   // ── 分类派生 ──
   // Alfabético: las tiendas buscan la categoría por su nombre.
@@ -373,13 +398,18 @@ export default function ShopClient({
       quantity: item.quantity,
       variantId: item.variant?.id,
     }));
+    const writtenItems = written.map((w) => ({
+      description: w.description,
+      quantity: w.quantity,
+    }));
     setResult(null);
     startTransition(async () => {
-      const res = await submitOrder(items, note);
+      const res = await submitOrder(items, note, writtenItems);
       setResult(res);
       if ("success" in res) {
         setCart({});
         setNote("");
+        setWritten([]);
       }
     });
   }
@@ -409,7 +439,11 @@ export default function ShopClient({
 
   const cartEntries = Object.entries(cart);
   const total = cartEntries.reduce((sum, [, item]) => sum + item.product.price * item.quantity, 0);
-  const cartCount = cartEntries.reduce((n, [, item]) => n + item.quantity, 0);
+  // Las líneas escritas cuentan como unidades del pedido (no tienen precio, así
+  // que no tocan el total) y bastan por sí solas para poder enviarlo.
+  const writtenCount = written.reduce((n, w) => n + w.quantity, 0);
+  const cartCount = cartEntries.reduce((n, [, item]) => n + item.quantity, 0) + writtenCount;
+  const canSubmit = cartEntries.length > 0 || written.length > 0;
 
   // ── 占位图 ──
   const imgPlaceholder = (size: "lg" | "sm") => (
@@ -940,12 +974,22 @@ export default function ShopClient({
                 </ul>
               )}
 
-              {cartEntries.length > 0 && (
+              <div className="mt-4">
+                <WrittenOrderPanel
+                  lines={written}
+                  onChange={setWritten}
+                  suggestions={writtenSuggestions}
+                />
+              </div>
+
+              {canSubmit && (
                 <div className="mt-4 border-t border-paper-100 pt-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-paper-500">{t("cart.total")}</span>
-                    <span className="font-bold text-paper-900">€{total.toFixed(2)}</span>
-                  </div>
+                  {cartEntries.length > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-paper-500">{t("cart.total")}</span>
+                      <span className="font-bold text-paper-900">€{total.toFixed(2)}</span>
+                    </div>
+                  )}
                   <textarea
                     value={note}
                     onChange={(e) => setNote(e.target.value)}
@@ -964,6 +1008,11 @@ export default function ShopClient({
                   {t("cart.orderSuccess", { id: result.orderId.slice(0, 8) })}
                 </p>
               )}
+              {result && "success" in result && result.warning && (
+                <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">
+                  {result.warning}
+                </p>
+              )}
 
               {lastOrderItems.length > 0 && (
                 <button type="button" onClick={handleRepeatOrder}
@@ -971,7 +1020,7 @@ export default function ShopClient({
                   {t("cart.repeatOrder")}
                 </button>
               )}
-              <button type="button" onClick={handleSubmit} disabled={cartEntries.length === 0 || isPending}
+              <button type="button" onClick={handleSubmit} disabled={!canSubmit || isPending}
                 className="mt-2 w-full rounded-lg bg-paper-700 py-3.5 text-base font-medium text-white transition hover:bg-paper-800 disabled:cursor-not-allowed disabled:opacity-40 sm:py-2.5 sm:text-sm">
                 {isPending ? t("common.submitting") : t("cart.submit")}
               </button>
@@ -1076,6 +1125,15 @@ export default function ShopClient({
                   ))}
                 </ul>
               )}
+
+              <div className="py-3">
+                <WrittenOrderPanel
+                  lines={written}
+                  onChange={setWritten}
+                  suggestions={writtenSuggestions}
+                  compact
+                />
+              </div>
             </div>
 
             {/* 面板底部操作区 */}
@@ -1084,7 +1142,7 @@ export default function ShopClient({
                 <span className="text-sm text-paper-500">{t("cart.itemCount", { n: cartCount })}</span>
                 <span className="text-xl font-bold text-paper-900">€{total.toFixed(2)}</span>
               </div>
-              {cartEntries.length > 0 && (
+              {canSubmit && (
                 <textarea
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
@@ -1101,13 +1159,18 @@ export default function ShopClient({
                   {t("cart.orderSuccess", { id: result.orderId.slice(0, 8) })}
                 </p>
               )}
+              {result && "success" in result && result.warning && (
+                <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">
+                  {result.warning}
+                </p>
+              )}
               {lastOrderItems.length > 0 && (
                 <button type="button" onClick={handleRepeatOrder}
                   className="mb-2 w-full rounded-xl border-2 border-paper-300 py-3 text-base font-semibold text-paper-700 transition hover:bg-paper-100">
                   {t("cart.repeatOrder")}
                 </button>
               )}
-              <button type="button" onClick={handleSubmit} disabled={cartEntries.length === 0 || isPending}
+              <button type="button" onClick={handleSubmit} disabled={!canSubmit || isPending}
                 className="w-full rounded-xl bg-paper-700 py-3.5 text-base font-semibold text-white transition hover:bg-paper-800 disabled:cursor-not-allowed disabled:opacity-40">
                 {isPending ? t("common.submitting") : t("cart.submit")}
               </button>

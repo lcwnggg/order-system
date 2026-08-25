@@ -27,6 +27,9 @@ export type OrderItem = {
   unitCost: number | null;
   variantColor: string | null;
 };
+/** Línea escrita a mano: texto libre + cantidad, sin producto ni precio. */
+export type WrittenOrderItem = { id: string; description: string; quantity: number };
+
 export type Order = {
   id: string;
   store_id: string;
@@ -37,6 +40,7 @@ export type Order = {
   note: string | null;
   title: string | null;
   items: OrderItem[];
+  writtenItems: WrittenOrderItem[];
 };
 
 type FilterValue = "all" | "pending" | "preparing" | "done" | "cancelled";
@@ -207,6 +211,14 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
         const label = itemLabel(item);
         map.set(label, (map.get(label) ?? 0) + item.quantity);
       }
+      // Lo escrito a mano se suma igual (agrupado por el texto, sin distinguir
+      // mayúsculas): si tres tiendas piden el mismo protector, sale una línea
+      // con el total, que es justo lo que hace falta para comprarlo.
+      for (const w of order.writtenItems) {
+        const label = `✎ ${w.description}`;
+        const key = [...map.keys()].find((k) => k.toLowerCase() === label.toLowerCase()) ?? label;
+        map.set(key, (map.get(key) ?? 0) + w.quantity);
+      }
     }
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
   }, [pendingOrders]);
@@ -231,6 +243,10 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
       for (const item of order.items) {
         const label = itemLabel(item);
         g.products.set(label, (g.products.get(label) ?? 0) + item.quantity);
+      }
+      for (const w of order.writtenItems) {
+        const label = `✎ ${w.description}`;
+        g.products.set(label, (g.products.get(label) ?? 0) + w.quantity);
       }
     }
     // key 用 store_id 而不是店名：两家门店重名时用店名当 React key 会撞车
@@ -287,6 +303,45 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
         }
       }
       return [...map.values()];
+    }
+
+    /**
+     * Lo escrito a mano, agrupado por texto (sin distinguir mayúsculas). Va en
+     * su propia sección de la hoja: no tiene categoría ni foto, y el almacén
+     * necesita verlo aparte para saber que eso no sale de una estantería.
+     */
+    function collectWritten(ordersIn: Order[]): PrintRow[] {
+      const map = new Map<string, PrintRow>();
+      for (const order of ordersIn) {
+        const storeName = displayStore(order, t);
+        for (const w of order.writtenItems) {
+          const key = w.description.toLowerCase();
+          if (!map.has(key)) {
+            map.set(key, {
+              name: w.description,
+              brand: null,
+              imageUrl: null,
+              total: 0,
+              categoryId: null,
+              stores: new Map(),
+            });
+          }
+          const p = map.get(key)!;
+          p.total += w.quantity;
+          p.stores.set(storeName, (p.stores.get(storeName) ?? 0) + w.quantity);
+        }
+      }
+      return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, tag));
+    }
+
+    /** Sección «escrito a mano» de la hoja; vacía si no hay ninguna línea. */
+    function writtenSectionHtml(ordersIn: Order[], showStores: boolean) {
+      const list = collectWritten(ordersIn);
+      if (!list.length) return "";
+      const head = `<div class="cat written-head">✎ ${escapeHtml(
+        t("written.section")
+      )} <span class="cat-n">${t("print.productKinds", { n: list.length })}</span></div>`;
+      return head + list.map((p) => itemHtml(p, showStores)).join("");
     }
 
     // Category label helper
@@ -360,7 +415,7 @@ ${thumb}
             "adminOrders.storeOrderCount",
             { n: g.orders.length }
           )} · ${t("print.productKinds", { n: list.length })}</span></div>`;
-          return head + list.map((p) => itemHtml(p, false)).join("");
+          return head + list.map((p) => itemHtml(p, false)).join("") + writtenSectionHtml(g.orders, false);
         })
         .join("");
     } else {
@@ -376,6 +431,7 @@ ${thumb}
           return header + itemHtml(p, true);
         })
         .join("");
+      itemsHtml += writtenSectionHtml(pendingOrders, true);
     }
 
     const html = `<!DOCTYPE html><html lang="${tag}"><head><meta charset="utf-8">
@@ -401,6 +457,10 @@ h1{font-size:13px;margin:0;letter-spacing:-.01em}
   background:#eceef2;border-radius:2px;padding:2px 4px;margin:6px 0 2px}
 .cat:first-child{margin-top:0}
 /* Por tienda el encabezado manda más que una categoría: se marca con filete. */
+/* Escrito a mano: mismo peso que un encabezado de tienda pero a rayas, para
+   que salte a la vista que eso no está en las estanterías. */
+.written-head{font-size:10px;text-transform:none;letter-spacing:0;color:#111;
+  background:#fff;border:1px dashed #6b7280;border-radius:2px}
 .store-head{font-size:10px;text-transform:none;letter-spacing:0;color:#111;
   background:#e2e6ec;border-left:2.5px solid #111;border-radius:0 2px 2px 0}
 .cat-n{font-weight:500;color:#6b7280;font-size:8px}
@@ -903,8 +963,13 @@ h1{font-size:13px;margin:0;letter-spacing:-.01em}
                   </svg>
                   {isOpen ? t("common.collapse") : t("common.expand")}
                   <span className="text-paper-400">
-                    · {t("adminOrders.itemCount", { n: order.items.length })}
+                    · {t("adminOrders.itemCount", { n: order.items.length + order.writtenItems.length })}
                   </span>
+                  {order.writtenItems.length > 0 && (
+                    <span className="rounded-full border border-dashed border-paper-400 px-2 py-0.5 text-[11px] font-medium text-paper-600">
+                      ✎ {t("written.lineCount", { n: order.writtenItems.length })}
+                    </span>
+                  )}
                 </button>
 
                 {isOpen && (
@@ -953,6 +1018,27 @@ h1{font-size:13px;margin:0;letter-spacing:-.01em}
                               })}
                             </span>
                           )}
+                        </span>
+                      </div>
+                    ))}
+
+                    {order.writtenItems.map((w) => (
+                      <div key={w.id} className="flex items-center gap-3 py-2.5 text-sm">
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-dashed border-paper-300 text-paper-400">
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </span>
+                        <span className="min-w-0 flex-1 break-words text-paper-700">
+                          {w.description}
+                          <span className="ml-1.5 rounded bg-paper-100 px-1.5 py-0.5 text-[11px] font-medium text-paper-600">
+                            {t("written.badge")}
+                          </span>
+                        </span>
+                        {/* Sin precio: es texto libre, no un artículo con tarifa */}
+                        <span className="shrink-0 text-right font-medium text-paper-900">
+                          × {w.quantity}
                         </span>
                       </div>
                     ))}

@@ -200,6 +200,24 @@ const es = {
   "cart.perUnit": "/ ud.",
   "cart.itemCount": "{n} artículos",
 
+  // ── pedido escrito (artículos que no están en el catálogo) ──
+  "written.title": "Pedido escrito",
+  "written.hint": "¿Falta algo en el catálogo? Escríbelo y pulsa Enter.",
+  "written.placeholder": "protector completo 16 Pro Max x5",
+  "written.add": "Añadir",
+  "written.qtyHintAsk": "¿×{n}?",
+  "written.qtyHintTitle": "Poner {n} unidades",
+  "written.remove": "Quitar esta línea",
+  "written.lineCount": "{n} escritos",
+  "written.pastedLines": "{n} líneas añadidas",
+  "written.recent": "De pedidos anteriores",
+  "written.badge": "Escrito",
+  "written.section": "Escrito a mano",
+  "written.units": "{n} uds.",
+  "written.tipMultiline": "Puedes pegar una lista entera: una línea por artículo.",
+  "written.saveFailed":
+    "El pedido se ha enviado, pero las líneas escritas a mano NO se han guardado. Avisa al almacén.",
+
   // ── escaneo en el catálogo ──
   "scan.notFound": "No se ha encontrado ningún producto con el código {code}",
   "scan.outOfStock": "{name} está sin stock",
@@ -736,6 +754,7 @@ const es = {
   "db.onlyDoneOrCancelledDeletable":
     "Solo se pueden eliminar los pedidos completados o cancelados",
   "db.onlyPendingCancellable": "Solo se pueden cancelar los pedidos pendientes",
+  "db.orderNotEditable": "Este pedido ya no se puede modificar",
   "db.cannotModifyOrder": "Sin permiso para modificar este pedido",
   "db.cannotCancelOrder": "Sin permiso para cancelar este pedido",
   "db.requestNotFound": "La solicitud no existe",

@@ -20,15 +20,20 @@ type StoreOrderItem = {
   variantColor: string | null;
 };
 
+/** Línea escrita a mano: texto libre + cantidad, sin producto ni precio. */
+type StoreWrittenItem = { id: string; description: string; quantity: number };
+
 export type StoreOrder = {
   id: string;
   status: "pending" | "preparing" | "done" | "cancelled";
   created_at: string;
   note: string | null;
   items: StoreOrderItem[];
+  writtenItems: StoreWrittenItem[];
 };
 
 const CART_KEY = "shopCart";
+const WRITTEN_KEY = "shopWrittenLines";
 
 const STATUS_KEY: Record<StoreOrder["status"], TranslationKey> = {
   pending: "orderStatus.pending",
@@ -59,8 +64,16 @@ export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }
       variantId: it.variantId ?? undefined,
       quantity: it.quantity,
     }));
+    // «Volver a pedir» arrastra también lo escrito a mano: es justo lo que más
+    // se repite mes a mes (protectores, cables…)
+    const writtenRows = order.writtenItems.map((w) => ({
+      id: `re-${w.id}`,
+      description: w.description,
+      quantity: w.quantity,
+    }));
     try {
       localStorage.setItem(CART_KEY, JSON.stringify(rows));
+      localStorage.setItem(WRITTEN_KEY, JSON.stringify(writtenRows));
     } catch {
       // 忽略写入失败
     }
@@ -179,6 +192,26 @@ export default function OrdersHistoryClient({ orders }: { orders: StoreOrder[] }
                   <span className="text-paper-500">
                     €{Number(item.price).toFixed(2)} × {item.quantity}
                   </span>
+                </div>
+              ))}
+
+              {order.writtenItems.map((w) => (
+                <div key={w.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
+                  <span className="flex min-w-0 items-center gap-2.5 text-paper-700">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-dashed border-paper-300 text-paper-400">
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8}
+                          d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </span>
+                    <span className="min-w-0">
+                      {w.description}
+                      <span className="ml-1.5 rounded bg-paper-100 px-1.5 py-0.5 text-[11px] font-medium text-paper-600">
+                        {t("written.badge")}
+                      </span>
+                    </span>
+                  </span>
+                  <span className="shrink-0 text-paper-500">× {w.quantity}</span>
                 </div>
               ))}
             </div>

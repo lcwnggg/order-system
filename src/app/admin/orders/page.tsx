@@ -84,6 +84,30 @@ export default async function AdminOrdersPage() {
     }
   }
 
+  // Líneas escritas a mano (artículos que no están en el catálogo). Consulta
+  // aparte a propósito: si supabase/order_custom_items.sql todavía no se ha
+  // ejecutado, esta falla sola y la página de pedidos sigue funcionando.
+  const orderIds = (rawOrders ?? []).map((o) => o.id as string);
+  const { data: writtenRows } =
+    orderIds.length > 0
+      ? await supabase
+          .from("order_custom_items")
+          .select("id, order_id, description, quantity")
+          .in("order_id", orderIds)
+          .order("created_at")
+      : { data: [] };
+  const writtenByOrder = new Map<string, { id: string; description: string; quantity: number }[]>();
+  for (const row of (writtenRows ?? []) as {
+    id: string;
+    order_id: string;
+    description: string;
+    quantity: number;
+  }[]) {
+    const list = writtenByOrder.get(row.order_id) ?? [];
+    list.push({ id: row.id, description: row.description, quantity: row.quantity });
+    writtenByOrder.set(row.order_id, list);
+  }
+
   const transferRequests = await getTransferBoard(supabase);
 
   const orders: Order[] = (rawOrders ?? []).map((o) => ({
@@ -95,6 +119,7 @@ export default async function AdminOrdersPage() {
     created_at: o.created_at as string,
     note: (o.note as string | null) ?? null,
     title: (o.title as string | null) ?? null,
+    writtenItems: writtenByOrder.get(o.id as string) ?? [],
     items: ((o.order_items as unknown[]) ?? []).map((raw) => {
       const item = raw as {
         id: string;

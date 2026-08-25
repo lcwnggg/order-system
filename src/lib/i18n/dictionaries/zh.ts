@@ -196,6 +196,23 @@ const zh: Dictionary = {
   "cart.perUnit": "/ 件",
   "cart.itemCount": "共 {n} 件",
 
+  // ── 手写下单（目录里没有的东西） ──
+  "written.title": "手写下单",
+  "written.hint": "目录里没有的东西？写一行，按回车。",
+  "written.placeholder": "保护壳 16 Pro Max x5",
+  "written.add": "添加",
+  "written.qtyHintAsk": "×{n}？",
+  "written.qtyHintTitle": "改成 {n} 件",
+  "written.remove": "删掉这一行",
+  "written.lineCount": "手写 {n} 行",
+  "written.pastedLines": "已添加 {n} 行",
+  "written.recent": "以前写过的",
+  "written.badge": "手写",
+  "written.section": "手写清单",
+  "written.units": "{n} 件",
+  "written.tipMultiline": "可以整段粘贴：一行一个。",
+  "written.saveFailed": "订单已提交，但手写的那几行没保存上，请通知仓库。",
+
   // ── 目录扫码 ──
   "scan.notFound": "未找到条码 {code} 对应的商品",
   "scan.outOfStock": "{name} 暂时缺货",
@@ -709,6 +726,7 @@ const zh: Dictionary = {
   "db.orderNotInWarehouse": "订单不属于本仓库",
   "db.onlyDoneOrCancelledDeletable": "只有已完成或已取消的订单可以删除",
   "db.onlyPendingCancellable": "只有待处理订单可以取消",
+  "db.orderNotEditable": "该订单已无法修改",
   "db.cannotModifyOrder": "无权修改该订单",
   "db.cannotCancelOrder": "无权取消该订单",
   "db.requestNotFound": "请求不存在",

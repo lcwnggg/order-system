@@ -16,7 +16,13 @@ export default async function ShopPage() {
 
   if (profile.role === "warehouse") redirect("/admin/products");
 
-  const [{ data: products }, { data: categoriesData }, { data: lastOrders }, { data: variantsData }] = await Promise.all([
+  const [
+    { data: products },
+    { data: categoriesData },
+    { data: lastOrders },
+    { data: variantsData },
+    { data: writtenHistory },
+  ] = await Promise.all([
     // `image_urls` y `new_until` se añaden a mano en Supabase: si alguna falta
     // todavía, el catálogo se sirve igual (sin fotos extra / sin «New in»).
     withOptionalColumns<Product[]>(["image_urls", "new_until"], (extra) =>
@@ -43,7 +49,26 @@ export default async function ShopPage() {
       .from("product_variants")
       .select("id, product_id, color, stock, sort_order")
       .order("sort_order"),
+    // Lo que esta tienda ya ha pedido por escrito otras veces: alimenta el
+    // autocompletar del «pedido escrito». RLS ya limita las filas a sus propios
+    // pedidos. Si el script order_custom_items.sql aún no se ha ejecutado, la
+    // consulta falla y la lista queda vacía: la página funciona igual.
+    supabase
+      .from("order_custom_items")
+      .select("description, created_at")
+      .order("created_at", { ascending: false })
+      .limit(300),
   ]);
+
+  // Sin repetidos y respetando el orden (lo más reciente primero)
+  const writtenSuggestions = [
+    ...new Map(
+      ((writtenHistory ?? []) as { description: string }[]).map((r) => [
+        r.description.toLowerCase(),
+        r.description,
+      ])
+    ).values(),
+  ].slice(0, 60);
 
   const lastOrderItems =
     (lastOrders?.[0]?.order_items ?? []) as { product_id: string; variant_id: string | null; quantity: number }[];
@@ -129,6 +154,7 @@ export default async function ShopPage() {
         categories={(categoriesData ?? []) as { id: string; name: string; parent_id: string | null }[]}
         lastOrderItems={lastOrderItems}
         variants={(variantsData ?? []) as { id: string; product_id: string; color: string; stock: number; sort_order: number }[]}
+        writtenSuggestions={writtenSuggestions}
       />
       </div>
     </div>

@@ -19,6 +19,7 @@ const DB_MESSAGE_KEYS: Record<string, TranslationKey> = {
   订单不属于本仓库: "db.orderNotInWarehouse",
   只有已完成或已取消的订单可以删除: "db.onlyDoneOrCancelledDeletable",
   只有待处理订单可以取消: "db.onlyPendingCancellable",
+  该订单已无法修改: "db.orderNotEditable",
   请填写要调的货: "transfers.itemRequired",
   请求不存在: "db.requestNotFound",
   该请求不属于本仓库分组: "db.requestNotInGroup",
