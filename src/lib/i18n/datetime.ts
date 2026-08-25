@@ -1,4 +1,4 @@
-import { LOCALE_TIME_ZONES, type Locale } from "./config";
+import { LOCALE_TAGS, LOCALE_TIME_ZONES, type Locale } from "./config";
 
 // 订单时间的统一格式化。
 //
@@ -23,4 +23,26 @@ export function formatDateTime(iso: string, locale: Locale): string {
 
   // 固定成 2026-07-29 14:05，与语言无关（数字日期两种语言都读得懂）
   return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}`;
+}
+
+// 按天分组用的「日」键：同样显式带时区，服务端和客户端切出来的那一天必然一致。
+export function dayKey(iso: string, locale: Locale): string {
+  return formatDateTime(iso, locale).slice(0, 10);
+}
+
+/**
+ * Cabecera de un grupo de pedidos: «lunes, 25 de agosto de 2026».
+ *
+ * Aquí sí se traduce (a diferencia de la hora, que va en números): el
+ * encabezado de un día se lee de un vistazo mucho mejor con el nombre del día
+ * escrito. La zona horaria va explícita por el mismo motivo que arriba.
+ */
+export function formatDayLabel(iso: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(LOCALE_TAGS[locale], {
+    timeZone: LOCALE_TIME_ZONES[locale],
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(new Date(iso));
 }

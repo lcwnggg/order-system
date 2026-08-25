@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import { updateOrderStatus, deleteOrder, renameOrder } from "./actions";
 import { useImageLightbox } from "@/app/image-lightbox";
 import { useI18n } from "@/lib/i18n/client";
-import { formatDateTime } from "@/lib/i18n/datetime";
+import { dayKey, formatDateTime, formatDayLabel } from "@/lib/i18n/datetime";
 import type { TranslationKey } from "@/lib/i18n/dictionaries";
 import type { Translate } from "@/lib/i18n/translate";
 import { supabaseImageUrl } from "@/lib/supabase-image-loader";
@@ -178,6 +178,10 @@ function ProductThumb({
   );
 }
 
+// El día de hoy no cambia solo mientras la página está abierta: no hay a qué
+// suscribirse, así que el «unsubscribe» es un no-op.
+const subscribeNever = () => () => {};
+
 export default function OrdersClient({ orders, categories }: { orders: Order[]; categories: CategoryItem[] }) {
   const { locale, tag, t } = useI18n();
   const [filter, setFilter] = useState<FilterValue>("all");
@@ -193,13 +197,47 @@ export default function OrdersClient({ orders, categories }: { orders: Order[]; 
   const [showCost, setShowCost] = useState(false);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  // Días plegados. Se guarda solo lo cerrado: un día nuevo aparece abierto.
+  const [closedDays, setClosedDays] = useState<Record<string, boolean>>({});
+
   const lightbox = useImageLightbox();
   const [, startTransition] = useTransition();
+
+  // «Hoy» / «Ayer» solo se calculan en el navegador: el servidor pinta el HTML
+  // pudiendo estar al otro lado de la medianoche (o en otra zona horaria), y
+  // React se quejaría de que lo pintado no coincide con lo hidratado. Con
+  // useSyncExternalStore el render del servidor devuelve "" y el del navegador
+  // el día de verdad, que es justo lo que este hook está pensado para hacer.
+  const todayKey = useSyncExternalStore(
+    subscribeNever,
+    () => dayKey(new Date().toISOString(), locale),
+    () => ""
+  );
+  const relativeDays = useMemo(() => {
+    if (!todayKey) return null;
+    const prev = new Date(`${todayKey}T00:00:00Z`);
+    prev.setUTCDate(prev.getUTCDate() - 1);
+    return { today: todayKey, yesterday: prev.toISOString().slice(0, 10) };
+  }, [todayKey]);
 
   const filtered = useMemo(
     () => (filter === "all" ? orders : orders.filter((o) => o.status === filter)),
     [orders, filter]
   );
+
+  // Los pedidos que se ven, repartidos por día. `orders` ya viene ordenado de
+  // más nuevo a más viejo, así que basta con ir cortando cada vez que cambia la
+  // fecha: los días salen en orden y los pedidos dentro de cada día también.
+  const dayGroups = useMemo(() => {
+    const groups: { key: string; label: string; orders: Order[] }[] = [];
+    for (const order of filtered) {
+      const key = dayKey(order.created_at, locale);
+      const last = groups[groups.length - 1];
+      if (last && last.key === key) last.orders.push(order);
+      else groups.push({ key, label: formatDayLabel(order.created_at, locale), orders: [order] });
+    }
+    return groups;
+  }, [filtered, locale]);
 
   const pendingOrders = useMemo(() => orders.filter((o) => o.status === "pending"), [orders]);
 
@@ -554,6 +592,9 @@ h1{font-size:13px;margin:0;letter-spacing:-.01em}
   }
 
   function setAllOpen(open: boolean) {
+    // «Desplegar todos» tiene que enseñarlo todo de verdad: si algún día está
+    // plegado, abrir solo los pedidos no serviría de nada.
+    if (open) setClosedDays({});
     setOpenOverrides((prev) => {
       const next = { ...prev };
       for (const o of filtered) next[o.id] = open;
@@ -800,8 +841,51 @@ h1{font-size:13px;margin:0;letter-spacing:-.01em}
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {filtered.map((order) => {
+        <div className="space-y-5">
+          {dayGroups.map((group) => {
+            const dayOpen = !closedDays[group.key];
+            const relative =
+              relativeDays?.today === group.key
+                ? t("adminOrders.today")
+                : relativeDays?.yesterday === group.key
+                  ? t("adminOrders.yesterday")
+                  : null;
+            return (
+              <section key={group.key}>
+                {/* Cabecera del día: pulsando se pliega el bloque entero */}
+                <button
+                  type="button"
+                  onClick={() =>
+                    setClosedDays((prev) => ({ ...prev, [group.key]: !prev[group.key] }))
+                  }
+                  aria-expanded={dayOpen}
+                  className="mb-2 flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-paper-100/60"
+                >
+                  <svg
+                    className={`h-4 w-4 shrink-0 text-paper-400 transition-transform ${dayOpen ? "rotate-90" : ""}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  <span className="text-sm font-semibold text-paper-900">
+                    {relative ?? group.label}
+                  </span>
+                  {relative && (
+                    <span className="text-xs text-paper-500">{group.label}</span>
+                  )}
+                  <span className="h-px flex-1 bg-paper-200" />
+                  <span className="shrink-0 font-mono text-[11px] uppercase tracking-[0.16em] text-paper-500">
+                    {group.orders.length === 1
+                      ? t("adminOrders.dayCountOne")
+                      : t("adminOrders.dayCount", { n: group.orders.length })}
+                  </span>
+                </button>
+
+                {dayOpen && (
+                  <div className="space-y-3">
+                    {group.orders.map((order) => {
             const money = orderMoney(order.items);
             const total = money.revenue;
             const isThisPending = pendingId === order.id;
@@ -1045,6 +1129,11 @@ h1{font-size:13px;margin:0;letter-spacing:-.01em}
                   </div>
                 )}
               </div>
+            );
+                    })}
+                  </div>
+                )}
+              </section>
             );
           })}
         </div>
