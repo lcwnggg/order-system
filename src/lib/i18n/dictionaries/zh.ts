@@ -651,7 +651,7 @@ const zh: Dictionary = {
   "transfers.askAgain": "再发一次",
   "transfers.confirmDelete": "把「{item}」从清单里删掉？删了就没了。",
   "transfers.expiredCount": "{n} 条没人理，已收回",
-  "transfers.stateExpired": "3 天没人回应 · 已收回给你",
+  "transfers.stateExpired": "3 天没有动静 · 已收回给你",
   "transfers.autoDeleteIn": "{n} 天后自动消失",
   "transfers.autoDeleteToday": "今天就会自动消失",
   "transfers.qtyUnits": "{n} 件",

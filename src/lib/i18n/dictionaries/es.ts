@@ -674,7 +674,7 @@ const es = {
   "transfers.askAgain": "Volver a solicitar",
   "transfers.confirmDelete": "¿Quitar «{item}» de tu lista? No se puede deshacer.",
   "transfers.expiredCount": "{n} devueltos sin respuesta",
-  "transfers.stateExpired": "Nadie respondió en 3 días · te lo hemos devuelto",
+  "transfers.stateExpired": "3 días sin movimiento · te lo hemos devuelto",
   "transfers.autoDeleteIn": "se borra solo en {n} días",
   "transfers.autoDeleteToday": "se borra solo hoy",
   "transfers.qtyUnits": "{n} uds.",

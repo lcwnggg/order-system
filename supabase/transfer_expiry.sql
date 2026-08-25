@@ -3,7 +3,8 @@
 --   问题：没人理的互调请求会永远挂在别家门店的看板上，越堆越难看。
 --
 --   规则：
---     1) open 且【没有任何门店回应】（没人认领、multi 也没人报名）满 3 天
+--     1) 只要【3 天没有任何动静】就收回（updated_at 是「最后一次有人动它」）：
+--        没人认领的、被认领了却迟迟不交货的、multi 收集中没人来收尾的，一视同仁。
 --        → 自动变 expired：别家门店/老板都看不到了，只回到发起店自己的清单里。
 --     2) expired 之后发起店可以「再发一次」(reopen) 或「删掉」(delete)。
 --     3) expired 满 7 天还是没人管 → 自己删掉，不留痕。
@@ -35,11 +36,11 @@ ALTER TABLE public.transfer_requests
   CHECK (status IN ('open', 'claimed', 'done', 'cancelled', 'expired'));
 
 -- 清扫用的索引：按老板范围 + 状态过滤
--- El DROP es necesario para quien ya ejecutó la primera versión de este
--- script: el índice llevaba updated_at y «IF NOT EXISTS» no lo rehace.
+-- El DROP recrea el índice para quien ya ejecutó una versión anterior de este
+-- script (llevaba otra columna y «IF NOT EXISTS» no lo rehace).
 DROP INDEX IF EXISTS public.idx_transfer_requests_sweep;
 CREATE INDEX IF NOT EXISTS idx_transfer_requests_sweep
-  ON public.transfer_requests(warehouse_id, status, created_at);
+  ON public.transfer_requests(warehouse_id, status, updated_at);
 
 
 -- ───────────────────────────────────────────────
@@ -58,20 +59,20 @@ BEGIN
   v_scope := public.current_warehouse_id();
   IF v_scope IS NULL THEN RETURN; END IF;
 
-  -- 3 天没人理 → 收回给发起店
-  --   计时起点是【最后一次「问出去」的时间】：created_at，或者「再发一次」的
-  --   reopened_at。不能用 updated_at：那个字段任何动作都会动（有人报名又撤回、
-  --   认领的门店把货退回看板…），一条 14 天前的请求会因此永远不过期。
+  -- 3 天没有任何动静 → 收回给发起店
+  --   updated_at 就是「最后一次有人动它」：发起、再发一次、认领、报名、报名
+  --   改动/撤回，全都会刷新它。所以这一条规则同时盖住三种烂尾：
+  --     · 没人认领的；
+  --     · 有门店点了「我有」却一直不交货的（真实数据里最多的就是这种）；
+  --     · multi 收集中、有人报了名但谁都没来收尾的。
+  --   「我没有」(transfer_declines) 不动 updated_at，所以不会重置计时——
+  --   那正是没人有货的情形。
   --   注意不要在这里改 updated_at，否则 7 天倒计时的判断会被自己搅乱。
   UPDATE public.transfer_requests t
   SET status = 'expired', expired_at = now()
   WHERE t.warehouse_id = v_scope
-    AND t.status = 'open'
-    AND t.claimed_by IS NULL
-    AND COALESCE(t.reopened_at, t.created_at) < now() - interval '3 days'
-    AND NOT EXISTS (
-      SELECT 1 FROM public.transfer_claims c WHERE c.request_id = t.id
-    );
+    AND t.status IN ('open', 'claimed')
+    AND t.updated_at < now() - interval '3 days';
 
   -- 收回后再放 7 天没人管 → 自己消失
   DELETE FROM public.transfer_requests t
@@ -101,7 +102,11 @@ BEGIN
   IF r.requester_store_id <> auth.uid() THEN RAISE EXCEPTION '只有发起门店可再发一次'; END IF;
   IF r.status NOT IN ('expired', 'cancelled') THEN RAISE EXCEPTION '当前状态不可再发一次'; END IF;
 
+  -- Pregunta nueva: ni los «no tengo» ni los apuntados de la vez anterior
+  -- deben seguir pegados. Si aquello se quedó a medias hace dos semanas, esos
+  -- apuntes ya no valen nada.
   DELETE FROM public.transfer_declines WHERE request_id = p_id;
+  DELETE FROM public.transfer_claims   WHERE request_id = p_id;
 
   UPDATE public.transfer_requests
   SET status = 'open',

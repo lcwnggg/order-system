@@ -21,18 +21,14 @@ SELECT
   t.status,
   t.mode,
   date_trunc('minute', t.created_at) AS creada,
-  round(extract(epoch FROM now() - COALESCE(t.reopened_at, t.created_at)) / 86400, 1)
-                                     AS dias_desde_que_se_pidio,
+  round(extract(epoch FROM now() - t.updated_at) / 86400, 1)
+                                     AS dias_sin_moverse,
   (SELECT count(*) FROM public.transfer_claims c WHERE c.request_id = t.id)
                                      AS apuntados,
   CASE
     WHEN t.status = 'expired' THEN 'ya está devuelta (solo la ve quien la pidió)'
-    WHEN t.status = 'claimed' THEN 'la cogió una tienda y no la ha entregado · por diseño NO caduca'
-    WHEN t.claimed_by IS NOT NULL THEN 'tiene tienda asignada · no caduca'
-    WHEN EXISTS (SELECT 1 FROM public.transfer_claims c WHERE c.request_id = t.id)
-      THEN 'alguien se apuntó · hubo respuesta, no caduca'
-    WHEN COALESCE(t.reopened_at, t.created_at) >= now() - interval '3 days'
-      THEN 'todavía no lleva 3 días'
+    WHEN t.updated_at >= now() - interval '3 days'
+      THEN 'se movió hace menos de 3 días'
     ELSE 'DEBERÍA HABER CADUCADO → el barrido no se está ejecutando'
   END                                AS motivo
 FROM public.transfer_requests t
@@ -49,13 +45,9 @@ ORDER BY t.created_at;
 -- ───────────────────────────────────────────────
 UPDATE public.transfer_requests t
 SET status = 'expired', expired_at = now()
-WHERE t.status = 'open'
-  AND t.claimed_by IS NULL
-  AND COALESCE(t.reopened_at, t.created_at) < now() - interval '3 days'
-  AND NOT EXISTS (
-    SELECT 1 FROM public.transfer_claims c WHERE c.request_id = t.id
-  )
-RETURNING left(item_text, 40) AS devuelta, created_at;
+WHERE t.status IN ('open', 'claimed')
+  AND t.updated_at < now() - interval '3 days'
+RETURNING left(item_text, 40) AS devuelta, status, created_at;
 
 
 -- ───────────────────────────────────────────────
