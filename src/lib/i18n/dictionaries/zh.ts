@@ -204,6 +204,7 @@ const zh: Dictionary = {
   "written.qtyHintAsk": "×{n}？",
   "written.qtyHintTitle": "改成 {n} 件",
   "written.remove": "删掉这一行",
+  "written.qtyLabel": "数量",
   "written.lineCount": "手写 {n} 行",
   "written.pastedLines": "已添加 {n} 行",
   "written.recent": "以前写过的",

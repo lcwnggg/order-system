@@ -208,6 +208,7 @@ const es = {
   "written.qtyHintAsk": "¿×{n}?",
   "written.qtyHintTitle": "Poner {n} unidades",
   "written.remove": "Quitar esta línea",
+  "written.qtyLabel": "Cantidad",
   "written.lineCount": "{n} escritos",
   "written.pastedLines": "{n} líneas añadidas",
   "written.recent": "De pedidos anteriores",

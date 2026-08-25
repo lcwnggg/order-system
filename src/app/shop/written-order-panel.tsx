@@ -57,6 +57,12 @@ export default function WrittenOrderPanel({
 }) {
   const { t } = useI18n();
   const [draft, setDraft] = useState("");
+  /**
+   * Cantidades a medio teclear. Mientras se escribe hace falta poder dejar la
+   * casilla vacía o en «0» sin que la línea desaparezca: solo al salir del
+   * campo se decide el valor definitivo.
+   */
+  const [qtyDraft, setQtyDraft] = useState<Record<string, string>>({});
   const [flash, setFlash] = useState<string | null>(null);
   const [focused, setFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -79,6 +85,26 @@ export default function WrittenOrderPanel({
       setTimeout(() => setFlash(null), 2500);
     }
     inputRef.current?.focus();
+  }
+
+  /** Lo tecleado a mano en la casilla de cantidad. */
+  function typeQty(id: string, raw: string) {
+    const digits = raw.replace(/\D/g, "").slice(0, 3);
+    setQtyDraft((prev) => ({ ...prev, [id]: digits }));
+    const n = parseInt(digits, 10);
+    if (Number.isFinite(n) && n >= 1) setQty(id, n);
+  }
+
+  /** Al salir del campo: vacío o 0 vuelve a 1, nunca borra la línea. */
+  function commitQty(id: string) {
+    const raw = qtyDraft[id];
+    setQtyDraft((prev) => {
+      const rest = { ...prev };
+      delete rest[id];
+      return rest;
+    });
+    const n = parseInt(raw ?? "", 10);
+    if (raw !== undefined && (!Number.isFinite(n) || n < 1)) setQty(id, 1);
   }
 
   function setQty(id: string, quantity: number) {
@@ -193,7 +219,25 @@ export default function WrittenOrderPanel({
               <div className="flex shrink-0 items-center gap-1">
                 <button type="button" onClick={() => setQty(line.id, line.quantity - 1)}
                   className="flex h-6 w-6 items-center justify-center rounded border border-paper-200 text-xs text-paper-500 hover:bg-paper-100">−</button>
-                <span className="w-6 text-center text-xs font-medium tabular-nums text-paper-900">{line.quantity}</span>
+                {/* Editable a mano: pedir 120 unidades a golpe de «+» no es vida.
+                    text + inputMode en vez de type=number (misma pauta que los
+                    precios): en el móvil sale el teclado numérico y no hay
+                    ruedecilla que cambie el valor sin querer. */}
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={qtyDraft[line.id] ?? String(line.quantity)}
+                  onChange={(e) => typeQty(line.id, e.target.value)}
+                  onFocus={(e) => e.currentTarget.select()}
+                  onBlur={() => commitQty(line.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") e.currentTarget.blur();
+                  }}
+                  aria-label={t("written.qtyLabel")}
+                  className={`w-10 rounded border border-paper-200 bg-white/70 text-center font-medium tabular-nums text-paper-900 outline-none focus:border-paper-400 focus:ring-2 focus:ring-paper-200 ${
+                    compact ? "h-8 text-sm" : "h-6 text-xs"
+                  }`}
+                />
                 <button type="button" onClick={() => setQty(line.id, line.quantity + 1)}
                   className="flex h-6 w-6 items-center justify-center rounded border border-paper-200 text-xs text-paper-500 hover:bg-paper-100">+</button>
                 <button type="button" onClick={() => onChange(lines.filter((l) => l.id !== line.id))}
