@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export type TransferStatus = "open" | "claimed" | "done" | "cancelled";
+/**
+ * `expired` = nadie respondió en 3 días y la petición se le devolvió a la
+ * tienda que la pidió: deja de verse en el tablón de las demás.
+ */
+export type TransferStatus = "open" | "claimed" | "done" | "cancelled" | "expired";
 
 /**
  * single = 只要一家店（第一个说「我有」的独占认领）
@@ -30,6 +34,10 @@ export type TransferRequest = {
   claimedBy: string | null;
   claimerName: string | null;
   createdAt: string;
+  /** Cuándo se devolvió por silencio; desde ahí corre la semana antes de borrarse. */
+  expiredAt: string | null;
+  /** Última vez que se volvió a preguntar (null = nunca se repitió). */
+  reopenedAt: string | null;
   iDeclined: boolean;
   /** multi 模式下已报名的门店（single 恒为空数组） */
   claims: TransferClaim[];
@@ -58,6 +66,8 @@ type RpcRow = {
   claimed_by: string | null;
   claimer_name: string | null;
   created_at: string;
+  expired_at: string | null;
+  reopened_at: string | null;
   i_declined: boolean;
   claims: RpcClaim[] | null;
   my_claim_status: "claimed" | "done" | null;
@@ -83,6 +93,15 @@ export async function getGroupStores(
 export async function getTransferBoard(
   supabase: SupabaseClient
 ): Promise<TransferRequest[]> {
+  // Limpieza perezosa antes de leer: no hay cron en este proyecto, así que las
+  // peticiones que llevan 3 días sin respuesta se devuelven a quien las pidió
+  // (y las devueltas hace más de una semana se borran) al abrir el tablón.
+  // Solo toca las del propio jefe y es idempotente; si el script
+  // supabase/transfer_expiry.sql aún no se ha ejecutado, falla sola y el
+  // tablón se sigue viendo igual.
+  const { error: sweepError } = await supabase.rpc("sweep_transfer_requests");
+  if (sweepError) console.error("[transfers] sweep_transfer_requests 失败：", sweepError.message);
+
   const { data, error } = await supabase.rpc("get_transfer_board");
   if (error) console.error("[transfers] get_transfer_board 失败：", error.message);
   return ((data as RpcRow[] | null) ?? []).map((r) => ({
@@ -99,6 +118,8 @@ export async function getTransferBoard(
     claimedBy: r.claimed_by,
     claimerName: r.claimer_name,
     createdAt: r.created_at,
+    expiredAt: r.expired_at ?? null,
+    reopenedAt: r.reopened_at ?? null,
     iDeclined: r.i_declined,
     claims: (r.claims ?? []).map((c) => ({
       storeId: c.store_id,

@@ -117,3 +117,35 @@ export async function setTransferStatus(
   revalidate();
   return {};
 }
+
+/**
+ * «Volver a solicitar»: la petición devuelta (o anulada) sale otra vez al
+ * tablón con el contador a cero. También borra los «no tengo» de la vez
+ * anterior: es una pregunta nueva, no debe arrastrar el silencio de antes.
+ */
+export async function reopenTransferRequest(id: string): Promise<{ error?: string }> {
+  const t = await getT();
+  const guard = await requireStore();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { supabase } = guard;
+
+  const { error } = await supabase.rpc("reopen_transfer_request", { p_id: id });
+  if (error) return { error: translateDbError(error.message, t) };
+
+  revalidate();
+  return {};
+}
+
+/** Quitar de la lista una petición ya terminada (devuelta / anulada / entregada). */
+export async function deleteTransferRequest(id: string): Promise<{ error?: string }> {
+  const t = await getT();
+  const guard = await requireStore();
+  if ("error" in guard) return { error: guardMessage(guard, t) };
+  const { supabase } = guard;
+
+  const { error } = await supabase.rpc("delete_transfer_request", { p_id: id });
+  if (error) return { error: translateDbError(error.message, t) };
+
+  revalidate();
+  return {};
+}

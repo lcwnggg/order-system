@@ -7,7 +7,13 @@ import { createClient } from "@/lib/supabase/client";
 import type { GroupStore, TransferMode, TransferRequest, TransferStatus } from "@/lib/transfers";
 import { useTransferRealtime } from "./use-transfer-realtime";
 import { StoreRoster } from "./store-roster";
-import { createTransferRequest, setTransferStatus, updateTransferClaim } from "./actions";
+import {
+  createTransferRequest,
+  deleteTransferRequest,
+  reopenTransferRequest,
+  setTransferStatus,
+  updateTransferClaim,
+} from "./actions";
 import { useImageLightbox } from "@/app/image-lightbox";
 import { useT } from "@/lib/i18n/client";
 import type { TranslationKey } from "@/lib/i18n/dictionaries";
@@ -48,19 +54,30 @@ const STATUS_KEY: Record<TransferStatus, TranslationKey> = {
   claimed: "transferStatus.claimed",
   done: "transferStatus.done",
   cancelled: "transferStatus.cancelled",
+  expired: "transferStatus.expired",
 };
 const STATUS_PILL: Record<TransferStatus, string> = {
   open: "bg-accent-50 text-accent-600",
   claimed: "bg-blue-50 text-blue-700",
   done: "bg-mint-50 text-mint-600",
   cancelled: "bg-paper-100 text-paper-500",
+  expired: "bg-ember-50 text-ember-700",
 };
 const STATUS_DOT: Record<TransferStatus, string> = {
   open: "bg-accent-500",
   claimed: "bg-blue-500",
   done: "bg-mint-500",
   cancelled: "bg-paper-400",
+  expired: "bg-ember-500",
 };
+
+/** Días que le quedan a una petición devuelta antes de borrarse sola. */
+const AUTO_DELETE_DAYS = 7;
+function daysUntilAutoDelete(expiredAt: string | null): number | null {
+  if (!expiredAt) return null;
+  const deadline = new Date(expiredAt).getTime() + AUTO_DELETE_DAYS * 86400000;
+  return Math.max(0, Math.ceil((deadline - Date.now()) / 86400000));
+}
 
 function StatusPill({ status }: { status: TransferStatus }) {
   const t = useT();
@@ -138,16 +155,21 @@ export default function TransfersClient({
       ),
     [requests, currentStoreId]
   );
-  const myRequests = useMemo(
-    () =>
-      requests
-        .filter((r) => r.requesterStoreId === currentStoreId && r.status !== "done" && r.status !== "cancelled")
-        .concat(
-          requests.filter(
-            (r) => r.requesterStoreId === currentStoreId && (r.status === "done" || r.status === "cancelled")
-          )
-        ),
-    [requests, currentStoreId]
+  // Las mías, ordenadas por lo que pide atención: primero las que siguen en
+  // marcha, luego las que me han devuelto por silencio (hay que decidir algo
+  // con ellas) y al final lo ya terminado.
+  const myRequests = useMemo(() => {
+    const rank = (r: TransferRequest) =>
+      r.status === "open" || r.status === "claimed" ? 0 : r.status === "expired" ? 1 : 2;
+    return requests
+      .filter((r) => r.requesterStoreId === currentStoreId)
+      .sort((a, b) => rank(a) - rank(b));
+  }, [requests, currentStoreId]);
+
+  /** Devueltas por silencio: se avisa arriba porque nadie más las ve ya. */
+  const expiredCount = useMemo(
+    () => myRequests.filter((r) => r.status === "expired").length,
+    [myRequests]
   );
 
   return (
@@ -183,9 +205,14 @@ export default function TransfersClient({
 
       {/* ── 我发出的互调 ── */}
       <section>
-        <div className="mb-3 flex items-baseline gap-2">
+        <div className="mb-3 flex flex-wrap items-baseline gap-2">
           <h2 className="text-[15px] font-semibold text-paper-900">{t("transfers.mySent")}</h2>
           <span className="text-xs text-paper-400">{t("transfers.mySentCount", { n: myRequests.length })}</span>
+          {expiredCount > 0 && (
+            <span className="rounded-full bg-ember-50 px-2 py-0.5 text-[11px] font-medium text-ember-700">
+              {t("transfers.expiredCount", { n: expiredCount })}
+            </span>
+          )}
         </div>
         {myRequests.length === 0 ? (
           <div className="glass-flat rounded-2xl py-10 text-center">
@@ -518,6 +545,8 @@ function MyRequestRow({ req }: { req: TransferRequest }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const isMulti = req.mode === "multi";
+  const isExpired = req.status === "expired";
+  const daysLeft = daysUntilAutoDelete(req.expiredAt);
 
   function act(status: "cancelled" | "done") {
     setError(null);
@@ -527,12 +556,41 @@ function MyRequestRow({ req }: { req: TransferRequest }) {
     });
   }
 
+  /** Volver a sacarla al tablón, con el contador de 3 días otra vez a cero. */
+  function reopen() {
+    setError(null);
+    startTransition(async () => {
+      const res = await reopenTransferRequest(req.id);
+      if (res.error) setError(res.error);
+    });
+  }
+
+  /** Quitarla de la lista para siempre (solo si ya está terminada). */
+  function remove() {
+    if (!window.confirm(t("transfers.confirmDelete", { item: req.itemText }))) return;
+    setError(null);
+    startTransition(async () => {
+      const res = await deleteTransferRequest(req.id);
+      if (res.error) setError(res.error);
+    });
+  }
+
+  // Terminadas: se ven apagadas. La devuelta no se apaga —hay que hacerle caso—
+  // pero tampoco es un traspaso vivo, así que lleva su propio marco ámbar.
   const dim = req.status === "done" || req.status === "cancelled";
   // 收集模式：谁报了名、各能给几件；总数用来判断「够了没」
   const offeredTotal = req.claims.reduce((sum, c) => sum + (c.quantity ?? 0), 0);
 
   return (
-    <div className={`rounded-xl p-3 ring-1 ring-paper-900/10 ${dim ? "bg-white/50" : "glass-flat"}`}>
+    <div
+      className={`rounded-xl p-3 ring-1 ${
+        isExpired
+          ? "bg-ember-50/50 ring-ember-200"
+          : dim
+            ? "bg-white/50 ring-paper-900/10"
+            : "glass-flat ring-paper-900/10"
+      }`}
+    >
       <div className="flex items-center gap-3">
       <ItemThumb req={req} size="h-10 w-10" />
       <div className="min-w-0 flex-1">
@@ -568,6 +626,17 @@ function MyRequestRow({ req }: { req: TransferRequest }) {
               </>
             ))}
           {req.status === "cancelled" && t("transfers.stateCancelled")}
+          {isExpired && (
+            <span className="text-ember-700">
+              {t("transfers.stateExpired")}
+              {daysLeft !== null &&
+                ` · ${
+                  daysLeft === 0
+                    ? t("transfers.autoDeleteToday")
+                    : t("transfers.autoDeleteIn", { n: daysLeft })
+                }`}
+            </span>
+          )}
           {req.quantity ? ` · ${t("transfers.qtyUnits", { n: req.quantity })}` : ""}
         </p>
         {error && <p className="mt-1 text-[11px] text-red-500">{error}</p>}
@@ -583,6 +652,43 @@ function MyRequestRow({ req }: { req: TransferRequest }) {
         </button>
       )}
       </div>
+
+      {/* Terminada: la tienda decide qué hacer con ella para que la lista no se
+          quede llena de traspasos muertos. */}
+      {(isExpired || req.status === "cancelled" || req.status === "done") && (
+        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+          {(isExpired || req.status === "cancelled") && (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={reopen}
+              className={`inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-[11px] font-medium transition-colors disabled:opacity-50 ${
+                isExpired
+                  ? "bg-ember-500 text-white hover:bg-ember-600"
+                  : "border border-paper-200 text-paper-600 hover:bg-paper-100"
+              }`}
+            >
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {pending ? "…" : t("transfers.askAgain")}
+            </button>
+          )}
+          <button
+            type="button"
+            disabled={pending}
+            onClick={remove}
+            className="inline-flex items-center gap-1 rounded-lg border border-paper-200 px-3 py-1.5 text-[11px] font-medium text-paper-400 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-500 disabled:opacity-50"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            {t("common.delete")}
+          </button>
+        </div>
+      )}
 
       {/* 收集模式：谁有几件的清单 + 「ya está, cerrar」 */}
       {isMulti && req.claims.length > 0 && (

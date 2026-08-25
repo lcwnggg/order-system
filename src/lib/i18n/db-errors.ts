@@ -33,6 +33,10 @@ const DB_MESSAGE_KEYS: Record<string, TranslationKey> = {
   只有备货门店可退回: "db.onlyClaimerCanRelease",
   当前状态不可退回: "db.cannotReleaseNow",
   只有发起门店可撤销: "db.onlyRequesterCanCancel",
+  只有发起门店可再发一次: "db.onlyRequesterCanReopen",
+  当前状态不可再发一次: "db.cannotReopenNow",
+  只有发起门店可删除: "db.onlyRequesterCanDelete",
+  进行中的请求要先撤销: "db.cancelBeforeDelete",
   当前状态不可撤销: "db.cannotCancelNow",
 };
 

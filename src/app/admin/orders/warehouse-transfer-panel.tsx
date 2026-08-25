@@ -16,18 +16,23 @@ const STATUS_KEY: Record<TransferStatus, TranslationKey> = {
   claimed: "transferStatus.claimed",
   done: "transferStatus.done",
   cancelled: "transferStatus.cancelled",
+  // El almacén no llega a ver las devueltas —get_transfer_board solo se las
+  // manda a la tienda que las pidió—, pero el mapa cubre el tipo entero.
+  expired: "transferStatus.expired",
 };
 const STATUS_PILL: Record<TransferStatus, string> = {
   open: "bg-accent-50 text-accent-600",
   claimed: "bg-blue-50 text-blue-700",
   done: "bg-mint-50 text-mint-600",
   cancelled: "bg-paper-100 text-paper-500",
+  expired: "bg-ember-50 text-ember-700",
 };
 const STATUS_DOT: Record<TransferStatus, string> = {
   open: "bg-accent-500",
   claimed: "bg-blue-500",
   done: "bg-mint-500",
   cancelled: "bg-paper-400",
+  expired: "bg-ember-500",
 };
 
 /**

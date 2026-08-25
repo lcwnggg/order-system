@@ -43,7 +43,13 @@ function beep() {
   }
 }
 
-type NewRow = { status?: string; requester_store_id?: string; item_text?: string };
+type NewRow = {
+  id?: string;
+  status?: string;
+  requester_store_id?: string;
+  item_text?: string;
+  reopened_at?: string | null;
+};
 
 /**
  * 「开启提示音」铃铛：开启后，本仓库分组里有【新的待认领请求】时
@@ -70,6 +76,10 @@ export default function TransferAlerts({ currentUserId }: { currentUserId: strin
     if (localStorage.getItem("transferAlerts") === "on") setEnabled(true);
   }, []);
 
+  // «Volver a solicitar» ya anunciados, para no repetir el aviso con cada
+  // actualización posterior de la misma petición.
+  const announcedReopens = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     const supabase = createClient();
 
@@ -80,27 +90,47 @@ export default function TransferAlerts({ currentUserId }: { currentUserId: strin
     };
     window.addEventListener("pointerdown", onFirstGesture);
 
+    /** Avisa igual venga de un alta o de un «volver a solicitar». */
+    function announce(row: NewRow) {
+      if (!enabledRef.current) return;
+      if (row.status !== "open") return;
+      if (row.requester_store_id === currentUserId) return; // 自己发的不提醒
+      beep();
+      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+        try {
+          new Notification(tRef.current("alerts.notifTitle"), {
+            body: row.item_text ?? tRef.current("alerts.notifBody"),
+            tag: "transfer-request",
+          });
+        } catch {
+          /* 忽略 */
+        }
+      }
+    }
+
     const channel = supabase
       .channel("transfer_alerts")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "transfer_requests" },
+        (payload) => announce(payload.new as NewRow)
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "transfer_requests" },
         (payload) => {
-          if (!enabledRef.current) return;
+          // Una petición se actualiza por muchos motivos (alguien se apunta,
+          // cambia de estado…). Solo canta la que acaban de volver a preguntar,
+          // y una sola vez por repetición: `reopened_at` cambia en cada una.
           const row = payload.new as NewRow;
-          if (row.status !== "open") return;
-          if (row.requester_store_id === currentUserId) return; // 自己发的不提醒
-          beep();
-          if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-            try {
-              new Notification(tRef.current("alerts.notifTitle"), {
-                body: row.item_text ?? tRef.current("alerts.notifBody"),
-                tag: "transfer-request",
-              });
-            } catch {
-              /* 忽略 */
-            }
-          }
+          if (!row.reopened_at || !row.id) return;
+          // Además tiene que ser de ahora mismo: si no, apuntarse a una
+          // petición repetida hace días también sonaría.
+          if (Date.now() - new Date(row.reopened_at).getTime() > 120000) return;
+          const key = `${row.id}@${row.reopened_at}`;
+          if (announcedReopens.current.has(key)) return;
+          announcedReopens.current.add(key);
+          announce(row);
         }
       )
       .subscribe();
