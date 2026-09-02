@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
-// Alias: este archivo también usa `new Image()` (DOM) para leer dimensiones al comprimir fotos
-import NextImage from "next/image";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import type { GroupStore, TransferMode, TransferRequest, TransferStatus } from "@/lib/transfers";
 import { useTransferRealtime } from "./use-transfer-realtime";
@@ -17,37 +16,8 @@ import {
 import { useImageLightbox } from "@/app/image-lightbox";
 import { useT } from "@/lib/i18n/client";
 import type { TranslationKey } from "@/lib/i18n/dictionaries";
-import type { Translate } from "@/lib/i18n/translate";
 import { supabaseImageUrl } from "@/lib/supabase-image-loader";
-
-// 与商品图一致的前端压缩（沿用项目里的做法）
-function compressToJpeg(file: File, t: Translate, maxWidth = 1200, quality = 0.8): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    // 用完要 revoke，否则每选一张图都会在页面存活期间漏一个 blob（项目里其他两处压缩都已这样做）
-    const objectUrl = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(objectUrl);
-      const scale = Math.min(1, maxWidth / img.width);
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return reject(new Error(t("transfers.imgProcessFail")));
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error(t("transfers.imgCompressFail")))),
-        "image/jpeg",
-        quality
-      );
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      reject(new Error(t("transfers.imgReadFail")));
-    };
-    img.src = objectUrl;
-  });
-}
+import { resizeToJpeg, uploadProductImage } from "@/lib/image-upload";
 
 const STATUS_KEY: Record<TransferStatus, TranslationKey> = {
   open: "transferStatus.open",
@@ -105,7 +75,7 @@ function ItemThumb({ req, size = "h-11 w-11" }: { req: TransferRequest; size?: s
           title={t("common.viewPhoto", { name: req.itemText })}
           className={`${size} shrink-0 cursor-zoom-in overflow-hidden rounded-xl ring-1 ring-paper-900/10 transition hover:ring-paper-400`}
         >
-          <NextImage src={req.photoUrl} alt={req.itemText} width={40} height={40} className="h-full w-full object-cover" />
+          <Image src={req.photoUrl} alt={req.itemText} width={40} height={40} className="h-full w-full object-cover" />
         </button>
         {lightbox.node}
       </>
@@ -250,15 +220,9 @@ function NewRequestForm() {
     try {
       setUploadPhase("uploading");
       setError(null);
-      const blob = await compressToJpeg(file, t);
-      const supabase = createClient();
-      const fileName = `transfers/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
-      const { error: upErr } = await supabase.storage
-        .from("product-images")
-        .upload(fileName, blob, { contentType: "image/jpeg", upsert: false });
-      if (upErr) throw new Error(upErr.message);
-      const { data } = supabase.storage.from("product-images").getPublicUrl(fileName);
-      setPhotoUrl(data.publicUrl);
+      const blob = await resizeToJpeg(file, t);
+      const url = await uploadProductImage(createClient(), blob, t, { prefix: "transfers/" });
+      setPhotoUrl(url);
       setUploadPhase("idle");
     } catch (err) {
       setUploadPhase("error");

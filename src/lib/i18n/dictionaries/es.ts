@@ -246,6 +246,7 @@ const es = {
   "adminProducts.added": "Productos añadidos",
   "adminProducts.countTotal": "{n} en total",
   "adminProducts.bulkImport": "Importar en lote →",
+  "adminProducts.thumbnails": "Miniaturas",
   "adminProducts.addNew": "Añadir producto",
 
   // ── formulario de producto ──
@@ -423,6 +424,20 @@ const es = {
     "Este producto aparece en pedidos anteriores y no se puede eliminar (rompería el historial). Ocúltalo en su lugar.",
   "err.nothingToImport": "No hay productos que importar",
   "err.bulkInsertFailed": "Error al crear los productos en lote: {message}",
+
+  // ── miniaturas de las fotos ──
+  "thumbs.pageTitle": "Miniaturas de las fotos",
+  "thumbs.pageSubtitle":
+    "Mantenimiento: comprueba que cada foto tenga guardadas sus versiones pequeñas.",
+  "thumbs.explain":
+    "Las listas y las fichas no bajan la foto entera, sino una versión pequeña que se guarda al subirla. Las fotos anteriores a este cambio no la tienen y se ven igual, pero pesan diez veces más. Aquí se generan las que falten; se puede volver a entrar las veces que haga falta.",
+  "thumbs.scanning": "Revisando las fotos…",
+  "thumbs.scanFailed": "No se han podido leer las fotos guardadas",
+  "thumbs.allGood": "Las {n} fotos tienen sus miniaturas",
+  "thumbs.missing": "{n} de {total} fotos no tienen miniatura",
+  "thumbs.generate": "Generar las que faltan",
+  "thumbs.working": "Generando… {done} de {total}",
+  "thumbs.doneMsg": "Hechas: {ok}. Con error: {failed}.",
 
   // ── importación en lote ──
   "import.pageTitle": "Importar productos en lote",
@@ -682,9 +697,6 @@ const es = {
   "transfers.stateClaimedSuffix": " lo tiene y lo está preparando",
   "transfers.stateDoneSuffix": " ya lo ha entregado",
   "transfers.stateCancelled": "Anulado",
-  "transfers.imgProcessFail": "No se pudo procesar la imagen",
-  "transfers.imgCompressFail": "No se pudo comprimir la imagen",
-  "transfers.imgReadFail": "No se pudo leer la imagen",
   "transfers.imgUploadFail": "No se pudo subir la imagen",
 
   // ── tablón de tiendas ──

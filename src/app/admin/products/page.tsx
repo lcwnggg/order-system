@@ -65,12 +65,20 @@ export default async function AdminProductsPage() {
                 </span>
               )}
             </h2>
-            <Link
-              href="/admin/products/import"
-              className="rounded-lg border border-paper-200 bg-white px-3 py-1.5 text-sm font-medium text-paper-700 transition-colors hover:bg-paper-100"
-            >
-              {t("adminProducts.bulkImport")}
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/admin/products/thumbnails"
+                className="rounded-lg px-3 py-1.5 text-sm font-medium text-paper-500 transition-colors hover:bg-paper-100 hover:text-paper-700"
+              >
+                {t("adminProducts.thumbnails")}
+              </Link>
+              <Link
+                href="/admin/products/import"
+                className="rounded-lg border border-paper-200 bg-white px-3 py-1.5 text-sm font-medium text-paper-700 transition-colors hover:bg-paper-100"
+              >
+                {t("adminProducts.bulkImport")}
+              </Link>
+            </div>
           </div>
 
           <ProductList

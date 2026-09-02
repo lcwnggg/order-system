@@ -12,10 +12,10 @@ import { parseDecimal, sanitizeDecimalText } from "@/lib/decimal";
 import { useImageLightbox } from "@/app/image-lightbox";
 import { productImages } from "@/lib/product-images";
 import { supabaseImageUrl } from "@/lib/supabase-image-loader";
+import { removeProductImage, resizeToJpeg, uploadProductImage } from "@/lib/image-upload";
 import { NEW_IN_DAYS, isNewIn, newInDaysLeft, newUntilFromNow } from "@/lib/new-in";
 import { useI18n } from "@/lib/i18n/client";
 import { sortByName } from "@/lib/sort";
-import type { Translate } from "@/lib/i18n/translate";
 
 type Product = {
   id: string;
@@ -58,30 +58,6 @@ type VariantDraft = {
 };
 
 type UploadPhase = "idle" | "compressing" | "uploading" | "done" | "error";
-
-function compressToJpeg(file: File | Blob, t: Translate, maxWidth = 1200, quality = 0.8): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(objectUrl);
-      const scale = Math.min(1, maxWidth / img.width);
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return reject(new Error(t("common.canvasUnavailable")));
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error(t("common.compressFailed")))),
-        "image/jpeg",
-        quality
-      );
-    };
-    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error(t("common.imageLoadFailed"))); };
-    img.src = objectUrl;
-  });
-}
 
 export default function ProductEditModal({
   product,
@@ -221,12 +197,7 @@ export default function ProductEditModal({
   }
 
   async function removeFromStorage(url: string) {
-    try {
-      const fileName = url.split("/product-images/").pop();
-      if (fileName) {
-        await createClient().storage.from("product-images").remove([decodeURIComponent(fileName)]);
-      }
-    } catch { /* 忽略存储错误 */ }
+    await removeProductImage(createClient(), url);
   }
 
   async function handleCropConfirm(cropped: Blob) {
@@ -237,17 +208,10 @@ export default function ProductEditModal({
     recropTargetRef.current = null;
     try {
       setPhase("compressing"); setUploadError(null);
-      const blob = await compressToJpeg(cropped, t);
+      const blob = await resizeToJpeg(cropped, t);
       setPreview(URL.createObjectURL(blob));
       setPhase("uploading");
-      const supabase = createClient();
-      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
-      const { error } = await supabase.storage
-        .from("product-images")
-        .upload(fileName, blob, { contentType: "image/jpeg", upsert: false });
-      if (error) throw new Error(error.message);
-      const { data } = supabase.storage.from("product-images").getPublicUrl(fileName);
-      const url = data.publicUrl;
+      const url = await uploadProductImage(createClient(), blob, t);
 
       setImages((prev) =>
         replacing && prev.includes(replacing)

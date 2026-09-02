@@ -4,32 +4,7 @@ import { useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { suggestProductFromImages, type AiSuggestion } from "./ai-actions";
 import { useT } from "@/lib/i18n/client";
-import type { Translate } from "@/lib/i18n/translate";
-
-// 复用与表单一致的压缩逻辑（浏览器端）
-function compressToJpeg(file: File, t: Translate, maxWidth = 1200, quality = 0.8): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(objectUrl);
-      const scale = Math.min(1, maxWidth / img.width);
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return reject(new Error(t("common.canvasUnavailable")));
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error(t("common.compressFailed")))),
-        "image/jpeg",
-        quality
-      );
-    };
-    img.onerror = () => { URL.revokeObjectURL(objectUrl); reject(new Error(t("common.imageLoadFailed"))); };
-    img.src = objectUrl;
-  });
-}
+import { resizeToJpeg, uploadProductImage } from "@/lib/image-upload";
 
 type Phase = "idle" | "uploading" | "recognizing" | "done" | "error";
 
@@ -59,14 +34,8 @@ export default function AiRecognizePanel({
       const supabase = createClient();
       const urls: string[] = [];
       for (const file of list) {
-        const blob = await compressToJpeg(file, t);
-        const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
-        const { error: upErr } = await supabase.storage
-          .from("product-images")
-          .upload(fileName, blob, { contentType: "image/jpeg", upsert: false });
-        if (upErr) throw new Error(upErr.message);
-        const { data } = supabase.storage.from("product-images").getPublicUrl(fileName);
-        urls.push(data.publicUrl);
+        const blob = await resizeToJpeg(file, t);
+        urls.push(await uploadProductImage(supabase, blob, t));
       }
 
       // 第一张直接用作商品图，省得再传一次（原图一并回传，供后续裁剪）

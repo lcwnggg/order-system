@@ -240,6 +240,7 @@ const zh: Dictionary = {
   "adminProducts.added": "已添加商品",
   "adminProducts.countTotal": "共 {n} 件",
   "adminProducts.bulkImport": "批量导入 →",
+  "adminProducts.thumbnails": "缩略图",
   "adminProducts.addNew": "添加新商品",
 
   // ── 商品表单 ──
@@ -410,6 +411,19 @@ const zh: Dictionary = {
     "该商品已存在于历史订单，不能删除（会破坏订单记录）。请改用「下架」隐藏它。",
   "err.nothingToImport": "没有可导入的商品",
   "err.bulkInsertFailed": "批量新增商品失败：{message}",
+
+  // ── 图片缩略图 ──
+  "thumbs.pageTitle": "图片缩略图",
+  "thumbs.pageSubtitle": "维护工具：检查每张商品图是否都已生成小尺寸版本。",
+  "thumbs.explain":
+    "列表和卡片不会下载原图，而是用上传时一并生成的小图。此改动之前上传的照片没有小图，虽然照样显示，但体积要大十倍。这里可以把缺的补齐，随时可以再来跑一次。",
+  "thumbs.scanning": "正在检查图片…",
+  "thumbs.scanFailed": "读取已存图片失败",
+  "thumbs.allGood": "{n} 张图片都已有缩略图",
+  "thumbs.missing": "{total} 张图片中有 {n} 张缺缩略图",
+  "thumbs.generate": "生成缺失的缩略图",
+  "thumbs.working": "生成中… {done} / {total}",
+  "thumbs.doneMsg": "完成 {ok} 张，失败 {failed} 张。",
 
   // ── 批量导入 ──
   "import.pageTitle": "批量导入商品",
@@ -659,9 +673,6 @@ const zh: Dictionary = {
   "transfers.stateClaimedSuffix": " 有货，正在备货",
   "transfers.stateDoneSuffix": " 已交货",
   "transfers.stateCancelled": "已撤销",
-  "transfers.imgProcessFail": "无法处理图片",
-  "transfers.imgCompressFail": "图片压缩失败",
-  "transfers.imgReadFail": "图片读取失败",
   "transfers.imgUploadFail": "图片上传失败",
 
   // ── 门店看板 ──

@@ -17,39 +17,7 @@ import { NEW_IN_DAYS } from "@/lib/new-in";
 import { useI18n } from "@/lib/i18n/client";
 import { sortByName } from "@/lib/sort";
 import { supabaseImageUrl } from "@/lib/supabase-image-loader";
-import type { Translate } from "@/lib/i18n/translate";
-
-function compressToJpeg(
-  file: File | Blob,
-  t: Translate,
-  maxWidth = 1200,
-  quality = 0.8
-): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
-    img.onload = () => {
-      URL.revokeObjectURL(objectUrl);
-      const scale = Math.min(1, maxWidth / img.width);
-      const canvas = document.createElement("canvas");
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return reject(new Error(t("common.canvasUnavailable")));
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error(t("common.compressFailed")))),
-        "image/jpeg",
-        quality
-      );
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
-      reject(new Error(t("common.imageLoadFailed")));
-    };
-    img.src = objectUrl;
-  });
-}
+import { removeProductImage, resizeToJpeg, uploadProductImage } from "@/lib/image-upload";
 
 type UploadPhase = "idle" | "compressing" | "uploading" | "done" | "error";
 type VariantDraft = { color: string; stock: string };
@@ -238,12 +206,7 @@ export default function ProductForm({
   }
 
   async function removeFromStorage(url: string) {
-    try {
-      const fileName = url.split("/product-images/").pop();
-      if (fileName) {
-        await createClient().storage.from("product-images").remove([decodeURIComponent(fileName)]);
-      }
-    } catch { /* 忽略存储删除错误 */ }
+    await removeProductImage(createClient(), url);
   }
 
   async function handleCropConfirm(blob: Blob) {
@@ -256,17 +219,10 @@ export default function ProductForm({
       setPhase("compressing");
       setUploadError(null);
       setPreview(null);
-      const compressed = await compressToJpeg(blob, t);
+      const compressed = await resizeToJpeg(blob, t);
       setPreview(URL.createObjectURL(compressed));
       setPhase("uploading");
-      const supabase = createClient();
-      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`;
-      const { error } = await supabase.storage
-        .from("product-images")
-        .upload(fileName, compressed, { contentType: "image/jpeg", upsert: false });
-      if (error) throw new Error(error.message);
-      const { data } = supabase.storage.from("product-images").getPublicUrl(fileName);
-      const url = data.publicUrl;
+      const url = await uploadProductImage(createClient(), compressed, t);
 
       // Al recortar de nuevo, la foto nueva ocupa el mismo puesto que la vieja
       // (importa: el primer puesto es la portada) y la vieja se borra: nunca
