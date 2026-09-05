@@ -6,7 +6,8 @@ Plataforma interna de pedidos, control de stock y traslados entre tiendas para u
 
 > Proyecto desarrollado de forma individual: análisis del problema, diseño del modelo de datos, desarrollo, despliegue e implantación con usuarios reales.
 
-<img width="1351" height="759" alt="catalogo" src="https://github.com/user-attachments/assets/ce639b50-5c11-4397-bec7-ef212b01f9b9" />
+<img width="1350" height="761" alt="image" src="https://github.com/user-attachments/assets/eb578732-5e8f-4c37-a506-e7107314eb02" />
+
 
 
 ---
