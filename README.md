@@ -27,6 +27,9 @@ La mercancía nueva llega sin etiquetar. Cada producto generaba la misma pregunt
 **Peticiones que se pierden.**
 Los traslados entre tiendas (una necesita un artículo que otra sí tiene) se pedían en un grupo de WhatsApp donde el mensaje quedaba enterrado bajo consultas de precio y conversación diaria. Pedidos olvidados, sin trazabilidad ni forma de saber quién debía atender qué.
 
+A esto se sumaba que buena parte de lo que las tiendas necesitaban ni siquiera
+estaba catalogado, así que no había forma de pedirlo por un canal estructurado.
+
 **Preparación de pedidos fragmentada.**
 Los pedidos llegaban a lo largo del día y sin agrupar: un artículo por la mañana, otro por la tarde. La persona de almacén tenía que volver a entrar a preparar pedidos continuamente, e identificar cada artículo a partir de fotos sueltas enviadas por chat. Con siete tiendas, el coste de coordinación se multiplicaba.
 
@@ -44,6 +47,12 @@ El sistema tiene dos caras: una **consola de almacén** para la dirección y una
 **Catálogo con precios de venta.** Cada tienda accede al catálogo completo por categorías, con el precio de venta de cada artículo y el stock disponible. Elimina las consultas de precio: la información está donde se necesita, en el momento en que se necesita.
 
 **Pedidos al almacén.** La tienda compone su pedido sobre el catálogo real, viendo lo que existe, y puede añadir una nota al pedido ("urgente", "entregar el viernes"). La reposición pasa de estimarse desde dirección a solicitarse por quien conoce la demanda.
+
+**Pedido escrito para artículos fuera de catálogo.** No todo lo que una tienda
+necesita está catalogado: piezas sueltas, protectores de modelos concretos,
+referencias puntuales. La tienda puede escribir la petición en texto libre
+("protector completo 16 Pro Max") y añadirla al mismo pedido. Evita que estos
+casos se salgan del sistema y vuelvan al WhatsApp, que es donde se perdían antes.
 
 **Tablón de traspasos entre tiendas.** Cuando ni la tienda ni el almacén tienen un artículo, se lanza una solicitud visible para todas las demás, que responden con «lo tengo» o «no lo tengo». Cada solicitud queda registrada con estado e historial. Sustituye al grupo de WhatsApp donde las peticiones se perdían.
 
