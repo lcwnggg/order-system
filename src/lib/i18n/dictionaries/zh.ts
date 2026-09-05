@@ -424,6 +424,7 @@ const zh: Dictionary = {
   "thumbs.generate": "生成缺失的缩略图",
   "thumbs.working": "生成中… {done} / {total}",
   "thumbs.doneMsg": "完成 {ok} 张，失败 {failed} 张。",
+  "thumbs.moreFailures": "另有 {n} 张",
 
   // ── 批量导入 ──
   "import.pageTitle": "批量导入商品",

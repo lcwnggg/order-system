@@ -51,6 +51,15 @@ export function resizeToJpeg(
 }
 
 /**
+ * Un fichero que ya estaba subido no es un fallo: la miniatura que se quería
+ * dejar ya está ahí. Storage lo contesta con un 409 «Duplicate».
+ */
+function alreadyExists(error: { message?: string; statusCode?: string } | null): boolean {
+  if (!error) return false;
+  return String(error.statusCode ?? "") === "409" || /already exists|duplicate/i.test(error.message ?? "");
+}
+
+/**
  * Genera y sube las miniaturas de una foto ya subida.
  *
  * Es un extra, nunca un requisito: si falla cualquiera de ellas se sigue
@@ -67,8 +76,9 @@ export async function uploadThumbnails(
   image: Blob,
   t: Translate,
   widths: readonly number[] = THUMB_WIDTHS
-): Promise<number> {
+): Promise<{ done: number; errors: string[] }> {
   let done = 0;
+  const errors: string[] = [];
   for (const width of widths) {
     try {
       const small = await resizeToJpeg(image, t, width, THUMB_QUALITY);
@@ -77,16 +87,18 @@ export async function uploadThumbnails(
         .upload(thumbName(fileName, width), small, {
           contentType: "image/jpeg",
           // Sin `upsert`: sobrescribir necesita permiso de UPDATE en el cubo y
-          // aquí nunca hace falta, las miniaturas se generan una sola vez. Si
-          // ya existe, el error se ignora igual que cualquier otro.
+          // aquí nunca hace falta, las miniaturas se generan una sola vez.
           upsert: false,
         });
-      if (!error) done += 1;
-    } catch {
-      /* la miniatura es un extra: sin ella se sirve el original */
+      if (!error || alreadyExists(error)) done += 1;
+      else errors.push(`w${width}: ${error.message}`);
+    } catch (err) {
+      // La miniatura es un extra: sin ella se sirve el original. Pero el
+      // motivo se devuelve, que la pantalla de mantenimiento lo enseña.
+      errors.push(`w${width}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
-  return done;
+  return { done, errors };
 }
 
 /**

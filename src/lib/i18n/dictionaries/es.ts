@@ -438,6 +438,7 @@ const es = {
   "thumbs.generate": "Generar las que faltan",
   "thumbs.working": "Generando… {done} de {total}",
   "thumbs.doneMsg": "Hechas: {ok}. Con error: {failed}.",
+  "thumbs.moreFailures": "y {n} más",
 
   // ── importación en lote ──
   "import.pageTitle": "Importar productos en lote",
