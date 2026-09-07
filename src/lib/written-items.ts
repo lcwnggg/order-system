@@ -31,10 +31,16 @@ const BULLET = /^\s*(?:[-–—•*·]|\d{1,2}[.)])\s+/;
 /** «5 x funda» / «5x funda» */
 const QTY_PREFIX = /^(\d{1,4})\s*[x*×]\s*(.+)$/i;
 /**
- * «funda x5» / «funda *5» / «funda × 5». El lookbehind es imprescindible: sin
- * él la «x» de «16 pro max 5» hace de marca y la descripción pierde la letra.
+ * «funda x5» / «funda *5» / «funda × 5». Lo que la marca NO puede tener delante
+ * es una letra, o la «x» de «16 pro max 5» haría de marca y la descripción
+ * perdería la letra. Eso se dice consumiendo ese carácter dentro del grupo
+ * (`.*?[^\p{L}]`) y no con un lookbehind `(?<!\p{L})`: Safari no entiende los
+ * lookbehind hasta la 16.4 y, al ser sintaxis, revienta el fichero entero al
+ * leerlo — no la línea al ejecutarla —, así que un iPhone algo viejo se
+ * quedaba con la tienda en blanco. `finish()` ya recorta el separador que así
+ * queda pegado al final de la descripción.
  */
-const QTY_SUFFIX = /^(.*?)[\s,;·-]*(?<!\p{L})[x*×]\s*(\d{1,4})$/iu;
+const QTY_SUFFIX = /^((?:.*?[^\p{L}])?)[x*×]\s*(\d{1,4})$/iu;
 /** «funda 5 uds» / «funda 5u» / «funda 5 unidades» / «funda 5个» */
 const QTY_UNITS =
   /^(.*?)[\s,;]+(\d{1,4})\s*(?:uds?|unidad(?:es)?|u|pcs?|pzas?|个|件|支|套|条)\.?$/i;
