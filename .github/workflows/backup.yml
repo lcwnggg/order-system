@@ -1,0 +1,63 @@
+# Copia de seguridad semanal de Supabase (base de datos + fotos).
+# El repo es PÚBLICO: todo se cifra con BACKUP_PASSPHRASE antes de subirse;
+# sin esa contraseña el archivo no sirve de nada. Cómo restaurar: BACKUP.md
+name: Copia de seguridad
+
+on:
+  schedule:
+    - cron: "0 3 * * 1" # lunes 03:00 UTC
+  workflow_dispatch: # botón «Run workflow» para lanzarla a mano
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Comprobar secretos
+        run: |
+          for v in SUPABASE_DB_URL SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY BACKUP_PASSPHRASE; do
+            if [ -z "${!v}" ]; then echo "::error::Falta el secreto $v"; exit 1; fi
+          done
+
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Volcar la base de datos
+        run: |
+          STAMP=$(date -u +%Y-%m-%d)
+          echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+          mkdir -p "out/$STAMP"
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f "out/$STAMP/roles.sql" --role-only
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f "out/$STAMP/schema.sql"
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f "out/$STAMP/data.sql" --data-only --use-copy
+          ls -lh "out/$STAMP"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Bajar las fotos
+        run: node scripts/backup-storage.mjs product-images "out/$STAMP/storage/product-images"
+
+      - name: Empaquetar y cifrar
+        run: |
+          tar -czf - -C out "$STAMP" \
+            | gpg --batch --yes --symmetric --cipher-algo AES256 \
+                  --passphrase "$BACKUP_PASSPHRASE" -o "backup-$STAMP.tar.gz.gpg"
+          rm -rf out
+          ls -lh "backup-$STAMP.tar.gz.gpg"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backup-${{ env.STAMP }}
+          path: backup-${{ env.STAMP }}.tar.gz.gpg
+          retention-days: 90 # máximo permitido: quedan ~13 copias
+          compression-level: 0 # ya va comprimido
